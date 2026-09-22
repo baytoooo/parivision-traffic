@@ -1,0 +1,379 @@
+---
+import Base from "../layouts/Base.astro";
+import SecHead from "../components/SecHead.astro";
+import { DATA_IS_MOCK } from "../config";
+import { loadAllResults, loadClips, loadEda, signalStats } from "../lib/data";
+import { fmtNum, fmtTime, isNum } from "../lib/format";
+
+const clips = loadClips();
+const results = loadAllResults();
+const eda = loadEda();
+
+// counts over time, per clip, for the interactive chart
+const counts = Object.fromEntries(clips.map((c) => [c.id, results[c.id]?.counts ?? null]));
+const clipMeta = clips.map((c) => ({ id: c.id, start: c.local_time, light: c.light }));
+
+// density per clip for small multiples (sent to the browser)
+const density = eda?.density ?? {};
+
+// mean vehicles and people in view per clip, placed by time of day (static SVG)
+const tod = clips
+  .map((c) => {
+    const d = density[c.id];
+    const mean = (a?: number[]) => (a && a.length ? a.reduce((x, y) => x + y, 0) / a.length : NaN);
+    const [hh, mm] = (c.local_time.split(" ")[1] ?? "0:0").split(":").map(Number);
+    return { id: c.id, minutes: hh * 60 + mm, time: c.local_time.split(" ")[1], veh: mean(d?.vehicles), ppl: mean(d?.people), light: c.light.split(",")[0] };
+  })
+  .sort((a, b) => a.minutes - b.minutes);
+const todMax = Math.max(1, ...tod.flatMap((r) => [r.veh, r.ppl]).filter(Number.isFinite));
+const todCeil = Math.ceil(todMax / 10) * 10;
+
+// speed histogram (static SVG)
+const bin = 4;
+const allSpeeds = [...(eda?.speeds.sb ?? []), ...(eda?.speeds.nb ?? [])];
+const vmax = Math.max(8, ...allSpeeds);
+const nb = Math.ceil(vmax / bin);
+const hist = (arr: number[]) => {
+  const h = new Array(nb).fill(0);
+  for (const v of arr) h[Math.min(nb - 1, Math.floor(v / bin))]++;
+  return h;
+};
+const hSB = hist(eda?.speeds.sb ?? []);
+const hNB = hist(eda?.speeds.nb ?? []);
+const hMax = Math.max(1, ...hSB, ...hNB);
+const median = (a: number[]) => {
+  if (!a.length) return NaN;
+  const s = [...a].sort((x, y) => x - y);
+  return s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2;
+};
+const medSB = median(eda?.speeds.sb ?? []);
+const medNB = median(eda?.speeds.nb ?? []);
+const HW = 480, HH = 240, HL = 34, HR = 10, HT = 14, HB = 30;
+const hx = (v: number) => HL + (v / (nb * bin)) * (HW - HL - HR);
+const hy = (n: number) => HT + (1 - n / hMax) * (HH - HT - HB);
+const stepPath = (h: number[]) => {
+  let d = `M${hx(0)},${hy(0)}`;
+  h.forEach((n, i) => {
+    d += ` L${hx(i * bin)},${hy(n)} L${hx((i + 1) * bin)},${hy(n)}`;
+  });
+  return d + ` L${hx(nb * bin)},${hy(0)}`;
+};
+
+// signal cycle
+const cyc = eda?.signal_cycle;
+const g = isNum(cyc?.green) ? cyc!.green : NaN;
+const r = isNum(cyc?.red) ? cyc!.red : NaN;
+const perClipSignal = clips.map((c) => ({ id: c.id, time: c.local_time.split(" ")[1], ...signalStats(results[c.id]?.signal) }));
+
+const images = eda
+  ? [
+      { src: eda.images.heatmap_vehicle, t: "Where vehicles are", c: "Share of time each reference pixel is covered by a vehicle foot point, all four clips." },
+      { src: eda.images.heatmap_person, t: "Where people walk: desire lines", c: "The same for pedestrians. Paths that leave the two zebras are the desire lines the jaywalking rule has to catch." },
+      { src: eda.images.trajectories, t: "Trajectories", c: "Every track mapped into the reference view, vehicles and people." },
+      { src: eda.images.directions, t: "Lane direction field", c: "Median heading of vehicle tracks per grid cell. The wrong_way rule compares each vehicle with the legal direction of its carriageway." },
+    ]
+  : [];
+---
+<Base title="EDA" description="What is in the four sample clips: object counts over time, traffic density by time of day, signal cycles, speeds, where people walk, and what it changed in our solution." active="eda">
+  <header class="page-head wrap">
+    <p class="kicker">Exploratory analysis</p>
+    <h1>What is in the footage</h1>
+    <p class="lede">Four clips from one camera on 18 September 2026, from late morning to dusk. Before writing any rule we looked at who uses the junction, when, and where they actually walk and drive.</p>
+  </header>
+
+  <section class="section wrap" id="clips">
+    <SecHead num="01" title="The clips" />
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th scope="col">Clip</th><th scope="col">Local time</th><th scope="col">Light</th><th scope="col" class="num">Resolution</th><th scope="col" class="num">fps</th><th scope="col" class="num">Length</th><th scope="col" class="num">Frames</th><th scope="col" class="num">Our labels</th></tr>
+        </thead>
+        <tbody>
+          {clips.map((c) => (
+            <tr>
+              <th scope="row" class="mono">{c.id}</th>
+              <td class="t">{c.local_time}</td>
+              <td>{c.light}</td>
+              <td class="num">{c.width}x{c.height}</td>
+              <td class="num">{c.fps}</td>
+              <td class="num">{fmtTime(c.duration)}</td>
+              <td class="num">{Math.round(c.duration * c.fps).toLocaleString("en-US")}</td>
+              <td class="num">{results[c.id]?.labels?.length ?? "TBD"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section wrap" id="counts">
+    <SecHead num="02" title="Objects in view over time">
+      <p>Detector counts per 5 s, by class, from our tracks. Click a class in the legend to hide it; hover or tap the chart for values.</p>
+    </SecHead>
+    <div class="tabs" role="tablist" aria-label="Clip" id="count-tabs">
+      {clips.map((c, i) => (
+        <button type="button" role="tab" aria-selected={i === 0 ? "true" : "false"} tabindex={i === 0 ? 0 : -1} data-clip={c.id}>{c.id} <span class="tab-sub">{c.local_time.split(" ")[1]}</span></button>
+      ))}
+    </div>
+    <div class="panel panel-pad"><div id="count-chart"></div></div>
+  </section>
+
+  <section class="section wrap" id="density">
+    <SecHead num="03" title="Traffic density by time of day">
+      <p>Mean number of vehicles and people in view per clip, placed at the time the clip starts, then the full curve for each clip.</p>
+    </SecHead>
+    <figure class="panel panel-pad tod">
+      <svg viewBox="0 0 480 236" class="chart stat-chart" role="img" aria-label={`Mean vehicles and people in view: ${tod.map((t) => `${t.id} at ${t.time}, ${t.veh.toFixed(0)} vehicles, ${t.ppl.toFixed(0)} people`).join("; ")}`}>
+        {[0, 0.25, 0.5, 0.75, 1].map((f) => (
+          <g>
+            <line x1="36" x2="476" y1={22 + (1 - f) * 150} y2={22 + (1 - f) * 150} class="c-grid" />
+            <text x="30" y={26 + (1 - f) * 150} text-anchor="end">{Math.round(todCeil * f)}</text>
+          </g>
+        ))}
+        {tod.map((t, i) => {
+          const cx = 36 + ((i + 0.5) / tod.length) * 440;
+          const hv = (t.veh / todCeil) * 150;
+          const hp = (t.ppl / todCeil) * 150;
+          return (
+            <g>
+              <rect x={cx - 34} y={172 - hv} width="32" height={hv} class="bar-veh" />
+              <rect x={cx + 2} y={172 - hp} width="32" height={hp} class="bar-ppl" />
+              <text x={cx - 18} y={166 - hv} text-anchor="middle" class="bar-v">{t.veh.toFixed(0)}</text>
+              <text x={cx + 18} y={166 - hp} text-anchor="middle" class="bar-v">{t.ppl.toFixed(0)}</text>
+              <text x={cx} y="194" text-anchor="middle" class="bar-x">{t.time}</text>
+              <text x={cx} y="211" text-anchor="middle">{t.id}</text>
+              <text x={cx} y="228" text-anchor="middle">{t.light}</text>
+            </g>
+          );
+        })}
+      </svg>
+      <figcaption><span class="key"><i class="sw veh"></i>vehicles</span> <span class="key"><i class="sw ppl"></i>people</span></figcaption>
+    </figure>
+    <div class="multiples">
+      {clips.map((c) => (
+        <figure class="panel panel-pad">
+          <figcaption class="mult-cap"><span class="mono">{c.id}</span> from {c.local_time.split(" ")[1]}, {c.light.split(",")[0]}</figcaption>
+          <div class="density-chart" data-clip={c.id}></div>
+        </figure>
+      ))}
+    </div>
+  </section>
+
+  <section class="section wrap two" id="signal">
+    <div>
+      <SecHead num="04" title="Signal cycle">
+        <p>From our signal reader, complete phases only. Green includes the flashing green and yellow at its end. The SB queue waits through every red, so any rule about stopped cars has to know the phase.</p>
+      </SecHead>
+      <div class="stats sig-stats">
+        <div class="stat"><span class={`v${isNum(cyc?.green) ? "" : " is-tbd"}`}>{fmtNum(cyc?.green, 1)}<small>s</small></span><span class="k"><span class="dot green"></span> Green, mean</span></div>
+        <div class="stat"><span class={`v${isNum(cyc?.red) ? "" : " is-tbd"}`}>{fmtNum(cyc?.red, 1)}<small>s</small></span><span class="k"><span class="dot red"></span> Red, mean</span></div>
+        <div class="stat"><span class={`v${isNum(cyc?.cycle) ? "" : " is-tbd"}`}>{fmtNum(cyc?.cycle, 1)}<small>s</small></span><span class="k">Full cycle</span></div>
+      </div>
+      {Number.isFinite(g) && Number.isFinite(r) && (
+        <div class="cycle-bar" role="img" aria-label={`Green ${g.toFixed(1)} s then red ${r.toFixed(1)} s`}>
+          <span class="cb-green" style={`flex:${g}`}>green {g.toFixed(0)} s</span>
+          <span class="cb-red" style={`flex:${r}`}>red {r.toFixed(0)} s</span>
+        </div>
+      )}
+    </div>
+    <div class="table-scroll sig-table">
+      <table>
+        <thead><tr><th scope="col">Clip</th><th scope="col" class="num">Full cycles</th><th scope="col" class="num">Green</th><th scope="col" class="num">Red</th><th scope="col" class="num">Unreadable</th></tr></thead>
+        <tbody>
+          {perClipSignal.map((p) => (
+            <tr>
+              <th scope="row" class="mono">{p.id} <span class="tab-sub">{p.time}</span></th>
+              <td class="num">{p.cycles}</td>
+              <td class="num">{Number.isFinite(p.green) ? `${p.green.toFixed(1)} s` : "-"}</td>
+              <td class="num">{Number.isFinite(p.red) ? `${p.red.toFixed(1)} s` : "-"}</td>
+              <td class="num">{p.unknown.toFixed(1)} s</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section wrap" id="speeds">
+    <SecHead num="05" title="Speeds per carriageway">
+      <p>Median speed of each vehicle track on the two avenue carriageways, in km/h. Dashed lines are the medians.</p>
+    </SecHead>
+    <figure class="panel panel-pad">
+      <svg viewBox={`0 0 ${HW} ${HH}`} class="chart stat-chart" role="img" aria-label={`Speed histogram. Median southbound ${medSB.toFixed(0)} km/h, northbound ${medNB.toFixed(0)} km/h.`}>
+        {[0, 0.5, 1].map((f) => (
+          <g>
+            <line x1={HL} x2={HW - HR} y1={hy(hMax * f)} y2={hy(hMax * f)} class="c-grid" />
+            <text x={HL - 6} y={hy(hMax * f) + 3.5} text-anchor="end">{Math.round(hMax * f)}</text>
+          </g>
+        ))}
+        {Array.from({ length: Math.floor((nb * bin) / 20) + 1 }, (_, i) => i * 20).map((v) => (
+          <text x={hx(v)} y={HH - HB + 16} text-anchor="middle">{v}</text>
+        ))}
+        <text x={HW - HR} y={HH - 2} text-anchor="end">km/h</text>
+        <path d={stepPath(hSB)} class="h-sb" />
+        <path d={stepPath(hNB)} class="h-nb" />
+        {Number.isFinite(medSB) && <line x1={hx(medSB)} x2={hx(medSB)} y1={HT} y2={HH - HB} class="m-sb" />}
+        {Number.isFinite(medNB) && <line x1={hx(medNB)} x2={hx(medNB)} y1={HT} y2={HH - HB} class="m-nb" />}
+      </svg>
+      <figcaption>
+        <span class="key"><i class="sw sb"></i>southbound, median {medSB.toFixed(0)} km/h, {eda?.speeds.sb.length ?? 0} tracks</span>
+        <span class="key"><i class="sw nb"></i>northbound, median {medNB.toFixed(0)} km/h, {eda?.speeds.nb.length ?? 0} tracks</span>
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="section wrap" id="maps">
+    <SecHead num="06" title="Where things move">
+      <p>All four clips, mapped into the reference view.</p>
+    </SecHead>
+    <div class="maps">
+      {images.map((im) => (
+        <figure>
+          <div class="frame">
+            {DATA_IS_MOCK && <span class="tag">placeholder</span>}
+            <img src={im.src} alt={im.t} width="960" height="540" loading="lazy" decoding="async" />
+          </div>
+          <figcaption><strong>{im.t}.</strong> {im.c}</figcaption>
+        </figure>
+      ))}
+    </div>
+  </section>
+
+  <section class="section wrap" id="findings">
+    <SecHead num="07" title="What this changed in our solution" />
+    <ol class="findings">
+      {(eda?.findings ?? []).map((f) => <li>{f}</li>)}
+    </ol>
+  </section>
+
+  <script type="application/json" id="eda-data" set:html={JSON.stringify({ counts, clips: clipMeta, density })} />
+</Base>
+
+<style>
+  .stat-chart { width: 100%; height: auto; max-width: 620px; }
+  .chart.stat-chart text { font-size: 12.5px; }
+  .tod, #speeds figure { max-width: 680px; }
+  .tod .bar-veh { fill: var(--paint); }
+  .tod .bar-ppl { fill: var(--zebra); }
+  .tod text.bar-v { fill: var(--paint-2); }
+  .tod text.bar-x { fill: var(--paint); font-weight: 600; }
+  .key { display: inline-flex; align-items: center; gap: 7px; margin-right: 16px; }
+  .sw { width: 14px; height: 8px; display: inline-block; }
+  .sw.veh, .sw.sb { background: var(--paint); }
+  .sw.ppl, .sw.nb { background: var(--zebra); }
+
+  .multiples { display: grid; gap: 12px; margin-top: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); }
+  .mult-cap { margin: 0 0 6px; color: var(--paint-2); font-size: .85rem; }
+
+  .two { display: grid; gap: 24px; }
+  @media (min-width: 980px) { .two { grid-template-columns: 1fr 1fr; align-items: start; } }
+  .sig-stats { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+  .sig-stats .k { display: inline-flex; align-items: center; gap: 6px; }
+  .cycle-bar { display: flex; margin-top: 12px; height: 34px; border-radius: var(--radius); overflow: hidden; font: 600 .75rem var(--font-mono); }
+  .cycle-bar span { display: flex; align-items: center; padding: 0 10px; color: #0e0f11; white-space: nowrap; overflow: hidden; }
+  .cb-green { background: var(--sig-green); }
+  .cb-red { background: var(--sig-red); }
+  @media (min-width: 980px) { .sig-table { margin-top: 64px; } }
+
+  .h-sb { fill: rgba(238,235,226,.1); stroke: var(--paint); stroke-width: 1.6; }
+  .h-nb { fill: rgba(243,195,22,.12); stroke: var(--zebra); stroke-width: 1.6; }
+  .m-sb { stroke: var(--paint); stroke-dasharray: 3 3; }
+  .m-nb { stroke: var(--zebra); stroke-dasharray: 3 3; }
+  #speeds svg { width: 100%; height: auto; }
+
+  .maps { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); }
+  .maps img { width: 100%; }
+  .maps figcaption strong { color: var(--paint); }
+
+  .findings { counter-reset: f; list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; max-width: 900px; }
+  .findings li {
+    counter-increment: f; position: relative; padding: 14px 16px 14px 60px;
+    background: var(--asphalt-2); border: 1px solid var(--line); border-radius: var(--radius); color: var(--paint-2);
+  }
+  .findings li::before {
+    content: counter(f, decimal-leading-zero); position: absolute; left: 14px; top: 13px;
+    font: 600 .85rem var(--font-mono); color: var(--asphalt); background: var(--zebra); padding: 2px 6px; border-radius: 2px;
+  }
+</style>
+
+<script>
+  import { LineChart, type Series } from "../scripts/linechart";
+  import type { Counts } from "../lib/types";
+
+  interface Payload {
+    counts: Record<string, Counts | null>;
+    clips: { id: string; start: string; light: string }[];
+    density: Record<string, { t: number[]; vehicles: number[]; people: number[] }>;
+  }
+  const data: Payload = JSON.parse(document.getElementById("eda-data")!.textContent || "{}");
+
+  const COLORS: Record<string, string> = {
+    car: "#eeebe2",
+    person: "#f3c316",
+    bus: "#6fb3e0",
+    truck: "#9aa0ff",
+    motorcycle: "#d98b9a",
+    bicycle: "#c9a97a",
+  };
+  const clock = (start: string, t: number) => {
+    const [hh, mm] = (start.split(" ")[1] ?? "00:00").split(":").map(Number);
+    const total = hh * 3600 + mm * 60 + Math.round(t);
+    const h = Math.floor(total / 3600) % 24;
+    const m = Math.floor((total % 3600) / 60);
+    return `${h}:${String(m).padStart(2, "0")}`;
+  };
+  const mmss = (t: number) => `${Math.floor(t / 60)}:${String(Math.round(t % 60)).padStart(2, "0")}`;
+
+  // counts chart with clip tabs
+  const host = document.getElementById("count-chart");
+  const tabs = [...document.querySelectorAll<HTMLButtonElement>("#count-tabs [role=tab]")];
+  const seriesFor = (c: Counts): Series[] =>
+    Object.keys(c)
+      .filter((k) => k !== "t")
+      .map((k) => ({ key: k, label: k, values: c[k], color: COLORS[k] ?? "#979aa0", width: k === "car" || k === "person" ? 2 : 1.4 }));
+  let chart: LineChart | null = null;
+  const show = (id: string) => {
+    const c = data.counts[id];
+    tabs.forEach((b) => {
+      const on = b.dataset.clip === id;
+      b.setAttribute("aria-selected", String(on));
+      b.tabIndex = on ? 0 : -1;
+    });
+    if (!host || !c) return;
+    const label = `Objects in view over time in clip ${id}, per 5 seconds`;
+    if (!chart) chart = new LineChart(host, { x: c.t, series: seriesFor(c), ariaLabel: label, xFormat: mmss, yLabel: "objects in view" });
+    else chart.setData(c.t, seriesFor(c), label);
+  };
+  tabs.forEach((b, i) => {
+    b.addEventListener("click", () => show(b.dataset.clip!));
+    b.addEventListener("keydown", (e) => {
+      const j = e.key === "ArrowRight" ? (i + 1) % tabs.length : e.key === "ArrowLeft" ? (i - 1 + tabs.length) % tabs.length : -1;
+      if (j < 0) return;
+      e.preventDefault();
+      tabs[j].focus();
+      show(tabs[j].dataset.clip!);
+    });
+  });
+  if (data.clips[0]) show(data.clips[0].id);
+
+  // density small multiples
+  document.querySelectorAll<HTMLElement>(".density-chart").forEach((el) => {
+    const id = el.dataset.clip!;
+    const d = data.density[id];
+    const meta = data.clips.find((c) => c.id === id);
+    if (!d || !meta) return;
+    new LineChart(el, {
+      x: d.t,
+      series: [
+        { key: "vehicles", label: "vehicles", values: d.vehicles, color: "#eeebe2" },
+        { key: "people", label: "people", values: d.people, color: "#f3c316" },
+      ],
+      height: 170,
+      area: "vehicles",
+      legend: false,
+      xFormat: (t) => clock(meta.start, t),
+      xTickStep: 60,
+      ariaLabel: `Vehicles and people in view over time in clip ${id}`,
+    });
+  });
+</script>

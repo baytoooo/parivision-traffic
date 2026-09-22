@@ -1,0 +1,81 @@
+---
+// Markup for one synced player: video, signal lamp, event timeline, risk
+// curve, event table. src/scripts/player.ts fills it in.
+import "../styles/player.css";
+
+interface Props {
+  name: string;
+  poster?: string;
+  title?: string;
+}
+const { name, poster, title = "" } = Astro.props;
+---
+<div class="player" data-player={name}>
+  <div class="pl-stage">
+    <div class="pl-video frame">
+      <video data-el="video" controls muted playsinline preload="none" poster={poster}></video>
+      <p class="pl-video-error" data-el="video-error" hidden>The video did not load. The timeline and table below still work.</p>
+    </div>
+    <aside class="pl-side" aria-label="State at the playhead">
+      <div class="pl-clock">
+        <span class="pl-k">Playhead</span>
+        <span class="pl-time mono"><span data-el="time">0:00.0</span><span class="pl-dur"> / <span data-el="dur">0:00.0</span></span></span>
+      </div>
+      <div class="pl-signal">
+        <div class="lamp" data-el="lamp" data-phase="none" aria-hidden="true">
+          <i class="l-red"></i><i class="l-amber"></i><i class="l-green"></i>
+        </div>
+        <div>
+          <span class="pl-k">Signal (SB)</span>
+          <span class="pl-phase mono" data-el="phase">no signal data</span>
+        </div>
+      </div>
+      <div class="pl-now">
+        <span class="pl-k">Events now</span>
+        <span class="pl-now-list" data-el="now">none</span>
+      </div>
+      <div class="pl-summary mono" data-el="summary"></div>
+      <p class="pl-title mono" data-el="title">{title}</p>
+    </aside>
+  </div>
+
+  <div class="pl-controls">
+    <fieldset class="seg" data-el="mode">
+      <legend class="visually-hidden">Show on the timeline</legend>
+      <label><input type="radio" name={`mode-${name}`} value="pred" checked /><span>Predictions</span></label>
+      <label><input type="radio" name={`mode-${name}`} value="labels" /><span>Our labels</span></label>
+      <label><input type="radio" name={`mode-${name}`} value="both" /><span>Both</span></label>
+    </fieldset>
+    <label class="check"><input type="checkbox" data-el="all" /> All 14 classes</label>
+    <span class="pl-legend" aria-hidden="true">
+      <span><i class="sw pred"></i>prediction</span>
+      <span class="lg-label"><i class="sw label"></i>label</span>
+      <span><i class="sw sig"></i>signal</span>
+    </span>
+  </div>
+
+  <div class="pl-charts panel">
+    <div data-el="timeline"></div>
+    <div data-el="risk"></div>
+  </div>
+
+  <div class="pl-table">
+    <div class="table-scroll">
+      <table>
+        <caption class="visually-hidden" data-el="table-cap">Events</caption>
+        <thead>
+          <tr>
+            <th scope="col">Start</th>
+            <th scope="col">End</th>
+            <th scope="col" class="num">Length</th>
+            <th scope="col">Class</th>
+            <th scope="col" class="zone">Zone</th>
+            <th scope="col" class="note">Note and actors</th>
+            <th scope="col" class="num" data-el="match-head" hidden>Best IoU with a label</th>
+          </tr>
+        </thead>
+        <tbody data-el="rows"></tbody>
+      </table>
+    </div>
+  </div>
+</div>

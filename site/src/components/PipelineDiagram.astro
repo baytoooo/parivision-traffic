@@ -1,0 +1,198 @@
+---
+// Pipeline diagram, drawn twice from the same stage list: a wide version for
+// desktop and a tall one for phones. Pure SVG, no script.
+
+type Kind = "data" | "learned" | "rule" | "geometry" | "output";
+interface Node {
+  id: string;
+  title: string;
+  lines: string[];
+  kind: Kind;
+  // wide layout: column and row
+  c: number;
+  r: number;
+}
+
+const partA: Node[] = [
+  { id: "a1", title: "4K clip", lines: ["3840x2160, 29.97 fps", "H.264 4:2:2 10-bit"], kind: "data", c: 0, r: 0 },
+  { id: "a2", title: "Sample", lines: ["every 3rd frame, about 10 fps", "resized to 1920x1080"], kind: "rule", c: 1, r: 0 },
+  { id: "a3", title: "Detect", lines: ["YOLO26m, COCO weights", "1280 px input, conf 0.1"], kind: "learned", c: 2, r: 0 },
+  { id: "a4", title: "Track", lines: ["ByteTrack, one tracker per", "group: vehicles, people, bikes"], kind: "rule", c: 3, r: 0 },
+  { id: "a5", title: "Register", lines: ["SIFT + MAGSAC homography", "clip -> reference view"], kind: "geometry", c: 0, r: 1 },
+  { id: "a6", title: "Trajectories", lines: ["foot points in reference px", "smoothed speed and heading"], kind: "geometry", c: 1, r: 1 },
+  { id: "a7", title: "Rules", lines: ["per actor and interval", "6 classes emitted"], kind: "rule", c: 2, r: 1 },
+  { id: "a8", title: "Segments", lines: ["union per class, no overlap", "[start, end, class]"], kind: "output", c: 3, r: 1 },
+];
+const inputs: Node[] = [
+  { id: "s1", title: "Signal phase", lines: ["lamp colour on the median", "head, every 0.2 s"], kind: "rule", c: 1, r: 2 },
+  { id: "s2", title: "Scene layout", lines: ["stop line, crossings, lanes,", "bus stop; drawn once"], kind: "geometry", c: 2, r: 2 },
+];
+const partB: Node[] = [
+  { id: "b1", title: "Frames as they arrive", lines: ["causal: past frames only", "every 3rd, 1280 px wide"], kind: "data", c: 0, r: 3 },
+  { id: "b2", title: "Detect and track", lines: ["YOLO26s at 960 px, conf 0.2", "same ByteTrack setup"], kind: "learned", c: 1, r: 3 },
+  { id: "b3", title: "Look ahead", lines: ["constant velocity, 4 s", "footprints in reference px"], kind: "geometry", c: 2, r: 3 },
+  { id: "b4", title: "Risk per frame", lines: ["pair hazards combined, EMA", "0.5 = contact likely in 5 s"], kind: "output", c: 3, r: 3 },
+];
+const all = [...partA, ...inputs, ...partB];
+
+// ---------- wide layout
+const BW = 250, BH = 74, GX = 36, X0 = 110;
+const ROW_Y = [48, 186, 300, 468];
+const WW = X0 + 4 * BW + 3 * GX + 10;
+const WH = ROW_Y[3] + BH + 26;
+const wx = (n: Node) => X0 + n.c * (BW + GX);
+const wy = (n: Node) => ROW_Y[n.r];
+const get = (id: string) => all.find((n) => n.id === id)!;
+
+type Path = { d: string; cls: string };
+const wPaths: Path[] = [];
+const hArrow = (a: string, b: string) => {
+  const A = get(a), B = get(b);
+  const y = wy(A) + BH / 2;
+  wPaths.push({ d: `M${wx(A) + BW},${y} L${wx(B) - 6},${y}`, cls: "flow" });
+};
+["a1", "a2", "a3", "a4"].forEach((id, i, arr) => i && hArrow(arr[i - 1], id));
+["a5", "a6", "a7", "a8"].forEach((id, i, arr) => i && hArrow(arr[i - 1], id));
+["b1", "b2", "b3", "b4"].forEach((id, i, arr) => i && hArrow(arr[i - 1], id));
+{
+  // a4 -> a5: down, back left along the "return lane", down
+  const A = get("a4"), B = get("a5");
+  const midY = (wy(A) + BH + wy(B)) / 2;
+  const ax = wx(A) + BW / 2, bx = wx(B) + BW / 2;
+  wPaths.push({ d: `M${ax},${wy(A) + BH} L${ax},${midY} L${bx},${midY} L${bx},${wy(B) - 6}`, cls: "flow" });
+}
+{
+  // sampled frames -> signal reader; signal + scene -> rules; scene -> register
+  const S1 = get("s1"), S2 = get("s2"), R = get("a7"), REG = get("a5"), SMP = get("a2");
+  const sx = wx(S1) + 40;
+  wPaths.push({ d: `M${wx(SMP) + 30},${wy(SMP) + BH} L${wx(SMP) + 30},${wy(SMP) + BH + 16} L${wx(S1) - 16},${wy(SMP) + BH + 16} L${wx(S1) - 16},${wy(S1) + BH / 2} L${wx(S1) - 6},${wy(S1) + BH / 2}`, cls: "side" });
+  wPaths.push({ d: `M${wx(S1) + BW},${wy(S1) + 22} L${wx(R) + 30},${wy(S1) + 22} L${wx(R) + 30},${wy(R) + BH + 6}`, cls: "side" });
+  wPaths.push({ d: `M${wx(S2) + BW / 2 + 40},${wy(S2)} L${wx(S2) + BW / 2 + 40},${wy(R) + BH + 6}`, cls: "side" });
+  wPaths.push({ d: `M${wx(S2) + BW},${wy(S2) + BH / 2} L${wx(S2) + BW + 18},${wy(S2) + BH / 2} L${wx(S2) + BW + 18},${wy(S2) + BH + 14} L${wx(REG) + BW / 2},${wy(S2) + BH + 14} L${wx(REG) + BW / 2},${wy(REG) + BH + 6}`, cls: "side" });
+  void sx;
+}
+const medianY = ROW_Y[3] - 40;
+
+// ---------- tall layout
+const TW = 360, TBW = 300, TX = 44, TBH = 70, TG = 30;
+const tallOrder = ["a1", "a2", "s1", "a3", "a4", "a5", "s2", "a6", "a7", "a8", "b1", "b2", "b3", "b4"];
+const tallSide = new Set(["s1", "s2"]);
+const tPos: Record<string, { x: number; y: number; w: number }> = {};
+let ty = 34;
+for (const id of tallOrder) {
+  if (id === "b1") ty += 66;
+  const side = tallSide.has(id);
+  tPos[id] = { x: side ? TX + 40 : TX, y: ty, w: side ? TBW - 40 : TBW };
+  ty += TBH + TG;
+}
+const TH = ty + 4;
+const tPaths: Path[] = [];
+const chainA = ["a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8"];
+const chainB = ["b1", "b2", "b3", "b4"];
+for (const chain of [chainA, chainB]) {
+  for (let i = 1; i < chain.length; i++) {
+    const A = tPos[chain[i - 1]], B = tPos[chain[i]];
+    const x = TX + 16;
+    tPaths.push({ d: `M${x},${A.y + TBH} L${x},${B.y - 6}`, cls: "flow" });
+  }
+}
+tPaths.push({ d: `M${tPos.s1.x + tPos.s1.w - 30},${tPos.a2.y + TBH} L${tPos.s1.x + tPos.s1.w - 30},${tPos.s1.y - 6}`, cls: "side" });
+tPaths.push({ d: `M${tPos.s1.x + tPos.s1.w},${tPos.s1.y + TBH / 2} L${TW - 8},${tPos.s1.y + TBH / 2} L${TW - 8},${tPos.a7.y + TBH / 2} L${TX + TBW + 6},${tPos.a7.y + TBH / 2}`, cls: "side" });
+tPaths.push({ d: `M${tPos.s2.x + tPos.s2.w - 30},${tPos.s2.y + TBH} L${tPos.s2.x + tPos.s2.w - 30},${tPos.a6.y - 6}`, cls: "side" });
+const tMedian = tPos.b1.y - 44;
+
+const kindLabel: Record<Kind, string> = { data: "input", learned: "learned", rule: "rule", geometry: "geometry", output: "output" };
+---
+<figure class="pipe">
+  <svg class="pipe-wide" viewBox={`0 0 ${WW} ${WH}`} role="img" aria-labelledby="pipe-title pipe-desc">
+    <title id="pipe-title">Pipeline diagram</title>
+    <desc id="pipe-desc">Part A: 4K clip, sample every 3rd frame, YOLO26m detection, ByteTrack, registration to the reference view, trajectories, rules using the signal phase and the scene layout, then per-class segments. Part B: frames as they arrive, YOLO26s detection and tracking, constant-velocity look-ahead, risk per frame.</desc>
+    <defs>
+      <marker id="arr" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" class="arr-head" /></marker>
+      <marker id="arr-s" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" class="arr-head side" /></marker>
+    </defs>
+    <text x="0" y={ROW_Y[0] + 14} class="part">PART A</text>
+    <text x="0" y={ROW_Y[0] + 30} class="part-sub">events</text>
+    <text x="0" y={ROW_Y[3] + 14} class="part">PART B</text>
+    <text x="0" y={ROW_Y[3] + 30} class="part-sub">risk, causal</text>
+    <line x1="0" x2={WW} y1={medianY} y2={medianY} class="median" />
+    <line x1="0" x2={WW} y1={medianY + 5} y2={medianY + 5} class="median" />
+    {wPaths.map((p) => <path d={p.d} class={`edge ${p.cls}`} marker-end={p.cls === "side" ? "url(#arr-s)" : "url(#arr)"} />)}
+    {all.map((n) => (
+      <g transform={`translate(${wx(n)},${wy(n)})`} class={`node ${n.kind}`}>
+        <rect width={BW} height={BH} rx="3" />
+        <rect width="5" height={BH} class="stripe" />
+        <text x="18" y="24" class="n-title">{n.title}</text>
+        <text x={BW - 10} y="22" class="n-kind" text-anchor="end">{kindLabel[n.kind]}</text>
+        {n.lines.map((l, i) => <text x="18" y={44 + i * 15} class="n-line">{l}</text>)}
+      </g>
+    ))}
+  </svg>
+
+  <svg class="pipe-tall" viewBox={`0 0 ${TW} ${TH}`} role="img" aria-labelledby="pipe-title-t pipe-desc">
+    <title id="pipe-title-t">Pipeline diagram</title>
+    <defs>
+      <marker id="arr-t" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" class="arr-head" /></marker>
+      <marker id="arr-ts" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" class="arr-head side" /></marker>
+    </defs>
+    <text x={TX} y="20" class="part">PART A <tspan class="part-sub">events</tspan></text>
+    <line x1="0" x2={TW} y1={tMedian} y2={tMedian} class="median" />
+    <line x1="0" x2={TW} y1={tMedian + 5} y2={tMedian + 5} class="median" />
+    <text x={TX} y={tPos.b1.y - 14} class="part">PART B <tspan class="part-sub">risk, causal</tspan></text>
+    {tPaths.map((p) => <path d={p.d} class={`edge ${p.cls}`} marker-end={p.cls === "side" ? "url(#arr-ts)" : "url(#arr-t)"} />)}
+    {tallOrder.map((id) => {
+      const n = get(id);
+      const p = tPos[id];
+      return (
+        <g transform={`translate(${p.x},${p.y})`} class={`node ${n.kind}`}>
+          <rect width={p.w} height={TBH} rx="3" />
+          <rect width="5" height={TBH} class="stripe" />
+          <text x="18" y="23" class="n-title">{n.title}</text>
+          <text x={p.w - 10} y="21" class="n-kind" text-anchor="end">{kindLabel[n.kind]}</text>
+          {n.lines.map((l, i) => <text x="18" y={42 + i * 15} class="n-line">{l}</text>)}
+        </g>
+      );
+    })}
+  </svg>
+  <figcaption>
+    <span class="key"><i class="k learned"></i>learned (pretrained, not fine-tuned)</span>
+    <span class="key"><i class="k rule"></i>hand-written rule</span>
+    <span class="key"><i class="k geometry"></i>geometry</span>
+    <span class="key"><i class="k io"></i>input or output</span>
+  </figcaption>
+</figure>
+
+<style>
+  .pipe { margin: 0; }
+  .pipe svg { width: 100%; height: auto; }
+  .pipe-tall { display: none; max-width: 420px; margin: 0 auto; }
+  @media (max-width: 1079px) {
+    .pipe-wide { display: none; }
+    .pipe-tall { display: block; }
+  }
+  .part { font: 700 13px var(--font-mono); fill: var(--paint); letter-spacing: .08em; }
+  .part-sub { font: 400 11px var(--font-mono); fill: var(--muted); letter-spacing: .02em; }
+  .median { stroke: var(--zebra); stroke-width: 2; }
+  .edge { fill: none; stroke: var(--paint-2); stroke-width: 1.6; }
+  .edge.flow { stroke-dasharray: 10 6; }
+  .edge.side { stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 3 4; }
+  .arr-head { fill: var(--paint-2); }
+  .arr-head.side { fill: var(--muted); }
+  .node rect { fill: var(--asphalt-2); stroke: var(--line-2); }
+  .node .stripe { stroke: none; fill: var(--line-2); }
+  .node.learned .stripe { fill: var(--zebra); }
+  .node.learned > rect:first-child { stroke: var(--zebra); }
+  .node.rule .stripe { fill: var(--paint); }
+  .node.geometry .stripe { fill: var(--island); }
+  .node.output > rect:first-child { stroke: var(--paint); }
+  .n-title { font: 800 14px var(--font-text); fill: var(--paint); }
+  .n-kind { font: 400 9.5px var(--font-mono); fill: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .node.learned .n-kind { fill: var(--zebra); }
+  .n-line { font: 400 10.5px var(--font-mono); fill: var(--paint-2); }
+  figcaption { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+  .key { display: inline-flex; align-items: center; gap: 7px; }
+  .k { width: 5px; height: 16px; display: inline-block; background: var(--line-2); }
+  .k.learned { background: var(--zebra); }
+  .k.rule { background: var(--paint); }
+  .k.geometry { background: var(--island); }
+</style>

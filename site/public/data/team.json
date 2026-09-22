@@ -1,0 +1,33 @@
+{
+ "team": "PariVision",
+ "university": "Webster University in Tashkent",
+ "members": [
+  {
+   "name": "Amal Karimov",
+   "role": "Captain. TODO: second role",
+   "did": ["TODO: what Amal built, one line each"],
+   "github": "TODO",
+   "linkedin": "TODO",
+   "portfolio": "TODO",
+   "projects": [{"name": "TODO", "url": "TODO"}]
+  },
+  {
+   "name": "Komronbek Qodirov",
+   "role": "TODO",
+   "did": ["TODO: what Komronbek built, one line each"],
+   "github": "TODO",
+   "linkedin": "TODO",
+   "portfolio": "TODO",
+   "projects": [{"name": "TODO", "url": "TODO"}]
+  },
+  {
+   "name": "Aziza Adizova",
+   "role": "TODO",
+   "did": ["TODO: what Aziza built, one line each"],
+   "github": "TODO",
+   "linkedin": "TODO",
+   "portfolio": "TODO",
+   "projects": [{"name": "TODO", "url": "TODO"}]
+  }
+ ]
+}

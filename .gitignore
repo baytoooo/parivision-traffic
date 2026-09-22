@@ -1,0 +1,17 @@
+.venv/
+kit/
+weights_cache/
+__pycache__/
+*.pyc
+.DS_Store
+runs/
+cache/
+out/
+*.part
+.claude/
+site/node_modules/
+site/dist/
+site/.astro/
+site/.qa-snap/
+site/.vercel/
+labels/dev_labels_partial.json

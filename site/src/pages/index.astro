@@ -1,0 +1,220 @@
+---
+import Base from "../layouts/Base.astro";
+import { CLASSES } from "../lib/classes";
+import { loadAblations, loadClips, loadMetrics } from "../lib/data";
+import { fmtNum, isNum } from "../lib/format";
+
+const clips = loadClips();
+const metrics = loadMetrics();
+const ablations = loadAblations();
+
+const scoreA = metrics?.part_a?.score_a;
+const runtime = ablations[0]?.runtime_x;
+const emitted = CLASSES.filter((c) => c.status === "on").length;
+const footageMin = clips.reduce((a, c) => a + c.duration, 0) / 60;
+const hero = clips[0];
+const times = clips.map((c) => c.local_time.split(" ")[1]).filter(Boolean).sort();
+
+const steps = [
+  { n: "01", t: "Sample", d: "Every 3rd 4K frame, resized to 1920 px" },
+  { n: "02", t: "Detect and track", d: "YOLO26m, then ByteTrack per object group" },
+  { n: "03", t: "Register", d: "Homography into one reference view" },
+  { n: "04", t: "Read the signal", d: "Lamp colour on the median head, every 0.2 s" },
+  { n: "05", t: "Apply rules", d: "Trajectories plus phase give per-actor intervals" },
+  { n: "06", t: "Segments", d: "Merged per class, written as [start, end, class]" },
+];
+
+const pages = [
+  { href: "/approach", n: "A", t: "Approach", d: "The pipeline, what is learned and what is a rule, and the rule for every class." },
+  { href: "/eda", n: "B", t: "EDA", d: "What is in the footage: counts over time, signal cycles, where people actually cross." },
+  { href: "/results", n: "C", t: "Results", d: "Annotated sample clips with click-to-seek timelines, risk curves, F1 and failures." },
+  { href: "/demo", n: "D", t: "Demo", d: "Upload a clip of this junction, up to 2 minutes, and get the events back." },
+  { href: "/dashboard", n: "E", t: "Dashboard", d: "All sample clips in one operator view, with a filterable event log." },
+  { href: "/report", n: "F", t: "Report", d: "One page: what worked, what did not, what we would do next." },
+  { href: "/team", n: "G", t: "Team", d: "Who we are and who did what." },
+];
+---
+<Base title="PariVision" description="Traffic events and accident risk from a fixed 4K camera over a Tashkent junction. WIUT Hackathon 2026, CV track." active="home">
+  <section class="hero wrap">
+    <div class="hero-text">
+      <p class="kicker">WIUT Hackathon 2026, CV track</p>
+      <h1>Traffic events at one Tashkent junction, read from a fixed 4K camera.</h1>
+      <p class="lede">
+        We are PariVision, three students from Webster University in Tashkent. Our system watches a signalised junction and does two jobs: it lists traffic events as time segments with a class, and it gives a per-frame risk that an accident starts within the next 5 seconds.
+      </p>
+      <div class="hero-cta">
+        <a class="btn primary" href="/demo">Try the demo</a>
+        <a class="btn" href="/results">See the sample clips</a>
+      </div>
+    </div>
+
+    <figure class="hero-clip">
+      <div class="frame clip-frame">
+        <div class="zebra-edge" aria-hidden="true"></div>
+        <video id="hero-video" muted loop playsinline preload="none" poster="/media/loop_poster.jpg" aria-label="Looping annotated clip from the junction camera">
+          <source src="/media/loop.mp4" type="video/mp4" />
+        </video>
+        <div class="hud mono" aria-hidden="true">
+          <span>{hero?.id}</span>
+          <span>{hero?.local_time}</span>
+          <span>{hero ? `${hero.width}x${hero.height} @ ${hero.fps}` : ""}</span>
+        </div>
+        <button class="clip-toggle" type="button" id="hero-toggle" aria-pressed="false">Play</button>
+      </div>
+      <figcaption>A short loop from {hero?.id} with our boxes and track ids drawn on. The camera sits on a building at the south-west corner and looks north-west up the avenue.</figcaption>
+    </figure>
+  </section>
+
+  <section class="wrap numbers" aria-label="Key numbers">
+    <div class="stats">
+      <div class="stat">
+        <span class={`v${isNum(scoreA) ? "" : " is-tbd"}`}>{fmtNum(scoreA)}</span>
+        <span class="k">Dev-set Score A</span>
+        <span class="s">mean F1 over classes, IoU 0.3 / 0.5 / 0.7</span>
+      </div>
+      <div class="stat">
+        <span class={`v${isNum(runtime) ? "" : " is-tbd"}`}>{isNum(runtime) ? runtime.toFixed(2) : fmtNum(runtime)}<small>min</small></span>
+        <span class="k">Processing per minute of 4K video</span>
+        <span class="s">{ablations[0]?.name ?? "submitted configuration"}</span>
+      </div>
+      <div class="stat">
+        <span class="v">{emitted}<small>of {CLASSES.length}</small></span>
+        <span class="k">Event classes we emit</span>
+        <span class="s">the rest stay off until they work</span>
+      </div>
+      <div class="stat">
+        <span class="v">{footageMin.toFixed(1)}<small>min</small></span>
+        <span class="k">Footage we labelled by hand</span>
+        <span class="s">{clips.length} clips, {times[0]} to {times[times.length - 1]}</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="section wrap how">
+    <div class="sec-head">
+      <span class="num" aria-hidden="true">Part A in six steps</span>
+      <h2>From frames to event segments</h2>
+      <p>Part B runs next to it: a smaller detector at 10 Hz, only past frames, time-to-collision between road users turned into a probability.</p>
+    </div>
+    <ol class="steps" role="list">
+      {steps.map((s) => (
+        <li>
+          <span class="step-n mono">{s.n}</span>
+          <span class="step-t">{s.t}</span>
+          <span class="step-d">{s.d}</span>
+        </li>
+      ))}
+    </ol>
+    <p><a href="/approach">The full pipeline, with the rule for each class</a></p>
+  </section>
+
+  <section class="section wrap">
+    <div class="sec-head">
+      <span class="num" aria-hidden="true">Everything else</span>
+      <h2>Where to look</h2>
+    </div>
+    <ul class="pages" role="list">
+      {pages.map((p) => (
+        <li>
+          <a href={p.href}>
+            <span class="pg-n mono" aria-hidden="true">{p.n}</span>
+            <span class="pg-t">{p.t}</span>
+            <span class="pg-d">{p.d}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </section>
+</Base>
+
+<style>
+  .hero {
+    display: grid; gap: 28px; padding-top: clamp(28px, 5vw, 64px); padding-bottom: 28px; align-items: center;
+  }
+  @media (min-width: 1000px) {
+    .hero { grid-template-columns: minmax(0, 21fr) minmax(0, 20fr); gap: 44px; }
+  }
+  .hero h1 { margin-bottom: 18px; font-size: clamp(2.3rem, 1.3rem + 2.8vw, 3.7rem); }
+  .hero-cta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+
+  .clip-frame { aspect-ratio: 16 / 9; }
+  .clip-frame .zebra-edge { position: absolute; top: 0; left: 0; right: 0; z-index: 2; height: 6px; }
+  .clip-frame video { width: 100%; height: 100%; object-fit: cover; }
+  .hud {
+    position: absolute; left: 0; right: 0; bottom: 0; display: flex; flex-wrap: wrap; gap: 4px 16px;
+    padding: 18px 12px 8px; font-size: .7rem; color: var(--paint);
+    background: linear-gradient(transparent, rgba(0,0,0,.75));
+  }
+  .clip-toggle {
+    position: absolute; top: 14px; right: 10px; z-index: 3;
+    background: rgba(14,15,17,.8); color: var(--paint); border: 1px solid var(--line-2); border-radius: 2px;
+    font: 600 .75rem var(--font-mono); padding: 5px 9px; cursor: pointer; min-height: 30px;
+  }
+  .clip-toggle:hover { border-color: var(--zebra); color: var(--zebra); }
+
+  .numbers { padding-block: 8px 12px; }
+
+  .steps {
+    list-style: none; margin: 0 0 18px; padding: 0; display: grid; gap: 1px;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    background: var(--line); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden;
+  }
+  .steps li { background: var(--asphalt-2); padding: 14px 14px 16px; display: grid; gap: 4px; align-content: start; position: relative; }
+  .steps li::before { content: ""; position: absolute; left: 0; top: 0; width: 100%; height: 3px; background: var(--stripes-tight); opacity: 0; transition: opacity .2s; }
+  .steps li:hover::before { opacity: 1; }
+  .step-n { font-size: .72rem; color: var(--zebra); }
+  .step-t { font-weight: 800; font-size: 1.02rem; }
+  .step-d { font-size: .86rem; color: var(--paint-2); line-height: 1.4; }
+
+  .pages { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  .pages a {
+    display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 14px; row-gap: 3px;
+    padding: 14px 16px 16px; text-decoration: none; color: var(--paint);
+    background: var(--asphalt-2); border: 1px solid var(--line); border-radius: var(--radius); height: 100%;
+  }
+  .pages a:hover { border-color: var(--zebra); }
+  .pages a:hover .pg-n { background: var(--zebra); color: var(--asphalt); }
+  .pg-n {
+    grid-row: 1 / 3; width: 34px; height: 34px; display: grid; place-items: center; border: 2px solid var(--paint);
+    border-radius: 3px; font-weight: 600; font-size: .95rem;
+  }
+  .pg-t { font-weight: 800; font-size: 1.08rem; }
+  .pg-d { font-size: .88rem; color: var(--paint-2); line-height: 1.4; }
+</style>
+
+<script>
+  const v = document.getElementById("hero-video") as HTMLVideoElement | null;
+  const btn = document.getElementById("hero-toggle") as HTMLButtonElement | null;
+  if (v && btn) {
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let userPaused = reduced;
+    const sync = () => {
+      const playing = !v.paused;
+      btn.textContent = playing ? "Pause" : "Play";
+      btn.setAttribute("aria-pressed", String(playing));
+    };
+    v.addEventListener("play", sync);
+    v.addEventListener("pause", sync);
+    btn.addEventListener("click", () => {
+      if (v.paused) {
+        userPaused = false;
+        v.preload = "auto";
+        v.play().catch(() => undefined);
+      } else {
+        userPaused = true;
+        v.pause();
+      }
+    });
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver((entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting && !userPaused) {
+            v.preload = "auto";
+            v.play().catch(() => undefined);
+          } else if (!e.isIntersecting && !v.paused) v.pause();
+        }
+      }, { threshold: 0.25 }).observe(v);
+    }
+    sync();
+  }
+</script>

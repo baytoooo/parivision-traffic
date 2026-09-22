@@ -1,0 +1,198 @@
+---
+import Base from "../layouts/Base.astro";
+import ClipPanel from "../components/ClipPanel.astro";
+import { UPLOAD_MAX_BYTES, UPLOAD_MAX_SECONDS } from "../config";
+
+const maxMb = Math.round(UPLOAD_MAX_BYTES / 1024 / 1024);
+const maxMin = UPLOAD_MAX_SECONDS / 60;
+---
+<Base title="Demo" description="Upload a short clip of the junction and get traffic events, a risk curve, annotated playback and a JSON file back." active="demo">
+  <header class="page-head wrap">
+    <p class="kicker">Demo</p>
+    <h1>Run it on a clip</h1>
+    <p class="lede">Upload an .mp4 from this camera, or pick one of our sample clips. You get the event timeline, the annotated video, the risk curve, an event table and a JSON file. Our rules are drawn for this one junction, so footage from anywhere else will give wrong answers.</p>
+  </header>
+
+  <section class="wrap">
+    <div class="server panel" id="server" data-state="checking" role="status" aria-live="polite">
+      <span class="srv-dot" aria-hidden="true"></span>
+      <div class="srv-body">
+        <strong id="server-text">Checking the analysis server</strong>
+        <span id="server-detail" class="srv-detail"></span>
+      </div>
+      <div class="srv-actions">
+        <button type="button" class="btn small" id="btn-use-mock" hidden>Use the example replay now</button>
+        <button type="button" class="btn small" id="btn-retry-server" hidden>Try the server again</button>
+      </div>
+    </div>
+    <p class="replay-note" id="replay-note" hidden>Replay mode: the page plays back a stored example job for a 30 s clip instead of analysing anything. Your file, if you pick one, stays in your browser.</p>
+  </section>
+
+  <section class="wrap inputs" id="inputs" aria-label="Choose a clip">
+    <div class="panel panel-pad upload">
+      <h2 class="h-card">Upload a clip</h2>
+      <label class="drop" id="drop" for="file-input">
+        <input type="file" id="file-input" accept=".mp4,video/mp4" class="visually-hidden" />
+        <span class="drop-icon" aria-hidden="true"></span>
+        <span class="drop-main">Choose an .mp4 or drop it here</span>
+        <span class="drop-sub">Up to {maxMin} minutes and {maxMb} MB. 1080p is recommended; 4K works but is slower.</span>
+      </label>
+      <div class="file-info" id="file-info" hidden>
+        <dl>
+          <div><dt>File</dt><dd id="file-name" class="mono"></dd></div>
+          <div><dt>Size</dt><dd id="file-size" class="mono"></dd></div>
+          <div><dt>Length</dt><dd id="file-dur" class="mono"></dd></div>
+        </dl>
+        <button type="button" class="btn small ghost" id="btn-clear">Remove</button>
+      </div>
+      <p class="file-msg" id="file-msg" role="status" hidden></p>
+      <button type="button" class="btn primary wide" id="btn-analyse" disabled>Analyse this clip</button>
+    </div>
+
+    <div class="panel panel-pad">
+      <h2 class="h-card">Or try a sample clip</h2>
+      <p class="samples-note" id="samples-note">Loading sample clips</p>
+      <div class="samples" id="samples"></div>
+      <ul class="facts-list">
+        <li>A 30 s clip takes TBD s on the server.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="wrap" id="job" hidden aria-labelledby="job-heading">
+    <div class="panel panel-pad jobpanel">
+      <div class="job-top">
+        <div>
+          <p class="job-k mono">Job <span id="job-mode"></span></p>
+          <h2 id="job-heading" class="h-card"><span id="job-title"></span></h2>
+        </div>
+        <button type="button" class="btn small ghost" id="btn-cancel">Cancel</button>
+      </div>
+      <div class="bar" id="bar" role="progressbar" aria-label="Job progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" style="--p:0%">
+        <span class="bar-fill"></span>
+      </div>
+      <div class="job-line mono">
+        <span id="pct">0%</span>
+        <span id="stage" class="job-stage">starting</span>
+        <span id="eta"></span>
+        <span>elapsed <span id="elapsed">0 s</span></span>
+      </div>
+      <p class="job-warn" id="job-warn" hidden></p>
+      <ol class="stages" id="stages" aria-label="Stages"></ol>
+    </div>
+  </section>
+
+  <section class="wrap" id="job-error" hidden tabindex="-1" aria-labelledby="err-heading">
+    <div class="panel panel-pad errpanel" role="alert">
+      <h2 id="err-heading" class="h-card">The job did not finish</h2>
+      <p id="job-error-msg"></p>
+      <button type="button" class="btn" id="btn-err-back">Back to the start</button>
+    </div>
+  </section>
+
+  <section class="wrap result" id="result" hidden aria-labelledby="result-heading">
+    <div class="result-top">
+      <div>
+        <p class="kicker">Result</p>
+        <h2 id="result-heading" tabindex="-1"><span id="result-title"></span></h2>
+        <p class="result-mode mono" id="result-mode"></p>
+      </div>
+      <div class="result-actions">
+        <button type="button" class="btn primary" id="btn-download">Download JSON</button>
+        <button type="button" class="btn" id="btn-again">Run another clip</button>
+      </div>
+    </div>
+    <ClipPanel name="demo" poster="/media/demo_poster.jpg" />
+  </section>
+</Base>
+
+<style is:global>
+  .server { display: flex; align-items: center; gap: 14px; padding: 12px 16px; flex-wrap: wrap; }
+  .srv-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--sig-off); flex: none; }
+  .server[data-state="online"] .srv-dot { background: var(--sig-green); box-shadow: 0 0 10px var(--sig-green); }
+  .server[data-state="waking"] .srv-dot { background: var(--sig-amber); box-shadow: 0 0 10px var(--sig-amber); animation: blink 1.2s steps(2) infinite; }
+  .server[data-state="checking"] .srv-dot { background: var(--sig-amber); }
+  .server[data-state="offline"] .srv-dot { background: var(--sig-red); box-shadow: 0 0 10px var(--sig-red); }
+  .server[data-state="mock"] .srv-dot { background: var(--paint-2); }
+  @keyframes blink { 50% { opacity: .25; } }
+  .srv-body { display: grid; gap: 2px; flex: 1; min-width: 200px; }
+  .srv-detail { font-size: .85rem; color: var(--paint-2); }
+  .srv-actions { display: flex; gap: 8px; }
+  .replay-note { margin: 10px 0 0; font-size: .88rem; color: var(--zebra); font-family: var(--font-mono); }
+
+  .inputs { display: grid; gap: 14px; margin-top: 18px; }
+  @media (min-width: 900px) { .inputs { grid-template-columns: 3fr 2fr; align-items: start; } }
+  .h-card { font-size: 1.25rem; margin: 0 0 12px; }
+
+  .drop {
+    display: grid; justify-items: center; text-align: center; gap: 6px; cursor: pointer;
+    border: 2px dashed var(--line-2); border-radius: var(--radius); padding: 26px 16px;
+    background: repeating-linear-gradient(90deg, transparent 0 22px, rgba(238,235,226,.025) 22px 44px);
+  }
+  .drop:hover, .drop.over { border-color: var(--zebra); }
+  .drop:focus-within { outline: 2px solid var(--zebra); outline-offset: 2px; }
+  .drop.disabled { opacity: .5; cursor: not-allowed; }
+  .drop-icon { width: 44px; height: 30px; background: var(--stripes-tight); clip-path: polygon(0 100%, 50% 0, 100% 100%); opacity: .9; }
+  .drop-main { font-weight: 800; font-size: 1.05rem; }
+  .drop-sub { font-size: .85rem; color: var(--paint-2); }
+
+  .file-info { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; margin-top: 12px; }
+  .file-info dl { margin: 0; display: grid; gap: 2px; min-width: 0; }
+  .file-info dl div { display: flex; gap: 10px; }
+  .file-info dt { width: 56px; flex: none; font-family: var(--font-mono); font-size: .7rem; text-transform: uppercase; color: var(--muted); padding-top: 3px; }
+  .file-info dd { margin: 0; font-size: .85rem; overflow-wrap: anywhere; }
+  .file-msg { margin: 10px 0 0; font-size: .88rem; padding: 8px 10px; border-left: 3px solid var(--line-2); background: var(--asphalt-3); }
+  .file-msg[data-kind="err"] { border-left-color: var(--sig-red); }
+  .file-msg[data-kind="warn"] { border-left-color: var(--sig-amber); }
+  .file-msg[data-kind="ok"] { border-left-color: var(--sig-green); }
+  .btn.wide { width: 100%; margin-top: 14px; }
+
+  .samples-note { font-size: .85rem; color: var(--paint-2); }
+  .samples { display: grid; gap: 8px; }
+  .sample {
+    display: grid; gap: 2px; text-align: left; cursor: pointer; padding: 11px 14px; min-height: 52px;
+    background: var(--asphalt-3); border: 1px solid var(--line-2); border-left: 4px solid var(--zebra); border-radius: var(--radius); color: var(--paint); font: inherit;
+  }
+  .sample:hover { border-color: var(--zebra); }
+  .sample[disabled] { opacity: .45; cursor: not-allowed; }
+  .s-label { font-weight: 700; }
+  .s-meta { font-size: .72rem; color: var(--muted); }
+  .facts-list { margin: 14px 0 0; padding-left: 1.1em; font-size: .85rem; color: var(--muted); }
+
+  #job, #job-error, .result { margin-top: 18px; }
+  .job-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+  .job-k { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 4px; }
+  .bar { position: relative; height: 18px; background: var(--asphalt-0); border: 1px solid var(--line-2); border-radius: 2px; overflow: hidden; margin: 6px 0 10px; }
+  .bar-fill {
+    position: absolute; inset: 0 auto 0 0; width: var(--p);
+    background: repeating-linear-gradient(-45deg, var(--zebra) 0 12px, var(--paint) 12px 24px);
+    background-size: 34px 34px;
+    transition: width .35s ease;
+    animation: stripes 1s linear infinite;
+  }
+  @keyframes stripes { to { background-position: 34px 0; } }
+  .job-line { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: .8rem; color: var(--paint-2); }
+  #pct { color: var(--paint); font-weight: 600; }
+  .job-stage { color: var(--zebra); }
+  .job-warn { color: var(--sig-amber); font-size: .85rem; margin: 8px 0 0; }
+  .stages { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 4px; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); counter-reset: st; }
+  .stages li { counter-increment: st; font-size: .85rem; padding: 6px 10px 6px 34px; position: relative; border: 1px solid var(--line); border-radius: 2px; color: var(--muted); }
+  .stages li::before { content: counter(st); position: absolute; left: 9px; top: 6px; font: 600 .72rem var(--font-mono); }
+  .stages li.done { color: var(--paint-2); }
+  .stages li.done::before { content: ""; width: 10px; height: 5px; border-left: 2px solid var(--paint-2); border-bottom: 2px solid var(--paint-2); transform: rotate(-45deg); top: 11px; left: 11px; }
+  .stages li.active { color: var(--asphalt); background: var(--zebra); border-color: var(--zebra); font-weight: 700; }
+
+  .errpanel { border-left: 4px solid var(--sig-red); }
+  .errpanel p { color: var(--paint-2); }
+
+  .result-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 14px; margin: 30px 0 14px; }
+  .result-top h2 { margin: 0; overflow-wrap: anywhere; }
+  .result-top h2:focus { outline: none; }
+  .result-mode { margin: 6px 0 0; font-size: .78rem; color: var(--muted); }
+  .result-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+</style>
+
+<script>
+  import { initDemo } from "../scripts/demo";
+  initDemo();
+</script>

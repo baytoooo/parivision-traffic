@@ -1,0 +1,98 @@
+---
+import Base from "../layouts/Base.astro";
+import { loadTeam } from "../lib/data";
+import { isTodo } from "../lib/format";
+
+const team = loadTeam();
+const initials = (n: string) => n.split(/\s+/).map((p) => p[0]).join("").slice(0, 2).toUpperCase();
+const links = (m: (typeof team.members)[number]) => [
+  { k: "GitHub", v: m.github },
+  { k: "LinkedIn", v: m.linkedin },
+  { k: "Portfolio", v: m.portfolio },
+];
+const todoCount = team.members.reduce((acc, m) => {
+  const vals = [m.role, m.github, m.linkedin, m.portfolio, ...m.did, ...m.projects.flatMap((p) => [p.name, p.url])];
+  return acc + vals.filter((v) => isTodo(v) || /\bTODO\b/.test(v)).length;
+}, 0);
+---
+<Base title="Team" description={`${team.team}: who we are and who did what.`} active="team">
+  <header class="page-head wrap">
+    <p class="kicker">Team</p>
+    <h1>{team.team}</h1>
+    <p class="lede">{team.members.length} students from {team.university}. This page is read from <code>public/data/team.json</code>.</p>
+    {todoCount > 0 && <p class="todo-note mono">{todoCount} fields still say TODO. They are marked with a dashed yellow border.</p>}
+  </header>
+
+  <section class="wrap">
+    <ul class="members" role="list">
+      {team.members.map((m, i) => (
+        <li class="member panel">
+          <div class="m-top">
+            <span class="m-badge mono" aria-hidden="true">{initials(m.name)}</span>
+            <div>
+              <h2 class="m-name">{m.name}</h2>
+              <p class:list={["m-role", { todo: /\bTODO\b/.test(m.role) }]}>{m.role}</p>
+            </div>
+            <span class="m-no mono" aria-hidden="true">{String(i + 1).padStart(2, "0")}</span>
+          </div>
+
+          <h3 class="m-h">What they did</h3>
+          <ul class="m-did">
+            {m.did.map((d) => <li class:list={{ todo: /\bTODO\b/.test(d) }}>{d}</li>)}
+          </ul>
+
+          <h3 class="m-h">Links</h3>
+          <ul class="m-links" role="list">
+            {links(m).map((l) => (
+              <li>
+                {isTodo(l.v) ? (
+                  <span class="chip todo" title="Fill in team.json">{l.k}: TODO</span>
+                ) : (
+                  <a class="chip on" href={l.v} rel="noopener" target="_blank">{l.k}</a>
+                )}
+              </li>
+            ))}
+          </ul>
+
+          <h3 class="m-h">Previous projects</h3>
+          <ul class="m-proj" role="list">
+            {m.projects.map((p) => (
+              <li>
+                {isTodo(p.url) || isTodo(p.name) ? (
+                  <span class="todo-inline">{isTodo(p.name) ? "TODO: project name" : p.name}{isTodo(p.url) ? ", link TODO" : ""}</span>
+                ) : (
+                  <a href={p.url} rel="noopener" target="_blank">{p.name}</a>
+                )}
+              </li>
+            ))}
+          </ul>
+        </li>
+      ))}
+    </ul>
+  </section>
+</Base>
+
+<style>
+  .todo-note { font-size: .8rem; color: var(--zebra); margin: 0; }
+  .members { list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); }
+  .member { padding: 18px 18px 20px; position: relative; overflow: hidden; }
+  .member::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 5px; background: var(--stripes); }
+  .m-top { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center; margin: 6px 0 14px; }
+  .m-badge {
+    width: 52px; height: 52px; display: grid; place-items: center; border: 2px solid var(--paint); border-radius: 4px;
+    font-size: 1.05rem; font-weight: 600;
+  }
+  .m-name { margin: 0; font-size: 1.35rem; }
+  .m-role { margin: 2px 0 0; color: var(--paint-2); font-size: .92rem; }
+  .m-no { align-self: start; font-size: .75rem; color: var(--muted); }
+  .m-h { font-family: var(--font-mono); font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 16px 0 6px; }
+  .m-did { margin: 0; padding-left: 1.1em; display: grid; gap: 4px; font-size: .92rem; color: var(--paint-2); }
+  .m-links { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+  .m-links a.chip { text-decoration: none; }
+  .m-links a.chip:hover { border-color: var(--zebra); color: var(--zebra); }
+  .m-proj { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; font-size: .92rem; }
+  .todo, .todo-inline {
+    outline: 1px dashed var(--zebra); outline-offset: 3px; color: var(--zebra); font-family: var(--font-mono); font-size: .82rem;
+  }
+  .m-did li.todo { outline-offset: 2px; }
+</style>

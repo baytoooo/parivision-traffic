@@ -1,0 +1,10 @@
+# CPU-only image for the Hugging Face Space; torch/torchvision come from the CPU wheel index (see demo/Dockerfile).
+ultralytics==8.4.159
+lap==0.5.13
+numpy>=1.24,<2.3
+scipy>=1.11,<1.16
+opencv-python-headless>=4.8,<4.13
+av>=14,<16
+fastapi==0.115.*
+uvicorn[standard]==0.34.*
+python-multipart==0.0.*

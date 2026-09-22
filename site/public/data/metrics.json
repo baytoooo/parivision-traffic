@@ -1,0 +1,459 @@
+{
+ "model_score": "TBD",
+ "part_a": {
+  "score_a": "TBD",
+  "classes": [
+   "accident",
+   "near_miss",
+   "red_light",
+   "wrong_way",
+   "illegal_u_turn",
+   "stopped_vehicle",
+   "jaywalking",
+   "failure_to_yield",
+   "illegal_turn",
+   "solid_line_crossing",
+   "stop_line",
+   "congestion",
+   "road_obstacle",
+   "fire_smoke"
+  ],
+  "per_class": {
+   "accident": {
+    "0.3": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "0.5": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "0.7": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "f1_mean": "TBD"
+   },
+   "near_miss": {
+    "0.3": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "0.5": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "0.7": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "f1_mean": "TBD"
+   },
+   "red_light": {
+    "0.3": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "0.5": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "0.7": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "f1_mean": "TBD"
+   },
+   "wrong_way": {
+    "0.3": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "0.5": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "0.7": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "f1_mean": "TBD"
+   },
+   "illegal_u_turn": {
+    "0.3": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "0.5": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "0.7": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "f1_mean": "TBD"
+   },
+   "stopped_vehicle": {
+    "0.3": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "0.5": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "0.7": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "f1_mean": "TBD"
+   },
+   "jaywalking": {
+    "0.3": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "0.5": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "0.7": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "f1_mean": "TBD"
+   },
+   "failure_to_yield": {
+    "0.3": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "0.5": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "0.7": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "f1_mean": "TBD"
+   },
+   "illegal_turn": {
+    "0.3": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "0.5": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "0.7": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "f1_mean": "TBD"
+   },
+   "solid_line_crossing": {
+    "0.3": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "0.5": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "0.7": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "f1_mean": "TBD"
+   },
+   "stop_line": {
+    "0.3": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "0.5": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "0.7": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "f1_mean": "TBD"
+   },
+   "congestion": {
+    "0.3": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "0.5": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "0.7": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "f1_mean": "TBD"
+   },
+   "road_obstacle": {
+    "0.3": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "0.5": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "0.7": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "f1_mean": "TBD"
+   },
+   "fire_smoke": {
+    "0.3": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "0.5": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "0.7": {
+     "tp": "TBD",
+     "fp": "TBD",
+     "fn": "TBD",
+     "precision": "TBD",
+     "recall": "TBD",
+     "f1": "TBD"
+    },
+    "f1_mean": "TBD"
+   }
+  },
+  "micro": {
+   "0.3": {
+    "tp": "TBD",
+    "fp": "TBD",
+    "fn": "TBD",
+    "precision": "TBD",
+    "recall": "TBD",
+    "f1": "TBD"
+   },
+   "0.5": {
+    "tp": "TBD",
+    "fp": "TBD",
+    "fn": "TBD",
+    "precision": "TBD",
+    "recall": "TBD",
+    "f1": "TBD"
+   },
+   "0.7": {
+    "tp": "TBD",
+    "fp": "TBD",
+    "fn": "TBD",
+    "precision": "TBD",
+    "recall": "TBD",
+    "f1": "TBD"
+   }
+  },
+  "class_agnostic": {
+   "0.3": {
+    "tp": "TBD",
+    "fp": "TBD",
+    "fn": "TBD",
+    "precision": "TBD",
+    "recall": "TBD",
+    "f1": "TBD"
+   },
+   "0.5": {
+    "tp": "TBD",
+    "fp": "TBD",
+    "fn": "TBD",
+    "precision": "TBD",
+    "recall": "TBD",
+    "f1": "TBD"
+   },
+   "0.7": {
+    "tp": "TBD",
+    "fp": "TBD",
+    "fn": "TBD",
+    "precision": "TBD",
+    "recall": "TBD",
+    "f1": "TBD"
+   }
+  },
+  "per_video": null
+ },
+ "part_b": null,
+ "missing_videos": [],
+ "extra_videos": [],
+ "team": "PariVision"
+}

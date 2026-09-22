@@ -1,0 +1,28 @@
+---
+import { EVENT_NAME, PREDICTIONS_URL, REPO_URL, TEAM_NAME, WEIGHTS_URL } from "../config";
+import { isTodo } from "../lib/format";
+
+const links = [
+  { label: "Repository", href: REPO_URL },
+  { label: "Model weights", href: WEIGHTS_URL },
+  { label: "predictions_samples.json", href: PREDICTIONS_URL },
+];
+---
+<footer class="site-footer">
+  <div class="zebra-rule thin" aria-hidden="true"></div>
+  <div class="wrap">
+    <div class="foot-team">
+      {TEAM_NAME}
+      <span>{EVENT_NAME}. Webster University in Tashkent.</span>
+    </div>
+    <nav class="foot-links" aria-label="Project files">
+      {links.map((l) =>
+        isTodo(l.href) ? (
+          <span class="pending">{l.label}</span>
+        ) : (
+          <a href={l.href} class="mono">{l.label}</a>
+        )
+      )}
+    </nav>
+  </div>
+</footer>

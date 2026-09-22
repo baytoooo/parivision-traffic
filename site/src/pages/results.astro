@@ -1,0 +1,320 @@
+---
+import Base from "../layouts/Base.astro";
+import ClipPanel from "../components/ClipPanel.astro";
+import SecHead from "../components/SecHead.astro";
+import { CLASSES, CLASS_BY_KEY, className } from "../lib/classes";
+import { loadAblations, loadAllResults, loadClips, loadExamples, loadFailures, loadMetrics } from "../lib/data";
+import { fmtInt, fmtNum, fmtTime, isNum } from "../lib/format";
+
+const clips = loadClips();
+const results = loadAllResults();
+const metrics = loadMetrics();
+const examples = loadExamples();
+const failures = loadFailures();
+const ablations = loadAblations();
+
+const tabs = clips.map((c) => ({
+  id: c.id,
+  time: c.local_time.split(" ")[1] ?? c.local_time,
+  light: c.light.split(",")[0],
+  events: results[c.id]?.events?.length ?? 0,
+  poster: c.poster,
+  video: c.video,
+  duration: c.duration,
+  label: `${c.id}, ${c.local_time}, ${c.light}`,
+}));
+
+const pa = metrics?.part_a;
+const scoredClasses = (pa?.classes?.length ? pa.classes : Object.keys(pa?.per_class ?? {})).slice();
+const order = CLASSES.map((c) => c.key);
+scoredClasses.sort((a, b) => (order.indexOf(a) + 100 * +(order.indexOf(a) < 0)) - (order.indexOf(b) + 100 * +(order.indexOf(b) < 0)));
+const f1Rows = scoredClasses.map((k) => {
+  const pc = pa!.per_class[k];
+  return {
+    key: k,
+    name: className(k),
+    status: CLASS_BY_KEY[k]?.status ?? "on",
+    f03: pc?.["0.3"]?.f1,
+    f05: pc?.["0.5"]?.f1,
+    f07: pc?.["0.7"]?.f1,
+    mean: pc?.f1_mean,
+    tp: pc?.["0.5"]?.tp,
+    fp: pc?.["0.5"]?.fp,
+    fn: pc?.["0.5"]?.fn,
+  };
+});
+const partB = metrics?.part_b ?? null;
+const exampleHref = (clip: string, t: number) => `/results?clip=${encodeURIComponent(clip)}&t=${t}#player`;
+const statusText = { on: "emitted", off: "rule off", none: "no rule" } as const;
+---
+<Base title="Results" description="Annotated sample clips with event timelines, risk curves, per-class F1 on our dev labels, failure cases and ablations." active="results">
+  <header class="page-head wrap">
+    <p class="kicker">Results</p>
+    <h1>What it finds on the four sample clips</h1>
+    <p class="lede">Pick a clip. The timeline has one lane per class; click a segment to jump the video there. The risk curve under it is Part B, and it follows the playhead. Switch to "Our labels" to see what we marked by hand.</p>
+  </header>
+
+  <section class="wrap" id="player" aria-label="Sample clip player">
+    <div class="clip-tabs" role="tablist" aria-label="Sample clips">
+      {tabs.map((t, i) => (
+        <button type="button" role="tab" id={`tab-${t.id}`} aria-controls="clip-panel" aria-selected={i === 0 ? "true" : "false"} tabindex={i === 0 ? 0 : -1} data-clip={t.id} aria-label={t.label}>
+          <span class="ct-id mono">{t.id}</span>
+          <span class="ct-meta"><span class="mono">{t.time}</span> {t.light}</span>
+          <span class="ct-n mono">{t.events} events</span>
+        </button>
+      ))}
+    </div>
+    <div id="clip-panel" role="tabpanel" aria-labelledby={`tab-${tabs[0]?.id}`}>
+      <ClipPanel name="results" poster={tabs[0]?.poster} />
+      <p class="load-error" hidden>Could not load the results for this clip.</p>
+    </div>
+  </section>
+
+  <section class="section wrap" id="scores">
+    <SecHead num="01" title="Per-class F1 on our dev labels">
+      <p>From <code>evaluate.py --json</code>. Predicted and labelled segments of a class are matched one to one by temporal IoU at 0.3, 0.5 and 0.7. Score A is the mean over classes of the mean F1 over the three thresholds; a class counts if it is in the labels or the predictions.</p>
+    </SecHead>
+    <div class="stats score-stats">
+      <div class="stat"><span class={`v${isNum(metrics?.model_score) ? "" : " is-tbd"}`}>{fmtNum(metrics?.model_score)}</span><span class="k">Model score</span><span class="s">0.7 A + 0.3 B, or A alone without accidents</span></div>
+      <div class="stat"><span class={`v${isNum(pa?.score_a) ? "" : " is-tbd"}`}>{fmtNum(pa?.score_a)}</span><span class="k">Score A, events</span><span class="s">{scoredClasses.length} classes averaged</span></div>
+      <div class="stat"><span class={`v${partB && isNum(partB.score_b) ? "" : " is-tbd"}`}>{partB ? fmtNum(partB.score_b) : "n/a"}</span><span class="k">Score B, risk</span><span class="s">{partB ? "AP, alarm F1 and lead time" : "no accidents in the sample clips"}</span></div>
+      <div class="stat"><span class={`v${partB && isNum(partB.mtta_sec) ? "" : " is-tbd"}`}>{partB ? fmtNum(partB.mtta_sec, 1) : "n/a"}{partB && isNum(partB.mtta_sec) && <small>s</small>}</span><span class="k">Mean time to accident</span><span class="s">how early the alarm fires</span></div>
+    </div>
+    {!partB && <p class="note-line">Part B is not scored here: evaluate.py returns null when the labels contain no accident, and none of the four sample clips has one.</p>}
+    <div class="table-scroll f1-table">
+      <table>
+        <caption class="visually-hidden">Per-class F1 at three IoU thresholds</caption>
+        <thead>
+          <tr>
+            <th scope="col">Class</th>
+            <th scope="col" class="num">F1 @0.3</th>
+            <th scope="col" class="num">F1 @0.5</th>
+            <th scope="col" class="num">F1 @0.7</th>
+            <th scope="col" class="num">Mean F1</th>
+            <th scope="col" class="num">TP / FP / FN @0.5</th>
+          </tr>
+        </thead>
+        <tbody>
+          {f1Rows.map((r) => (
+            <tr>
+              <th scope="row" class="f1-cls"><span>{r.name}</span> <span class={`chip ${r.status}`}>{statusText[r.status]}</span></th>
+              <td class={`num${isNum(r.f03) ? "" : " tbd"}`}>{fmtNum(r.f03, 2)}</td>
+              <td class={`num${isNum(r.f05) ? "" : " tbd"}`}>{fmtNum(r.f05, 2)}</td>
+              <td class={`num${isNum(r.f07) ? "" : " tbd"}`}>{fmtNum(r.f07, 2)}</td>
+              <td class={`num mean${isNum(r.mean) ? "" : " tbd"}`}>
+                {isNum(r.mean) && <span class="bar" style={`--w:${Math.round(r.mean * 100)}%`} aria-hidden="true"></span>}
+                {fmtNum(r.mean, 2)}
+              </td>
+              <td class={`num${isNum(r.tp) ? "" : " tbd"}`}>{fmtInt(r.tp)} / {fmtInt(r.fp)} / {fmtInt(r.fn)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  {examples.length > 0 && (
+    <section class="section wrap" id="examples">
+      <SecHead num="02" title="One example per class we emit">
+        <p>Each card opens the clip at that moment in the player above.</p>
+      </SecHead>
+      <ul class="cards" role="list">
+        {examples.map((ex) => (
+          <li class="card">
+            <a href={exampleHref(ex.clip, ex.t)} data-jump data-clip={ex.clip} data-t={ex.t}>
+              <span class="frame card-img"><img src={ex.thumb} alt="" loading="lazy" decoding="async" width="480" height="270" /></span>
+              <span class="card-body">
+                <span class="card-cls">{className(ex.label)}</span>
+                <span class="card-when mono">{ex.clip} at {fmtTime(ex.t)}</span>
+                <span class="card-cap">{ex.caption}</span>
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )}
+
+  {failures.length > 0 && (
+    <section class="section wrap" id="failures">
+      <SecHead num="03" title="Where it goes wrong">
+        <p>Cases we found by comparing predictions with our labels. They are in the table and on the timeline above too.</p>
+      </SecHead>
+      <ul class="fails" role="list">
+        {failures.map((f) => (
+          <li class="fail panel">
+            <div class="fail-top">
+              <span class="chip">{f.kind}</span>
+              <span class="mono fail-where">{className(f.label)}, {f.clip} at {fmtTime(f.t)}</span>
+            </div>
+            <p>{f.caption}</p>
+            <a class="btn small ghost" href={exampleHref(f.clip, f.t)} data-jump data-clip={f.clip} data-t={f.t}>Open at {fmtTime(f.t)}</a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )}
+
+  <section class="section wrap" id="ablations">
+    <SecHead num="04" title="Ablations">
+      <p>Same rules, same dev labels, one change per row. Runtime is processing time divided by clip length, so 1.0x means as long as the video.</p>
+    </SecHead>
+    <div class="table-scroll">
+      <table>
+        <caption class="visually-hidden">Ablations</caption>
+        <thead>
+          <tr><th scope="col">Configuration</th><th scope="col" class="num">Score A</th><th scope="col" class="num">Runtime</th><th scope="col">Note</th></tr>
+        </thead>
+        <tbody>
+          {ablations.map((a, i) => (
+            <tr class={i === 0 ? "chosen" : ""}>
+              <th scope="row" class="mono abl-name">{a.name}{i === 0 && <span class="chip on">submitted</span>}</th>
+              <td class={`num${isNum(a.score_a) ? "" : " tbd"}`}>{fmtNum(a.score_a, 3)}</td>
+              <td class={`num${isNum(a.runtime_x) ? "" : " tbd"}`}>{isNum(a.runtime_x) ? `${a.runtime_x.toFixed(2)}x` : fmtNum(a.runtime_x)}</td>
+              <td class="abl-note">{a.note}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <script type="application/json" id="clips-data" set:html={JSON.stringify(tabs)} />
+</Base>
+
+<style>
+  .clip-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
+  @media (min-width: 860px) { .clip-tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  .clip-tabs button {
+    text-align: left; display: grid; gap: 2px; padding: 10px 12px 12px; cursor: pointer;
+    background: var(--asphalt-2); color: var(--paint); border: 1px solid var(--line); border-radius: var(--radius);
+    font: inherit; position: relative; min-width: 0;
+  }
+  .clip-tabs button:hover { border-color: var(--line-2); }
+  .clip-tabs button[aria-selected="true"] { border-color: var(--paint-2); background: var(--asphalt-3); }
+  .clip-tabs button[aria-selected="true"]::after { content: ""; position: absolute; left: -1px; right: -1px; bottom: -1px; height: 4px; background: var(--stripes-tight); }
+  .ct-id { font-weight: 600; font-size: 1.05rem; }
+  .ct-meta { font-size: .8rem; color: var(--paint-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ct-n { font-size: .7rem; color: var(--muted); }
+  .load-error { color: var(--sig-red); }
+
+  .score-stats { margin-bottom: 14px; }
+  .note-line { font-size: .88rem; color: var(--muted); max-width: 80ch; }
+  .f1-table { margin-top: 12px; }
+  .f1-cls { font-weight: 600; white-space: nowrap; }
+  .f1-cls .chip { margin-left: 6px; font-weight: 400; }
+  td.mean { position: relative; min-width: 110px; }
+  td.mean .bar { position: absolute; left: 12px; right: 12px; bottom: 5px; height: 3px; background: linear-gradient(90deg, var(--zebra) var(--w), var(--line) var(--w)); }
+
+  .cards { list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+  .card a { display: grid; text-decoration: none; color: inherit; background: var(--asphalt-2); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; height: 100%; }
+  .card a:hover { border-color: var(--zebra); }
+  .card-img { border: 0; border-radius: 0; aspect-ratio: 16 / 9; }
+  .card-img img { width: 100%; height: 100%; object-fit: cover; }
+  .card-body { display: grid; gap: 4px; padding: 10px 12px 14px; }
+  .card-cls { font-weight: 800; }
+  .card-when { font-size: .74rem; color: var(--zebra); }
+  .card-cap { font-size: .86rem; color: var(--paint-2); line-height: 1.4; }
+
+  .fails { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); }
+  .fail { padding: 14px 16px 16px; display: grid; gap: 8px; align-content: start; }
+  .fail p { margin: 0; color: var(--paint-2); font-size: .92rem; }
+  .fail-top { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .fail-where { font-size: .76rem; color: var(--muted); }
+  .fail .btn { justify-self: start; }
+
+  .abl-name { font-weight: 600; font-size: .85rem; white-space: nowrap; }
+  .abl-name .chip { margin-left: 8px; font-family: var(--font-mono); }
+  .abl-note { color: var(--paint-2); font-size: .88rem; min-width: 240px; }
+  tr.chosen { background: rgba(243,195,22,.05); }
+</style>
+
+<script>
+  import { Player } from "../scripts/player";
+  import { RISK_MERGE_GAP, RISK_THETA } from "../config";
+  import type { ClipResult } from "../lib/types";
+
+  interface Tab { id: string; poster: string; video: string; label: string; duration: number }
+  const tabs: Tab[] = JSON.parse(document.getElementById("clips-data")!.textContent || "[]");
+  const root = document.querySelector<HTMLElement>('[data-player="results"]')!;
+  const panel = document.getElementById("clip-panel")!;
+  const errBox = panel.querySelector<HTMLElement>(".load-error")!;
+  const buttons = [...document.querySelectorAll<HTMLButtonElement>(".clip-tabs [role=tab]")];
+  const cache = new Map<string, Promise<ClipResult>>();
+  let player: Player | null = null;
+  let current = "";
+
+  function getResult(id: string) {
+    if (!cache.has(id)) {
+      cache.set(
+        id,
+        fetch(`/data/results/${id}.json`).then((r) => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return r.json();
+        }),
+      );
+    }
+    return cache.get(id)!;
+  }
+
+  async function select(id: string, t = 0, play = false) {
+    const tab = tabs.find((x) => x.id === id) ?? tabs[0];
+    if (!tab) return;
+    buttons.forEach((b) => {
+      const on = b.dataset.clip === tab.id;
+      b.setAttribute("aria-selected", String(on));
+      b.tabIndex = on ? 0 : -1;
+    });
+    panel.setAttribute("aria-labelledby", `tab-${tab.id}`);
+    panel.setAttribute("aria-busy", "true");
+    try {
+      const result = await getResult(tab.id);
+      errBox.hidden = true;
+      const src = { result, video: tab.video, poster: tab.poster, title: tab.label };
+      if (!player) player = new Player(root, src, { theta: RISK_THETA, mergeGap: RISK_MERGE_GAP });
+      else if (current !== tab.id) player.load(src);
+      current = tab.id;
+      if (t > 0 || play) player.seek(t, play);
+      const url = new URL(location.href);
+      url.searchParams.set("clip", tab.id);
+      if (t > 0) url.searchParams.set("t", String(t));
+      else url.searchParams.delete("t");
+      history.replaceState(null, "", url);
+    } catch (e) {
+      errBox.hidden = false;
+      console.error(e);
+    } finally {
+      panel.removeAttribute("aria-busy");
+    }
+  }
+
+  buttons.forEach((b, i) => {
+    b.addEventListener("click", () => select(b.dataset.clip!));
+    b.addEventListener("keydown", (e) => {
+      let j = -1;
+      if (e.key === "ArrowRight") j = (i + 1) % buttons.length;
+      else if (e.key === "ArrowLeft") j = (i - 1 + buttons.length) % buttons.length;
+      else if (e.key === "Home") j = 0;
+      else if (e.key === "End") j = buttons.length - 1;
+      if (j < 0) return;
+      e.preventDefault();
+      buttons[j].focus();
+      select(buttons[j].dataset.clip!);
+    });
+  });
+
+  document.querySelectorAll<HTMLAnchorElement>("a[data-jump]").forEach((a) => {
+    a.addEventListener("click", (e) => {
+      e.preventDefault();
+      const t = Number(a.dataset.t);
+      select(a.dataset.clip!, t, true).then(() => player?.focusVideo());
+    });
+  });
+
+  const params = new URLSearchParams(location.search);
+  const startClip = params.get("clip") ?? tabs[0]?.id;
+  const startT = Number(params.get("t") ?? 0) || 0;
+  select(startClip!, startT).then(() => {
+    if (location.hash === "#player" && startT > 0) player?.focusVideo();
+  });
+</script>

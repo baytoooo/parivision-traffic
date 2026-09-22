@@ -1,0 +1,57 @@
+---
+interface Props {
+  active: string;
+}
+const { active } = Astro.props;
+const links = [
+  { href: "/", key: "home", label: "Home" },
+  { href: "/approach", key: "approach", label: "Approach" },
+  { href: "/eda", key: "eda", label: "EDA" },
+  { href: "/results", key: "results", label: "Results" },
+  { href: "/dashboard", key: "dashboard", label: "Dashboard" },
+  { href: "/report", key: "report", label: "Report" },
+  { href: "/team", key: "team", label: "Team" },
+  { href: "/demo", key: "demo", label: "Try the demo", cls: "nav-demo" },
+];
+---
+<header class="site-header">
+  <div class="zebra-edge" aria-hidden="true"></div>
+  <div class="wrap bar">
+    <a class="brand" href="/" aria-label="PariVision, home">
+      <svg class="brand-mark" viewBox="0 0 30 20" aria-hidden="true">
+        <rect x="0" y="0" width="4" height="20" fill="#f3c316" />
+        <rect x="6.5" y="0" width="4" height="20" fill="#eeebe2" />
+        <rect x="13" y="0" width="4" height="20" fill="#f3c316" />
+        <rect x="19.5" y="0" width="4" height="20" fill="#eeebe2" />
+        <rect x="26" y="0" width="4" height="20" fill="#f3c316" />
+      </svg>
+      <span>PariVision</span>
+    </a>
+    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav">
+      <span class="bars" aria-hidden="true"></span> Menu
+    </button>
+    <nav class="nav" id="site-nav" aria-label="Main">
+      {links.map((l) => (
+        <a href={l.href} class={l.cls} aria-current={active === l.key ? "page" : undefined}>{l.label}</a>
+      ))}
+    </nav>
+  </div>
+</header>
+
+<script>
+  const btn = document.querySelector<HTMLButtonElement>(".menu-btn");
+  const nav = document.getElementById("site-nav");
+  if (btn && nav) {
+    const set = (open: boolean) => {
+      btn.setAttribute("aria-expanded", String(open));
+      nav.classList.toggle("open", open);
+    };
+    btn.addEventListener("click", () => set(btn.getAttribute("aria-expanded") !== "true"));
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && nav.classList.contains("open")) {
+        set(false);
+        btn.focus();
+      }
+    });
+  }
+</script>

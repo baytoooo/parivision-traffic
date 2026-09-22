@@ -1,0 +1,58 @@
+[
+ {
+  "label": "jaywalking",
+  "clip": "C3896",
+  "t": 43.1,
+  "thumb": "/media/examples/jay_1.jpg",
+  "caption": "Pedestrian leaves the kerb and cuts across the junction box."
+ },
+ {
+  "label": "jaywalking",
+  "clip": "C3897",
+  "t": 28.1,
+  "thumb": "/media/examples/jay_2.jpg",
+  "caption": "Pedestrian leaves the kerb and cuts across the junction box."
+ },
+ {
+  "label": "failure_to_yield",
+  "clip": "C3896",
+  "t": 35.6,
+  "thumb": "/media/examples/fty_1.jpg",
+  "caption": "Right-turning car crosses the west zebra while a pedestrian is on it."
+ },
+ {
+  "label": "failure_to_yield",
+  "clip": "C3897",
+  "t": 26.8,
+  "thumb": "/media/examples/fty_2.jpg",
+  "caption": "Right-turning car crosses the west zebra while a pedestrian is on it."
+ },
+ {
+  "label": "red_light",
+  "clip": "C3896",
+  "t": 218.8,
+  "thumb": "/media/examples/red_1.jpg",
+  "caption": "Southbound car crosses the stop line after the lamp turned red."
+ },
+ {
+  "label": "stop_line",
+  "clip": "C3896",
+  "t": 72.7,
+  "thumb": "/media/examples/stopline_1.jpg",
+  "caption": "Car stops with its front on the north crossing during red."
+ },
+ {
+  "label": "stopped_vehicle",
+  "clip": "C3897",
+  "t": 40.9,
+  "thumb": "/media/examples/stopped_1.jpg",
+  "caption": "Car stands in the kerb lane for more than 10 s, not in the queue."
+ },
+ {
+  "label": "wrong_way",
+  "clip": "C3896",
+  "t": 204.6,
+  "thumb": "/media/examples/wrong_1.jpg",
+  "caption": "Scooter rides against the flow in the northbound kerb lane."
+ }
+]

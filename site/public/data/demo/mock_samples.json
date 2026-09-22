@@ -1,0 +1,17 @@
+[
+ {
+  "name": "c3896_crossing",
+  "label": "Busy crossing, midday",
+  "seconds": 30
+ },
+ {
+  "name": "c3897_red_phase",
+  "label": "Red phase and queue, midday",
+  "seconds": 30
+ },
+ {
+  "name": "c3905_dusk",
+  "label": "Dusk, headlights on",
+  "seconds": 30
+ }
+]

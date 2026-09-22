@@ -1,0 +1,45 @@
+---
+import "@fontsource-variable/overpass";
+import "@fontsource/overpass-mono/400.css";
+import "@fontsource/overpass-mono/600.css";
+import "../styles/global.css";
+import SiteHeader from "../components/SiteHeader.astro";
+import SiteFooter from "../components/SiteFooter.astro";
+import { DATA_IS_MOCK, TEAM_NAME } from "../config";
+
+interface Props {
+  title: string;
+  description: string;
+  active?: string;
+  wide?: boolean;
+}
+const { title, description, active = "" } = Astro.props;
+const fullTitle = title === TEAM_NAME ? `${TEAM_NAME}: traffic events at a Tashkent junction` : `${title} | ${TEAM_NAME}`;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#151618" />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content="/media/C3896_poster.jpg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <SiteHeader active={active} />
+    {DATA_IS_MOCK && (
+      <div class="mock-note" role="note">
+        <div class="wrap"><b>Mock data.</b> Numbers and events on this site are placeholders until our final run. Values we do not know yet say TBD.</div>
+      </div>
+    )}
+    <main id="main">
+      <slot />
+    </main>
+    <SiteFooter />
+  </body>
+</html>

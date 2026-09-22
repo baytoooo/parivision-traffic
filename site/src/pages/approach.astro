@@ -1,0 +1,202 @@
+---
+import Base from "../layouts/Base.astro";
+import PipelineDiagram from "../components/PipelineDiagram.astro";
+import SecHead from "../components/SecHead.astro";
+import { CLASSES } from "../lib/classes";
+import { loadAblations } from "../lib/data";
+import { fmtNum, isNum } from "../lib/format";
+
+const ablations = loadAblations();
+const runtime = ablations[0]?.runtime_x;
+const statusText = { on: "emitted", off: "rule off", none: "no rule" } as const;
+
+const learned = [
+  { part: "A", stage: "Detection", how: "Learned", detail: "YOLO26m with COCO weights, not fine-tuned. 1280 px input, confidence 0.1. Keeps person, bicycle, car, motorcycle, bus, truck and six animal classes." },
+  { part: "A", stage: "Tracking", how: "Algorithm", detail: "ByteTrack (the Ultralytics implementation), one tracker per group so boxes of different kinds never get linked. High 0.3, low 0.1, new track 0.4, 2 s buffer." },
+  { part: "A", stage: "Registration", how: "Geometry", detail: "SIFT, 6000 features, on a per-pixel median of a few frames; homography by MAGSAC with 3 px tolerance, against a midday and a dusk reference." },
+  { part: "A", stage: "Signal phase", how: "Rule", detail: "Lamp patches mapped from the reference view; the lamp with the strongest colour contrast (at least 18 on a 0 to 255 scale) wins." },
+  { part: "A", stage: "Rider or pedestrian", how: "Rule", detail: "A person whose box is at least 30% covered by a bicycle or motorbike box, or whose median speed is above 110 px/s, is a rider." },
+  { part: "A", stage: "Events", how: "Rules", detail: "One function per class on trajectories, zones and phase. Thresholds were tuned by hand on our dev labels." },
+  { part: "B", stage: "Detection", how: "Learned", detail: "YOLO26s with COCO weights at 960 px, confidence 0.2, every 3rd frame (10 Hz)." },
+  { part: "B", stage: "Risk", how: "Hand-built model", detail: "Constant-velocity look-ahead of 4 s from 0.8 s of history; pair hazard from closing speed and footprint overlap, plus hard braking; combined as independent events, EMA 0.35." },
+];
+
+const licences = [
+  { what: "YOLO26m, YOLO26s weights", who: "Ultralytics", lic: "AGPL-3.0", use: "Detectors for Part A and Part B" },
+  { what: "COCO 2017", who: "COCO Consortium", lic: "Annotations CC BY 4.0; images under their Flickr licences", use: "What the detector weights were trained on. We did not train on it ourselves." },
+  { what: "ByteTrack (Ultralytics implementation)", who: "Zhang et al.; Ultralytics", lic: "MIT (original), AGPL-3.0 (Ultralytics)", use: "Multi-object tracking" },
+  { what: "OpenCV", who: "OpenCV team", lic: "Apache 2.0", use: "Decoding, SIFT, homography, colour" },
+  { what: "PyTorch", who: "PyTorch Foundation", lic: "BSD-3-Clause", use: "Runs the detectors" },
+  { what: "Sample clips C3896, C3897, C3902, C3905", who: "Hackathon organisers", lic: "Competition use only", use: "Our dev set, labelled by us" },
+];
+---
+<Base title="Approach" description="How the PariVision pipeline works: detection, tracking, registration, signal reading and one rule per event class." active="approach">
+  <header class="page-head wrap">
+    <p class="kicker">Approach</p>
+    <h1>A detector, a tracker, one reference view and a rule per class</h1>
+    <p class="lede">Nothing here is trained by us. The only learned parts are two COCO-pretrained detectors; everything after them is geometry and rules we wrote for this one junction. This page has enough detail to rebuild it.</p>
+  </header>
+
+  <section class="section wrap" id="pipeline">
+    <SecHead num="01" title="Pipeline" />
+    <PipelineDiagram />
+  </section>
+
+  <section class="section wrap" id="scene">
+    <SecHead num="02" title="The scene">
+      <p>A camcorder on a tripod, high on a building at the south-west corner, looking north-west up the avenue. We describe everything in one 1920x1080 reference view; the 4K clips are mapped onto it.</p>
+    </SecHead>
+    <div class="scene-grid">
+      <figure>
+        <div class="frame"><img src="/media/scene_overlay_960.jpg" alt="The junction from the camera, with the road mask in green, the crossings outlined in blue and the southbound stop line in red." width="960" height="540" loading="lazy" decoding="async" /></div>
+        <figcaption>Reference view with our scene layout drawn on it: road mask (green), crossings (blue), southbound stop line (red).</figcaption>
+      </figure>
+      <div class="prose scene-text">
+        <p><strong>Southbound (SB)</strong> traffic comes towards the camera on the left of the median, four lanes at the stop line. <strong>Northbound (NB)</strong> traffic drives away on the right, past a bus stop near the top of the frame.</p>
+        <p>The <strong>north crossing</strong> is a zebra across both carriageways just past the SB stop line, split by the median nose. The <strong>west crossing</strong> is a long diagonal zebra over the west arm at the bottom left, between three pink islands. Nothing else in view is a legal place to cross.</p>
+        <p>Things that are easy to get wrong here: cars parked along the left edge are off the carriageway; buses wait at the NB stop for 20 to 60 s; the SB queue at a red light can stand still for a minute; cyclists come out of the detector as a person plus a bike.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section wrap" id="learned">
+    <SecHead num="03" title="What is learned and what is a rule" />
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th scope="col">Part</th><th scope="col">Stage</th><th scope="col">Kind</th><th scope="col">What exactly</th></tr></thead>
+        <tbody>
+          {learned.map((r) => (
+            <tr>
+              <td class="mono">{r.part}</td>
+              <th scope="row">{r.stage}</th>
+              <td><span class={`chip ${r.how === "Learned" ? "todo learned-chip" : ""}`}>{r.how}</span></td>
+              <td class="detail">{r.detail}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section wrap" id="rules">
+    <SecHead num="04" title="The rule for each class">
+      <p>Distances are in pixels of the reference view; near the north crossing one metre is 25 to 30 px. Score A averages over classes, so a class we predict that never happens in the test set adds a zero. That is why eight classes are not emitted yet.</p>
+    </SecHead>
+    <ol class="rules" role="list">
+      {CLASSES.map((c) => (
+        <li class={`rule ${c.status}`}>
+          <div class="rule-head">
+            <span class="rule-code mono">{c.code}</span>
+            <h3>{c.name}</h3>
+            <span class={`chip ${c.status}`}>{statusText[c.status]}</span>
+          </div>
+          <p>{c.rule}</p>
+        </li>
+      ))}
+    </ol>
+  </section>
+
+  <section class="section wrap two-col" id="signal">
+    <div>
+      <SecHead num="05" title="How we read the signal" />
+      <div class="prose">
+        <p>The heads over the SB lanes face away from the camera. Two heads do face it: one on the pole at the left corner and one on the median nose. Both follow the avenue phase and stay readable at dusk.</p>
+        <p>For each of the three lamps we take a small patch around its centre, mapped from the reference view into the frame. A lit red lamp is much redder than its dark housing, a lit green one much greener, a lit yellow one much warmer. The lamp with the strongest contrast wins. Position decides the phase, not colour alone, so tail lights passing behind the head do not read as red.</p>
+        <p>When every lamp is dark the head is "off": the flashing part of green, or a car hiding the head. The cycle here is green, 3 s flashing green, about 3 s yellow, then red. We sample it every 0.2 s.</p>
+      </div>
+    </div>
+    <figure class="lamp-fig" aria-hidden="true">
+      <svg viewBox="0 0 220 240">
+        <rect x="70" y="10" width="80" height="210" rx="12" class="housing" />
+        <circle cx="110" cy="50" r="24" class="lamp-red" />
+        <circle cx="110" cy="115" r="24" class="lamp-off" />
+        <circle cx="110" cy="180" r="24" class="lamp-off" />
+        <rect x="94" y="34" width="32" height="32" class="patch" />
+        <rect x="94" y="99" width="32" height="32" class="patch" />
+        <rect x="94" y="164" width="32" height="32" class="patch" />
+        <text x="160" y="54" class="lab">red wins</text>
+        <text x="160" y="119" class="lab dim">dark</text>
+        <text x="160" y="184" class="lab dim">dark</text>
+      </svg>
+    </figure>
+  </section>
+
+  <section class="section wrap" id="registration">
+    <SecHead num="06" title="Why registration was needed" />
+    <div class="prose">
+      <p>The camera does not move inside a clip, but the clips are not framed identically: the afternoon session is about 20 px off from the morning one. Every zone we test against (stop line, crossings, carriageways, bus stop) is drawn once, by hand, in the reference view. If we drew them per clip, a new test clip with slightly different framing would put the stop line in the wrong place.</p>
+      <p>So for every clip we take the per-pixel median of a few frames, which removes most of the traffic, match SIFT features against a midday and a dusk reference, and keep the homography with the most inliers. Tracks are then mapped into the reference view before any rule looks at them.</p>
+    </div>
+  </section>
+
+  <section class="section wrap" id="models">
+    <SecHead num="07" title="Models, data and licences" />
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th scope="col">What</th><th scope="col">From</th><th scope="col">Licence</th><th scope="col">How we use it</th></tr></thead>
+        <tbody>
+          {licences.map((l) => (
+            <tr><th scope="row">{l.what}</th><td>{l.who}</td><td class="mono small">{l.lic}</td><td class="detail">{l.use}</td></tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section wrap" id="budget">
+    <SecHead num="08" title="Frame sampling and runtime budget" />
+    <div class="budget">
+      <dl class="facts">
+        <div><dt>Source</dt><dd>3840x2160, 29.97 fps, about 140 Mbit/s</dd></div>
+        <div><dt>Part A frames</dt><dd>every 3rd, 9.99 per second, resized to 1920 px, batches of 8</dd></div>
+        <div><dt>Part A detector</dt><dd>YOLO26m at 1280 px</dd></div>
+        <div><dt>Part A time cap</dt><dd>stops at 1.6x the clip length; the organisers' runner allows 3x for A and B together</dd></div>
+        <div><dt>Part B frames</dt><dd>every 3rd frame it receives, 1280 px wide, YOLO26s at 960 px</dd></div>
+        <div><dt>Measured runtime</dt><dd class={isNum(runtime) ? "" : "tbd"}>{isNum(runtime) ? `${runtime.toFixed(2)}x clip length` : fmtNum(runtime)}</dd></div>
+      </dl>
+      <div class="prose">
+        <p>At 10 fps a walking pedestrian moves about 4 px of the reference view between samples near the north crossing, and a car at 40 km/h about 30 px. That is enough to know who is on a zebra and who crosses the stop line. The ablations on the <a href="/results#ablations">Results page</a> show what 5 fps and smaller detectors do to the score.</p>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .scene-grid { display: grid; gap: 24px; }
+  @media (min-width: 980px) { .scene-grid { grid-template-columns: 3fr 2fr; align-items: start; } }
+  .scene-grid img { width: 100%; }
+  .scene-text p { font-size: .98rem; }
+
+  th[scope="row"] { font-weight: 700; white-space: nowrap; }
+  td.detail { color: var(--paint-2); font-size: .9rem; min-width: 260px; }
+  td.small { font-size: .78rem; }
+  .learned-chip { font-weight: 600; }
+
+  .rules { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); }
+  .rule { background: var(--asphalt-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px 12px; position: relative; }
+  .rule.on { border-left: 4px solid var(--zebra); }
+  .rule.off, .rule.none { opacity: .88; }
+  .rule-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .rule-head h3 { margin: 0; font-size: 1.02rem; flex: 1; }
+  .rule-code { font-size: .7rem; color: var(--muted); border: 1px solid var(--line-2); padding: 1px 5px; border-radius: 2px; }
+  .rule p { margin: 0; font-size: .9rem; color: var(--paint-2); line-height: 1.45; }
+
+  .two-col { display: grid; gap: 28px; }
+  @media (min-width: 900px) { .two-col { grid-template-columns: 1fr 260px; align-items: center; } }
+  .lamp-fig svg { width: 220px; margin: 0 auto; }
+  .housing { fill: #0b0b0c; stroke: var(--line-2); stroke-width: 2; }
+  .lamp-red { fill: var(--sig-red); filter: drop-shadow(0 0 12px rgba(255,91,76,.8)); }
+  .lamp-off { fill: #2a2c30; }
+  .patch { fill: none; stroke: var(--zebra); stroke-width: 1.5; stroke-dasharray: 3 3; }
+  .lab { font: 600 12px var(--font-mono); fill: var(--paint); }
+  .lab.dim { fill: var(--muted); font-weight: 400; }
+
+  .budget { display: grid; gap: 24px; }
+  @media (min-width: 900px) { .budget { grid-template-columns: 1fr 1fr; } }
+  .facts { margin: 0; display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .facts div { background: var(--asphalt-2); padding: 10px 14px; display: grid; gap: 2px; }
+  @media (min-width: 560px) { .facts div { grid-template-columns: 150px 1fr; gap: 12px; } }
+  .facts dt { font-family: var(--font-mono); font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding-top: 3px; }
+  .facts dd { margin: 0; font-size: .95rem; }
+  .facts dd.tbd { color: var(--muted); font-family: var(--font-mono); }
+</style>

@@ -1,0 +1,441 @@
+---
+import Base from "../layouts/Base.astro";
+import { CLASSES, ZONES, zoneFor } from "../lib/classes";
+import { loadAllResults, loadClips } from "../lib/data";
+
+const clips = loadClips();
+const results = loadAllResults();
+
+interface Row {
+  clip: string;
+  s: number;
+  e: number;
+  l: string;
+  z: string;
+  n: string;
+}
+const rows: Row[] = [];
+for (const c of clips) {
+  const r = results[c.id];
+  if (!r) continue;
+  for (const [s, e, l] of r.events ?? []) {
+    const ev = (r.evidence ?? []).filter((x) => x.label === l && x.end >= s - 0.05 && x.start <= e + 0.05);
+    rows.push({ clip: c.id, s, e, l, z: zoneFor(l, ev.find((x) => x.zone)?.zone), n: [...new Set(ev.map((x) => x.note).filter(Boolean))].join("; ") });
+  }
+}
+const clipMeta = clips.map((c) => ({ id: c.id, start: c.local_time, light: c.light, duration: c.duration }));
+const classMeta = CLASSES.map((c) => ({ key: c.key, name: c.name, code: c.code }));
+const zoneMeta = ZONES;
+const day = clips[0]?.local_time.split(" ")[0] ?? "";
+const times = clips.map((c) => c.local_time.split(" ")[1]).sort();
+const presentClasses = CLASSES.filter((c) => rows.some((r) => r.l === c.key));
+---
+<Base title="Dashboard" description="Operator view across all sample clips: events per class, per clip and time of day, per zone of the junction, and a filterable event log." active="dashboard">
+  <div class="dash wrap" id="dash">
+    <header class="dash-head">
+      <div>
+        <p class="kicker">Operator view</p>
+        <h1>Junction dashboard</h1>
+        <p class="dash-sub mono">Replay of {clips.length} clips, {day}, {times[0]} to {times[times.length - 1]}. Not a live feed.</p>
+      </div>
+      <button type="button" class="btn" id="wall-btn" aria-pressed="false">Wall mode</button>
+    </header>
+
+    <form class="filters panel" id="filters" aria-label="Filters" onsubmit="return false">
+      <fieldset class="f-classes">
+        <legend>Class</legend>
+        <div class="chips">
+          {presentClasses.map((c) => (
+            <button type="button" class="fchip" data-class={c.key} aria-pressed="false">{c.name}</button>
+          ))}
+        </div>
+      </fieldset>
+      <div class="f-row">
+        <label>Clip
+          <select id="f-clip">
+            <option value="">All clips</option>
+            {clips.map((c) => <option value={c.id}>{c.id}, {c.local_time.split(" ")[1]}</option>)}
+          </select>
+        </label>
+        <label>Zone
+          <select id="f-zone">
+            <option value="">All zones</option>
+            {ZONES.map((z) => <option value={z.key}>{z.name}</option>)}
+          </select>
+        </label>
+        <label class="f-search">Note contains
+          <input type="search" id="f-text" placeholder="e.g. west crossing" autocomplete="off" />
+        </label>
+        <button type="button" class="btn small ghost" id="f-reset">Reset</button>
+      </div>
+      <p class="f-count mono" id="f-count" role="status" aria-live="polite"></p>
+    </form>
+
+    <div class="kpis stats" id="kpis"></div>
+
+    <div class="grid">
+      <section class="panel card" aria-labelledby="h-class">
+        <h2 id="h-class" class="card-h">Events per class</h2>
+        <div id="by-class" class="hbars"></div>
+      </section>
+
+      <section class="panel card" aria-labelledby="h-zone">
+        <h2 id="h-zone" class="card-h">Per zone of the junction</h2>
+        <div class="zone-map frame" id="zone-map">
+          <img src="/media/scene_overlay_960.jpg" alt="" width="960" height="540" loading="lazy" decoding="async" />
+        </div>
+        <p class="card-note">Zone is where the event happened, or where the class's rule looks when an event has no zone. Tap a zone to filter.</p>
+      </section>
+
+      <section class="panel card wide" aria-labelledby="h-clip">
+        <h2 id="h-clip" class="card-h">Per clip and time of day</h2>
+        <div class="table-scroll matrix-wrap"><table class="matrix" id="matrix"></table></div>
+        <div class="strips" id="strips" aria-label="Events along each clip"></div>
+      </section>
+    </div>
+
+    <section class="panel card log" aria-labelledby="h-log">
+      <h2 id="h-log" class="card-h">Event log</h2>
+      <div class="table-scroll log-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col"><button type="button" class="sort" data-sort="clock">Local time</button></th>
+              <th scope="col"><button type="button" class="sort" data-sort="clip">Clip</button></th>
+              <th scope="col"><button type="button" class="sort" data-sort="s">In clip</button></th>
+              <th scope="col" class="num"><button type="button" class="sort" data-sort="d">Length</button></th>
+              <th scope="col"><button type="button" class="sort" data-sort="l">Class</button></th>
+              <th scope="col">Zone</th>
+              <th scope="col">Note</th>
+              <th scope="col"><span class="visually-hidden">Open</span></th>
+            </tr>
+          </thead>
+          <tbody id="log"></tbody>
+        </table>
+      </div>
+    </section>
+    <noscript><p>The dashboard needs JavaScript. The same events are on the Results page.</p></noscript>
+  </div>
+
+  <script type="application/json" id="dash-data" set:html={JSON.stringify({ rows, clips: clipMeta, classes: classMeta, zones: zoneMeta })} />
+</Base>
+
+<style is:global>
+  .dash { padding-top: clamp(24px, 4vw, 44px); }
+  .dash-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 14px; margin-bottom: 18px; }
+  .dash-head h1 { margin: 0; font-size: clamp(2rem, 1.2rem + 3vw, 3.4rem); }
+  .dash-sub { margin: 8px 0 0; font-size: .8rem; color: var(--muted); }
+
+  .filters { padding: 12px 14px; display: grid; gap: 10px; margin-bottom: 14px; }
+  .filters fieldset { border: 0; margin: 0; padding: 0; }
+  .filters legend, .filters label { font-family: var(--font-mono); font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .fchip {
+    background: transparent; color: var(--paint-2); border: 1px solid var(--line-2); border-radius: 2px;
+    font: 600 .8rem var(--font-text); padding: 5px 10px; cursor: pointer; min-height: 32px;
+  }
+  .fchip[aria-pressed="true"] { background: var(--zebra); color: var(--asphalt); border-color: var(--zebra); }
+  .f-row { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end; }
+  .f-row label { display: grid; gap: 4px; }
+  .f-row select, .f-row input {
+    font: 500 .9rem var(--font-text); color: var(--paint); background: var(--asphalt-3); border: 1px solid var(--line-2);
+    border-radius: 2px; padding: 7px 9px; min-height: 36px; text-transform: none; letter-spacing: 0;
+  }
+  .f-search { flex: 1; min-width: 180px; }
+  .f-search input { width: 100%; }
+  .f-count { margin: 0; font-size: .75rem; color: var(--paint-2); }
+
+  .kpis { margin-bottom: 14px; }
+  .grid { display: grid; gap: 14px; margin-bottom: 14px; }
+  @media (min-width: 980px) { .grid { grid-template-columns: 1fr 1fr; } .grid .wide { grid-column: 1 / -1; } }
+  .card { padding: 14px 16px 16px; min-width: 0; }
+  .card-h { font-size: 1rem; margin: 0 0 12px; letter-spacing: 0; }
+  .card-note { font-size: .78rem; color: var(--muted); margin: 8px 0 0; }
+
+  .hbars { display: grid; gap: 7px; }
+  .hbar { display: grid; grid-template-columns: 130px 1fr 44px; gap: 10px; align-items: center; font-size: .86rem; background: none; border: 0; color: inherit; padding: 0; cursor: pointer; text-align: left; font-family: inherit; }
+  .hbar:hover .hb-name { color: var(--zebra); }
+  .hb-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--paint-2); }
+  .hb-track { height: 14px; background: var(--asphalt-3); border-radius: 1px; overflow: hidden; }
+  .hb-fill { height: 100%; background: var(--paint); }
+  .hbar.sel .hb-fill { background: var(--zebra); }
+  .hb-n { font-family: var(--font-mono); text-align: right; font-size: .82rem; }
+  .hb-empty { color: var(--muted); font-size: .85rem; }
+
+  .zone-map { position: relative; aspect-ratio: 16 / 9; }
+  .zone-map img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(.85) brightness(.5); }
+  .zbub {
+    position: absolute; transform: translate(-50%, -50%); display: grid; place-items: center; text-align: center;
+    border-radius: 50%; background: rgba(243,195,22,.85); color: var(--asphalt); border: 2px solid var(--asphalt);
+    font: 700 .78rem var(--font-mono); cursor: pointer; padding: 0; line-height: 1;
+    transition: width .2s, height .2s;
+  }
+  .zbub.zero { background: rgba(14,15,17,.75); color: var(--muted); border-color: var(--line-2); }
+  .zbub.sel { background: var(--paint); outline: 3px solid var(--zebra); }
+  .zlab {
+    position: absolute; transform: translate(-50%, 0); white-space: nowrap; pointer-events: none;
+    font: 600 .66rem var(--font-mono); color: var(--paint); background: rgba(14,15,17,.8); padding: 1px 5px; border-radius: 2px;
+  }
+  @media (max-width: 560px) { .zlab { display: none; } }
+
+  .matrix { font-size: .82rem; }
+  .matrix th, .matrix td { padding: 6px 8px; text-align: center; white-space: nowrap; }
+  .matrix th:first-child, .matrix td:first-child { text-align: left; }
+  .matrix td.cell { font-family: var(--font-mono); }
+  .matrix td.cell span { display: inline-block; min-width: 30px; padding: 3px 4px; border-radius: 2px; }
+  .matrix .tot { font-family: var(--font-mono); color: var(--paint); }
+  .matrix .rate { font-family: var(--font-mono); color: var(--zebra); }
+  .matrix thead th { position: static; }
+
+  .strips { display: grid; gap: 8px; margin-top: 14px; }
+  .strip { display: grid; grid-template-columns: 110px 1fr; gap: 10px; align-items: center; }
+  .strip-lab { font: 600 .75rem var(--font-mono); color: var(--paint-2); }
+  .strip-lab span { color: var(--muted); font-weight: 400; }
+  .strip-track { position: relative; height: 22px; background: var(--asphalt-3); border-radius: 1px; }
+  .strip-track a { position: absolute; top: 3px; bottom: 3px; min-width: 3px; background: var(--zebra); border-radius: 1px; }
+  .strip-track a:hover, .strip-track a:focus-visible { background: var(--paint); }
+
+  .log-scroll { max-height: 520px; overflow: auto; }
+  .log td { font-size: .86rem; }
+  .log td.note { color: var(--paint-2); min-width: 200px; }
+  .sort { background: none; border: 0; padding: 0; font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit; cursor: pointer; }
+  .sort[aria-sort="ascending"]::after { content: " \2191"; color: var(--zebra); }
+  .sort[aria-sort="descending"]::after { content: " \2193"; color: var(--zebra); }
+  .log a.open { font: 600 .78rem var(--font-mono); white-space: nowrap; }
+
+  body.wall .site-header, body.wall .site-footer, body.wall .mock-note { display: none; }
+  body.wall .dash { max-width: none; padding-top: 16px; }
+  body.wall { font-size: 1.15rem; }
+  body.wall .grid { grid-template-columns: 1fr 1fr 1fr; }
+  body.wall .grid .wide { grid-column: auto; }
+  body.wall .log-scroll { max-height: 38vh; }
+</style>
+
+<script>
+  import { fmtTime } from "../lib/format";
+
+  interface Row { clip: string; s: number; e: number; l: string; z: string; n: string }
+  interface ClipM { id: string; start: string; light: string; duration: number }
+  interface Payload { rows: Row[]; clips: ClipM[]; classes: { key: string; name: string; code: string }[]; zones: { key: string; name: string; x: number; y: number }[] }
+  const D: Payload = JSON.parse(document.getElementById("dash-data")!.textContent || "{}");
+  const cname = (k: string) => D.classes.find((c) => c.key === k)?.name ?? k;
+  const zname = (k: string) => D.zones.find((z) => z.key === k)?.name ?? k;
+  const clipById = Object.fromEntries(D.clips.map((c) => [c.id, c]));
+  const clockSec = (clip: string, t: number) => {
+    const [hh, mm] = (clipById[clip]?.start.split(" ")[1] ?? "0:0").split(":").map(Number);
+    return hh * 3600 + mm * 60 + t;
+  };
+  const clockStr = (sec: number) => {
+    const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = Math.floor(sec % 60);
+    return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  };
+  const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+  const openHref = (r: Row) => `/results?clip=${r.clip}&t=${r.s}#player`;
+
+  const state = { classes: new Set<string>(), clip: "", zone: "", text: "", sort: "clock", dir: 1 };
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const clipSel = $("f-clip") as HTMLSelectElement;
+  const zoneSel = $("f-zone") as HTMLSelectElement;
+  const textIn = $("f-text") as HTMLInputElement;
+
+  function filtered(ignore: "class" | "zone" | "" = ""): Row[] {
+    const q = state.text.trim().toLowerCase();
+    return D.rows.filter(
+      (r) =>
+        (ignore === "class" || !state.classes.size || state.classes.has(r.l)) &&
+        (!state.clip || r.clip === state.clip) &&
+        (ignore === "zone" || !state.zone || r.z === state.zone) &&
+        (!q || r.n.toLowerCase().includes(q) || cname(r.l).toLowerCase().includes(q)),
+    );
+  }
+
+  function kpis(rows: Row[]) {
+    const minutes = D.clips.filter((c) => !state.clip || c.id === state.clip).reduce((a, c) => a + c.duration, 0) / 60;
+    const byClass = new Map<string, number>();
+    rows.forEach((r) => byClass.set(r.l, (byClass.get(r.l) ?? 0) + 1));
+    const top = [...byClass.entries()].sort((a, b) => b[1] - a[1])[0];
+    const busiest = D.clips
+      .map((c) => ({ c, n: rows.filter((r) => r.clip === c.id).length / (c.duration / 60) }))
+      .sort((a, b) => b.n - a.n)[0];
+    $("kpis").innerHTML = [
+      `<div class="stat"><span class="v">${rows.length}</span><span class="k">Events shown</span><span class="s">of ${D.rows.length} in all clips</span></div>`,
+      `<div class="stat"><span class="v">${minutes ? (rows.length / minutes).toFixed(1) : "0"}<small>/min</small></span><span class="k">Events per minute of footage</span><span class="s">${minutes.toFixed(1)} min in view</span></div>`,
+      `<div class="stat"><span class="v" style="font-size:1.5rem">${top ? esc(cname(top[0])) : "-"}</span><span class="k">Most frequent class</span><span class="s">${top ? `${top[1]} events` : "no events"}</span></div>`,
+      `<div class="stat"><span class="v" style="font-size:1.5rem">${busiest && rows.length ? busiest.c.id : "-"}</span><span class="k">Busiest clip per minute</span><span class="s">${busiest && rows.length ? `${busiest.n.toFixed(1)} events/min, ${busiest.c.start.split(" ")[1]}` : ""}</span></div>`,
+    ].join("");
+  }
+
+  function byClass() {
+    const rows = filtered("class");
+    const counts = D.classes.map((c) => ({ ...c, n: rows.filter((r) => r.l === c.key).length })).filter((c) => c.n > 0 || state.classes.has(c.key));
+    const max = Math.max(1, ...counts.map((c) => c.n));
+    const box = $("by-class");
+    if (!counts.length) {
+      box.innerHTML = `<p class="hb-empty">No events match the filters.</p>`;
+      return;
+    }
+    box.innerHTML = counts
+      .sort((a, b) => b.n - a.n)
+      .map(
+        (c) =>
+          `<button type="button" class="hbar${state.classes.has(c.key) ? " sel" : ""}" data-class="${c.key}" aria-pressed="${state.classes.has(c.key)}" aria-label="${esc(c.name)}: ${c.n} events. Filter by this class."><span class="hb-name">${esc(c.name)}</span><span class="hb-track"><span class="hb-fill" style="width:${(c.n / max) * 100}%"></span></span><span class="hb-n">${c.n}</span></button>`,
+      )
+      .join("");
+    const other = D.classes.length - D.classes.filter((c) => D.rows.some((r) => r.l === c.key)).length;
+    box.insertAdjacentHTML("beforeend", `<p class="card-note">${other} of ${D.classes.length} classes have no events: most are not emitted yet (see Approach).</p>`);
+  }
+
+  function zones() {
+    const rows = filtered("zone");
+    const map = $("zone-map");
+    map.querySelectorAll(".zbub, .zlab").forEach((n) => n.remove());
+    const max = Math.max(1, ...D.zones.map((z) => rows.filter((r) => r.z === z.key).length));
+    for (const z of D.zones) {
+      const n = rows.filter((r) => r.z === z.key).length;
+      const size = n ? 26 + 34 * Math.sqrt(n / max) : 22;
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = `zbub${n ? "" : " zero"}${state.zone === z.key ? " sel" : ""}`;
+      b.style.left = `${z.x}%`;
+      b.style.top = `${z.y}%`;
+      b.style.width = b.style.height = `${size}px`;
+      b.textContent = String(n);
+      b.setAttribute("aria-pressed", String(state.zone === z.key));
+      b.setAttribute("aria-label", `${z.name}: ${n} events. Filter by this zone.`);
+      b.addEventListener("click", () => {
+        state.zone = state.zone === z.key ? "" : z.key;
+        zoneSel.value = state.zone;
+        render();
+      });
+      const lab = document.createElement("span");
+      lab.className = "zlab";
+      lab.style.left = `${z.x}%`;
+      lab.style.top = `calc(${z.y}% + ${size / 2 + 3}px)`;
+      lab.textContent = z.name;
+      map.append(b, lab);
+    }
+  }
+
+  function matrix(rows: Row[]) {
+    const cls = D.classes.filter((c) => D.rows.some((r) => r.l === c.key));
+    const clipsShown = D.clips.filter((c) => !state.clip || c.id === state.clip).sort((a, b) => a.start.localeCompare(b.start));
+    let max = 1;
+    const grid = clipsShown.map((c) => cls.map((k) => {
+      const n = rows.filter((r) => r.clip === c.id && r.l === k.key).length;
+      max = Math.max(max, n);
+      return n;
+    }));
+    const head = `<thead><tr><th scope="col">Clip, start</th>${cls.map((k) => `<th scope="col" title="${esc(k.name)}"><abbr title="${esc(k.name)}">${k.code}</abbr></th>`).join("")}<th scope="col">Total</th><th scope="col">Per min</th></tr></thead>`;
+    const body = clipsShown
+      .map((c, i) => {
+        const tot = grid[i].reduce((a, b) => a + b, 0);
+        const cells = grid[i]
+          .map((n) => `<td class="cell"><span style="background:rgba(243,195,22,${n ? 0.12 + 0.7 * (n / max) : 0});color:${n / max > 0.55 ? "#151618" : "inherit"}">${n || "."}</span></td>`)
+          .join("");
+        return `<tr><th scope="row"><span class="mono">${c.id}</span> <span class="tab-sub">${c.start.split(" ")[1]}, ${esc(c.light.split(",")[0])}</span></th>${cells}<td class="tot">${tot}</td><td class="rate">${(tot / (c.duration / 60)).toFixed(1)}</td></tr>`;
+      })
+      .join("");
+    $("matrix").innerHTML = head + `<tbody>${body}</tbody>`;
+
+    $("strips").innerHTML = clipsShown
+      .map((c) => {
+        const ticks = rows
+          .filter((r) => r.clip === c.id)
+          .map((r) => `<a href="${openHref(r)}" style="left:${(r.s / c.duration) * 100}%;width:${Math.max(0.4, ((r.e - r.s) / c.duration) * 100)}%" aria-label="${esc(cname(r.l))} at ${fmtTime(r.s)} in ${c.id}" title="${esc(cname(r.l))}, ${fmtTime(r.s)}"></a>`)
+          .join("");
+        return `<div class="strip"><span class="strip-lab">${c.id} <span>${c.start.split(" ")[1]}</span></span><div class="strip-track">${ticks}</div></div>`;
+      })
+      .join("");
+  }
+
+  function log(rows: Row[]) {
+    const key = state.sort;
+    const val = (r: Row): number | string =>
+      key === "clock" ? clockSec(r.clip, r.s) : key === "clip" ? r.clip : key === "s" ? r.s : key === "d" ? r.e - r.s : cname(r.l);
+    const sorted = [...rows].sort((a, b) => {
+      const A = val(a), B = val(b);
+      return (A < B ? -1 : A > B ? 1 : 0) * state.dir;
+    });
+    document.querySelectorAll<HTMLButtonElement>(".sort").forEach((b) => {
+      if (b.dataset.sort === key) b.setAttribute("aria-sort", state.dir > 0 ? "ascending" : "descending");
+      else b.removeAttribute("aria-sort");
+    });
+    $("log").innerHTML = sorted.length
+      ? sorted
+          .map(
+            (r) =>
+              `<tr><td class="t">${clockStr(clockSec(r.clip, r.s))}</td><td class="mono">${r.clip}</td><td class="t">${fmtTime(r.s)}</td><td class="num">${(r.e - r.s).toFixed(1)} s</td><td><strong>${esc(cname(r.l))}</strong></td><td>${esc(zname(r.z))}</td><td class="note">${esc(r.n)}</td><td><a class="open" href="${openHref(r)}">Open</a></td></tr>`,
+          )
+          .join("")
+      : `<tr><td colspan="8" class="note">No events match the filters.</td></tr>`;
+  }
+
+  function render() {
+    const rows = filtered();
+    $("f-count").textContent = `Showing ${rows.length} of ${D.rows.length} events`;
+    document.querySelectorAll<HTMLButtonElement>(".fchip").forEach((b) => b.setAttribute("aria-pressed", String(state.classes.has(b.dataset.class!))));
+    kpis(rows);
+    byClass();
+    zones();
+    matrix(rows);
+    log(rows);
+  }
+
+  const toggleClass = (k: string) => {
+    if (state.classes.has(k)) state.classes.delete(k);
+    else state.classes.add(k);
+    render();
+  };
+  document.querySelectorAll<HTMLButtonElement>(".fchip").forEach((b) => b.addEventListener("click", () => toggleClass(b.dataset.class!)));
+  $("by-class").addEventListener("click", (e) => {
+    const b = (e.target as Element).closest<HTMLButtonElement>(".hbar");
+    if (b) {
+      toggleClass(b.dataset.class!);
+      document.querySelector<HTMLButtonElement>(`.hbar[data-class="${b.dataset.class}"]`)?.focus();
+    }
+  });
+  clipSel.addEventListener("change", () => ((state.clip = clipSel.value), render()));
+  zoneSel.addEventListener("change", () => ((state.zone = zoneSel.value), render()));
+  let tId = 0;
+  textIn.addEventListener("input", () => {
+    clearTimeout(tId);
+    tId = window.setTimeout(() => ((state.text = textIn.value), render()), 150);
+  });
+  $("f-reset").addEventListener("click", () => {
+    state.classes.clear();
+    state.clip = state.zone = state.text = "";
+    clipSel.value = zoneSel.value = textIn.value = "";
+    render();
+  });
+  document.querySelectorAll<HTMLButtonElement>(".sort").forEach((b) =>
+    b.addEventListener("click", () => {
+      const k = b.dataset.sort!;
+      state.dir = state.sort === k ? -state.dir : 1;
+      state.sort = k;
+      log(filtered());
+    }),
+  );
+
+  const wallBtn = $("wall-btn") as HTMLButtonElement;
+  const setWall = (on: boolean) => {
+    document.body.classList.toggle("wall", on);
+    wallBtn.setAttribute("aria-pressed", String(on));
+    wallBtn.textContent = on ? "Exit wall mode" : "Wall mode";
+  };
+  wallBtn.addEventListener("click", async () => {
+    const on = !document.body.classList.contains("wall");
+    setWall(on);
+    try {
+      if (on && document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
+      else if (!on && document.fullscreenElement) await document.exitFullscreen();
+    } catch {
+      /* fullscreen not allowed; wall layout still applies */
+    }
+  });
+  document.addEventListener("fullscreenchange", () => {
+    if (!document.fullscreenElement) setWall(false);
+  });
+
+  render();
+</script>

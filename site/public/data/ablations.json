@@ -1,0 +1,38 @@
+[
+ {
+  "name": "yolo26m @1280, 10 fps, ByteTrack",
+  "score_a": "TBD",
+  "runtime_x": "TBD",
+  "note": "Submitted configuration."
+ },
+ {
+  "name": "yolo26s @960, 10 fps, ByteTrack",
+  "score_a": "TBD",
+  "runtime_x": "TBD",
+  "note": "Same rules, smaller detector. This is the Part B detector."
+ },
+ {
+  "name": "yolo26n @640, 10 fps, ByteTrack",
+  "score_a": "TBD",
+  "runtime_x": "TBD",
+  "note": "Smallest model, 640 px input."
+ },
+ {
+  "name": "yolo11m @1280, 10 fps, ByteTrack",
+  "score_a": "TBD",
+  "runtime_x": "TBD",
+  "note": "Previous generation of the same detector size."
+ },
+ {
+  "name": "yolo26m @1280, 5 fps, ByteTrack",
+  "score_a": "TBD",
+  "runtime_x": "TBD",
+  "note": "Every 6th frame, half the detector time."
+ },
+ {
+  "name": "yolo26m @1280, 10 fps, no tracking",
+  "score_a": "TBD",
+  "runtime_x": "TBD",
+  "note": "Rules need speed and direction per actor, so only per-frame checks can fire."
+ }
+]

@@ -1,0 +1,10 @@
+# Tested with Python 3.10 and 3.11. torch 2.6.0 from PyPI ships CUDA 12.4 kernels,
+# which run on the T4 (sm_75) with any NVIDIA driver >= 525.
+torch==2.6.0
+torchvision==0.21.0
+ultralytics==8.4.159
+lap==0.5.13
+numpy>=1.24,<2.3
+scipy>=1.11,<1.16
+opencv-python-headless>=4.8,<4.13
+av>=14,<16

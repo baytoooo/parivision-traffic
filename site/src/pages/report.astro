@@ -1,0 +1,71 @@
+---
+import { marked } from "marked";
+import Base from "../layouts/Base.astro";
+import { readText } from "../lib/data";
+
+// public/data/report.md, rendered at build time. The first "# " heading
+// becomes the page title; "## " headings get anchors and a contents list.
+const md = readText("report.md");
+const titleMatch = md.match(/^#\s+(.+)$/m);
+const title = titleMatch ? titleMatch[1].trim() : "Report";
+const body = titleMatch ? md.replace(titleMatch[0], "") : md;
+
+const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+const toc: { id: string; text: string }[] = [];
+const renderer = new marked.Renderer();
+renderer.heading = ({ tokens, depth }) => {
+  const text = tokens.map((t) => ("text" in t ? t.text : "")).join("");
+  const inner = marked.Parser.parseInline(tokens);
+  if (depth === 2) {
+    const id = slug(text);
+    toc.push({ id, text });
+    return `<h2 id="${id}">${inner}</h2>`;
+  }
+  return `<h${depth}>${inner}</h${depth}>`;
+};
+const html = await marked.parse(body, { renderer, gfm: true });
+---
+<Base title="Report" description="One page on what PariVision built, what worked, what did not and what we would do next." active="report">
+  <header class="page-head wrap">
+    <p class="kicker">Report</p>
+    <h1>{title}</h1>
+  </header>
+  <div class="wrap report">
+    {toc.length > 0 && (
+      <nav class="toc" aria-label="On this page">
+        <p class="toc-k mono">On this page</p>
+        <ol>
+          {toc.map((t) => <li><a href={`#${t.id}`}>{t.text}</a></li>)}
+        </ol>
+      </nav>
+    )}
+    <article class="md" set:html={html} />
+  </div>
+</Base>
+
+<style>
+  .report { display: grid; gap: 28px; padding-bottom: 24px; }
+  @media (min-width: 980px) { .report { grid-template-columns: 220px minmax(0, 1fr); align-items: start; } }
+  .toc { position: sticky; top: 84px; border-left: 3px solid var(--line-2); padding-left: 14px; }
+  @media (max-width: 979px) { .toc { position: static; } }
+  .toc-k { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 8px; }
+  .toc ol { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+  .toc a { text-decoration: none; color: var(--paint-2); font-size: .92rem; }
+  .toc a:hover { color: var(--zebra); }
+
+  .md { max-width: 72ch; }
+  .md :global(h2) {
+    font-size: clamp(1.4rem, 1.1rem + 1vw, 1.9rem); margin: 40px 0 14px; padding-top: 18px; position: relative; scroll-margin-top: 80px;
+  }
+  .md :global(h2::before) { content: ""; position: absolute; top: 0; left: 0; width: 72px; height: 6px; background: var(--stripes-tight); }
+  .md :global(h2:first-child) { margin-top: 0; }
+  .md :global(h3) { margin: 24px 0 10px; }
+  .md :global(p), .md :global(li) { color: var(--paint-2); }
+  .md :global(strong) { color: var(--paint); }
+  .md :global(ul), .md :global(ol) { padding-left: 1.3em; display: grid; gap: 8px; margin: 0 0 1.2em; }
+  .md :global(li::marker) { color: var(--zebra); }
+  .md :global(a) { color: var(--paint); }
+  .md :global(table) { margin: 1em 0; border: 1px solid var(--line); }
+  .md :global(blockquote) { margin: 1em 0; padding: 4px 16px; border-left: 3px solid var(--zebra); color: var(--paint-2); }
+  .md :global(pre) { background: var(--asphalt-0); border: 1px solid var(--line); padding: 12px; overflow-x: auto; border-radius: var(--radius); }
+</style>
