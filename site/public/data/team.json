@@ -5,29 +5,54 @@
   {
    "name": "Amal Karimov",
    "role": "Captain. TODO: second role",
-   "did": ["TODO: what Amal built, one line each"],
+   "did": [
+    "TODO: what Amal built, one line each"
+   ],
    "github": "TODO",
    "linkedin": "TODO",
    "portfolio": "TODO",
-   "projects": [{"name": "TODO", "url": "TODO"}]
+   "projects": [
+    {
+     "name": "TODO",
+     "url": "TODO"
+    }
+   ]
   },
   {
    "name": "Komronbek Qodirov",
    "role": "TODO",
-   "did": ["TODO: what Komronbek built, one line each"],
-   "github": "TODO",
+   "did": [
+    "TODO: what Komronbek built, one line each"
+   ],
+   "github": "https://github.com/baytoooo",
    "linkedin": "TODO",
-   "portfolio": "TODO",
-   "projects": [{"name": "TODO", "url": "TODO"}]
+   "portfolio": "https://bayto.uz",
+   "projects": [
+    {
+     "name": "BAYTO STUDIO, design and web studio site",
+     "url": "https://bayto.uz"
+    },
+    {
+     "name": "AdmitPath, study-abroad admissions planner (MVP)",
+     "url": "https://admitpath-one.vercel.app"
+    }
+   ]
   },
   {
    "name": "Aziza Adizova",
    "role": "TODO",
-   "did": ["TODO: what Aziza built, one line each"],
+   "did": [
+    "TODO: what Aziza built, one line each"
+   ],
    "github": "TODO",
    "linkedin": "TODO",
    "portfolio": "TODO",
-   "projects": [{"name": "TODO", "url": "TODO"}]
+   "projects": [
+    {
+     "name": "TODO",
+     "url": "TODO"
+    }
+   ]
   }
  ]
 }

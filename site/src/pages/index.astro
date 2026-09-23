@@ -1,15 +1,15 @@
 ---
 import Base from "../layouts/Base.astro";
 import { CLASSES } from "../lib/classes";
-import { loadAblations, loadClips, loadMetrics } from "../lib/data";
+import { loadClips, loadMetrics, loadRuntime, runtimeFactor } from "../lib/data";
 import { fmtNum, isNum } from "../lib/format";
 
 const clips = loadClips();
 const metrics = loadMetrics();
-const ablations = loadAblations();
+const rt = loadRuntime();
 
 const scoreA = metrics?.part_a?.score_a;
-const runtime = ablations[0]?.runtime_x;
+const runtime = runtimeFactor(rt);
 const emitted = CLASSES.filter((c) => c.status === "on").length;
 const footageMin = clips.reduce((a, c) => a + c.duration, 0) / 60;
 const hero = clips[0];
@@ -75,7 +75,7 @@ const pages = [
       <div class="stat">
         <span class={`v${isNum(runtime) ? "" : " is-tbd"}`}>{isNum(runtime) ? runtime.toFixed(2) : fmtNum(runtime)}<small>min</small></span>
         <span class="k">Processing per minute of 4K video</span>
-        <span class="s">{ablations[0]?.name ?? "submitted configuration"}</span>
+        <span class="s">{rt ? `Part A + Part B, ${rt.machine}` : "Part A + Part B"}</span>
       </div>
       <div class="stat">
         <span class="v">{emitted}<small>of {CLASSES.length}</small></span>

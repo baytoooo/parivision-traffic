@@ -38,6 +38,7 @@ PARAMS = {
     "fty_walk": 0.25,              # body heights per second: the pedestrian is walking, not standing
     "fty_pad_start": 0.3,          # s
     "fty_pad_end": 0.1,            # s
+    "fty_moto_speed": float("inf"),  # px/s: scooters count only when ridden faster than this
     # signal
     "red_settle": 1.0,             # s of red before a crossing counts as red-light running
     "red_before_green": 1.5,       # s of red still to go: jumping the light by a fraction of a second is noise
@@ -258,8 +259,8 @@ def failure_to_yield(ctx: Context, H_work_to_ref: np.ndarray) -> list[Evidence]:
         if not on_cw:
             continue
         for veh in ctx.vehicles:
-            if veh.cls == MOTORCYCLE:
-                continue  # scooters ride and get walked along the zebras; only cars, buses and trucks count
+            if veh.cls == MOTORCYCLE and np.median(veh.speed) < p["fty_moto_speed"]:
+                continue  # scooters get walked along the zebras; only ones clearly being ridden count
             fp = _footprint_points(veh, H_work_to_ref)  # (N, 5, 2)
             on = (ctx.sample(m, fp.reshape(-1, 2)).reshape(len(veh.t), 5) > 0).any(axis=1)
             if not on.any():

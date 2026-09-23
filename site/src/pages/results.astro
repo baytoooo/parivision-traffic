@@ -157,20 +157,20 @@ const statusText = { on: "emitted", off: "rule off", none: "no rule" } as const;
 
   <section class="section wrap" id="ablations">
     <SecHead num="04" title="Ablations">
-      <p>Same rules, same dev labels, one change per row. Runtime is processing time divided by clip length, so 1.0x means as long as the video.</p>
+      <p>Same rules, same dev labels, one change per row. Cost is detector compute (input pixels times frames) relative to the submitted configuration.</p>
     </SecHead>
     <div class="table-scroll">
       <table>
         <caption class="visually-hidden">Ablations</caption>
         <thead>
-          <tr><th scope="col">Configuration</th><th scope="col" class="num">Score A</th><th scope="col" class="num">Runtime</th><th scope="col">Note</th></tr>
+          <tr><th scope="col">Configuration</th><th scope="col" class="num">Score A</th><th scope="col" class="num">Detector cost</th><th scope="col">Note</th></tr>
         </thead>
         <tbody>
           {ablations.map((a, i) => (
             <tr class={i === 0 ? "chosen" : ""}>
               <th scope="row" class="mono abl-name">{a.name}{i === 0 && <span class="chip on">submitted</span>}</th>
               <td class={`num${isNum(a.score_a) ? "" : " tbd"}`}>{fmtNum(a.score_a, 3)}</td>
-              <td class={`num${isNum(a.runtime_x) ? "" : " tbd"}`}>{isNum(a.runtime_x) ? `${a.runtime_x.toFixed(2)}x` : fmtNum(a.runtime_x)}</td>
+              <td class={`num${isNum(a.cost_x) ? "" : " tbd"}`}>{isNum(a.cost_x) ? `${a.cost_x.toFixed(2)}x` : fmtNum(a.cost_x)}</td>
               <td class="abl-note">{a.note}</td>
             </tr>
           ))}

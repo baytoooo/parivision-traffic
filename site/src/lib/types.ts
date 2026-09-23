@@ -82,8 +82,17 @@ export interface Metrics {
 export interface Ablation {
   name: string;
   score_a: Num;
-  runtime_x: Num;
+  /** Detector compute relative to the submitted configuration (input pixels x frames). */
+  cost_x: Num;
   note: string;
+  per_class?: Record<string, number>;
+}
+
+/** Wall-clock times from run_submission.py's log, per clip. */
+export interface Runtime {
+  machine: string;
+  note: string;
+  clips: { clip: string; duration: number; part_a_sec: number; part_b_sec: number; total_sec: number }[];
 }
 
 export interface Eda {

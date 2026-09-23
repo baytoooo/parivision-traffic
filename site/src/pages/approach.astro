@@ -3,11 +3,11 @@ import Base from "../layouts/Base.astro";
 import PipelineDiagram from "../components/PipelineDiagram.astro";
 import SecHead from "../components/SecHead.astro";
 import { CLASSES } from "../lib/classes";
-import { loadAblations } from "../lib/data";
+import { loadRuntime, runtimeFactor } from "../lib/data";
 import { fmtNum, isNum } from "../lib/format";
 
-const ablations = loadAblations();
-const runtime = ablations[0]?.runtime_x;
+const rt = loadRuntime();
+const runtime = runtimeFactor(rt);
 const statusText = { on: "emitted", off: "rule off", none: "no rule" } as const;
 
 const learned = [
@@ -152,7 +152,7 @@ const licences = [
         <div><dt>Part A detector</dt><dd>YOLO26m at 1280 px</dd></div>
         <div><dt>Part A time cap</dt><dd>stops at 1.6x the clip length; the organisers' runner allows 3x for A and B together</dd></div>
         <div><dt>Part B frames</dt><dd>every 3rd frame it receives, 1280 px wide, YOLO26s at 960 px</dd></div>
-        <div><dt>Measured runtime</dt><dd class={isNum(runtime) ? "" : "tbd"}>{isNum(runtime) ? `${runtime.toFixed(2)}x clip length` : fmtNum(runtime)}</dd></div>
+        <div><dt>Measured runtime</dt><dd class={isNum(runtime) ? "" : "tbd"}>{isNum(runtime) ? `${runtime.toFixed(2)}x clip length, Part A + Part B, ${rt?.machine}` : fmtNum(runtime)}</dd></div>
       </dl>
       <div class="prose">
         <p>At 10 fps a walking pedestrian moves about 4 px of the reference view between samples near the north crossing, and a car at 40 km/h about 30 px. That is enough to know who is on a zebra and who crosses the stop line. The ablations on the <a href="/results#ablations">Results page</a> show what 5 fps and smaller detectors do to the score.</p>

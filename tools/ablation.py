@@ -29,17 +29,23 @@ from parivision.tracking import MultiTracker, collect  # noqa: E402
 from parivision.trajectories import build  # noqa: E402
 
 VARIANTS = [
-    # name, detector cache tag, keep every n-th cached frame, options
-    ("YOLO26m @1280, 10 fps (submitted)", "yolo26m_1280_1920_10fps", 1, {}),
-    ("YOLO26m @1280, 5 fps", "yolo26m_1280_1920_10fps", 2, {}),
-    ("YOLO26m @1280, 3.3 fps", "yolo26m_1280_1920_10fps", 3, {}),
-    ("YOLO26s @1280, 10 fps", "yolo26s_1280_1920_10fps", 1, {}),
-    ("YOLO26m @960, 10 fps", "yolo26m_960_1920_10fps", 1, {}),
-    ("no registration (pixel polygons as drawn)", "yolo26m_1280_1920_10fps", 1, {"no_registration": True}),
-    ("hand-drawn road instead of learned drivable area", "yolo26m_1280_1920_10fps", 1, {"hand_road": True}),
+    # name, detector cache tag, keep every n-th cached frame, options, note for the site
+    ("YOLO26m @1280, 10 fps", "yolo26m_1280_1920_10fps", 1, {},
+     "Submitted configuration."),
+    ("YOLO26m @1280, 5 fps", "yolo26m_1280_1920_10fps", 2, {},
+     "Every 6th frame: half the detector work."),
+    ("YOLO26m @1280, 3.3 fps", "yolo26m_1280_1920_10fps", 3, {},
+     "Every 9th frame: a third of the detector work."),
+    ("YOLO26s @1280, 10 fps", "yolo26s_1280_1920_10fps", 1, {},
+     "Smaller detector (the Part B one), same input size."),
+    ("YOLO26m @960, 10 fps", "yolo26m_960_1920_10fps", 1, {},
+     "Same detector, 960 px input: people near the top of the frame shrink to about 17 px."),
+    ("No registration", "yolo26m_1280_1920_10fps", 1, {"no_registration": True},
+     "Scene polygons used as drawn, without mapping each clip onto the reference view."),
+    ("Hand-drawn road mask", "yolo26m_1280_1920_10fps", 1, {"hand_road": True},
+     "Jaywalking checked against the traced carriageway instead of the drivable area learned from vehicle tracks."),
 ]
-# wall time per video second for the detector alone on a T4 is not measurable here;
-# we report the relative cost of each variant instead (detector input pixels x frames).
+# detector compute relative to the submitted run: input pixels x frames
 REL_COST = {"yolo26m_1280": 1.0, "yolo26s_1280": 0.46, "yolo26m_960": 0.56}
 
 
@@ -69,7 +75,7 @@ def main() -> None:
     gt_all = json.loads((ROOT / args.gt).read_text())
     gt = {k: v for k, v in gt_all.items() if Path(k).stem in args.clips}
     rows = []
-    for name, tag, every, opt in VARIANTS:
+    for name, tag, every, opt, note in VARIANTS:
         if not all((ROOT / "cache/det" / f"{c}__{tag}.npz").exists() for c in args.clips):
             print("skip (no cache):", name)
             continue
@@ -86,10 +92,10 @@ def main() -> None:
         rep = evaluate(gt, pred)
         det_key = "_".join(tag.split("_")[:2])
         row = {"name": name, "score_a": round(rep["part_a"]["score_a"], 4),
-               "per_class": {c: round(v["f1_mean"], 3) for c, v in rep["part_a"]["per_class"].items()},
-               "relative_cost": round(REL_COST.get(det_key, 1.0) / every, 2)}
+               "cost_x": round(REL_COST.get(det_key, 1.0) / every, 2), "note": note,
+               "per_class": {c: round(v["f1_mean"], 3) for c, v in rep["part_a"]["per_class"].items()}}
         rows.append(row)
-        print(f"{name:52s} Score A {row['score_a']:.3f}  cost x{row['relative_cost']}")
+        print(f"{name:28s} Score A {row['score_a']:.3f}  cost x{row['cost_x']}")
     Path(ROOT / args.out).parent.mkdir(parents=True, exist_ok=True)
     (ROOT / args.out).write_text(json.dumps(rows, indent=1))
 

@@ -12,6 +12,7 @@ sample clips (normal traffic, no collisions) the score stays well below 0.5.
 """
 from __future__ import annotations
 
+import os
 import time
 from functools import lru_cache
 
@@ -27,8 +28,9 @@ from .tracking import MultiTracker
 WORK_WIDTH = 1280
 TARGET_HZ = 10.0
 MAX_STRIDE_FACTOR = 10  # on a slow machine fall back to 1 Hz, and skip processing entirely if even that is late
-OWN_TIME_SHARE = 0.4    # our processing may use at most this x video time (the harness decode comes on top)
-TOTAL_LIMIT = 2.8       # stay under this x clip duration for Part A + Part B (the harness allows 3.0)
+# the defaults fit the official T4 run; the environment overrides are for slower machines (our laptop)
+OWN_TIME_SHARE = float(os.environ.get("PARIVISION_RISK_SHARE", 0.4))  # our processing, x video time (decode on top)
+TOTAL_LIMIT = float(os.environ.get("PARIVISION_TOTAL_LIMIT", 2.8))    # Part A + Part B, x clip duration (harness: 3.0)
 HISTORY = 8            # samples used for the velocity estimate (0.8 s)
 HORIZON = 3.0          # s of constant-velocity look-ahead
 STEP = 0.1
