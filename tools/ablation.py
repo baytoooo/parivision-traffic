@@ -46,13 +46,18 @@ VARIANTS = [
      "Smaller detector (the Part B one), same input size."),
     ("YOLO26m @960, 10 fps", "yolo26m_960_1920_10fps", 1, {},
      "Same detector, 960 px input: people near the top of the frame shrink to about 17 px."),
+    ("YOLO26n @960, 5 fps", "yolo26n_960_1920_10fps", 2, {},
+     "The live demo's detector and frame rate (it runs in the visitor's browser)."),
+    ("YOLO26s @960, 5 fps", "yolo26s_960_1920_10fps", 2, {},
+     "The Part B detector at the demo's frame rate."),
     ("No registration", "yolo26m_1280_1920_10fps", 1, {"no_registration": True},
      "Scene polygons used as drawn, without mapping each clip onto the reference view."),
     ("Hand-drawn road mask", "yolo26m_1280_1920_10fps", 1, {"hand_road": True},
      "Jaywalking checked against the traced carriageway instead of the drivable area learned from vehicle tracks."),
 ]
-# detector compute relative to the submitted run: input pixels x frames
-REL_COST = {"yolo26m_1280": 1.0, "yolo26s_1280": 0.46, "yolo26m_960": 0.56}
+# detector compute per frame relative to the submitted YOLO26m @1280: GFLOPs at 640 px
+# (Ultralytics get_flops: n 6.2, s 23.1, m 75.6) times the input area; divided by the frame step below
+REL_COST = {"yolo26m_1280": 1.0, "yolo26m_960": 0.56, "yolo26s_1280": 0.31, "yolo26s_960": 0.17, "yolo26n_960": 0.05}
 
 
 def trajectories(clip: str, tag: str, every: int, no_registration: bool):

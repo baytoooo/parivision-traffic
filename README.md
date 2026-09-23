@@ -71,7 +71,7 @@ map (`scene.PERSON_HEIGHT_PX`, fitted on ~150k pedestrian boxes).
 | others | <!-- ENABLED_NOTE --> |
 
 Segments of one class are merged when they overlap, as the task asks, and
-when the gap between them is short (0 to 1 s depending on the class, 8 s for
+when the gap between them is short (0 to 3 s depending on the class, 8 s for
 congestion).
 Every rule except congestion keeps the ids of the road users involved, and
 the renderer uses them to draw who did what.
