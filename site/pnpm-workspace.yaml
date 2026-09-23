@@ -1,5 +1,5 @@
 allowBuilds:
   esbuild: true
-  onnxruntime-node: set this to true or false
-  protobufjs: set this to true or false
+  onnxruntime-node: false  # its install script only fetches optional CUDA binaries; the tests use the CPU build
+  protobufjs: false
   sharp: true

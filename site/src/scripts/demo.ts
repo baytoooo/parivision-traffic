@@ -1,8 +1,9 @@
-// Demo page controller: server status, upload or sample, job progress, result.
-import { API_BASE_URL, RISK_MERGE_GAP, RISK_THETA, UPLOAD_MAX_BYTES, UPLOAD_MAX_SECONDS } from "../config";
+// Demo page controller: what this browser can run, file or sample, job progress, result.
+import { RISK_MERGE_GAP, RISK_THETA, UPLOAD_MAX_SECONDS } from "../config";
 import { fmtBytes, fmtTime } from "../lib/format";
 import type { ClipResult, Job, Sample } from "../lib/types";
-import { ApiError, HttpApi, MockApi, STAGES, type Api } from "./api";
+import { ApiError, MockApi, STAGES, type Api } from "./api";
+import { LocalApi } from "./local_api";
 import { Player } from "./player";
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -10,15 +11,13 @@ const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getEleme
 const params = new URLSearchParams(location.search);
 const mockParam = params.get("mock");
 const forceMock = mockParam !== null && mockParam !== "0";
-const DEV = import.meta.env.DEV;
-const WAKE_LIMIT_S = 90;
-const UNREACHABLE_LIMIT_S = DEV ? 0 : 30;
 
-type ServerState = "checking" | "online" | "waking" | "offline" | "mock";
+/** online: the pipeline runs here; offline: it cannot, so the page replays a stored job. */
+type EngineState = "checking" | "online" | "offline" | "mock";
 
-let api: Api = forceMock ? new MockApi({ fail: mockParam === "error" }) : new HttpApi(API_BASE_URL);
-let serverState: ServerState = "checking";
-let checkToken = 0;
+const local = new LocalApi();
+let api: Api = forceMock ? new MockApi({ fail: mockParam === "error" }) : local;
+let engineState: EngineState = "checking";
 let file: File | null = null;
 let fileOk = false;
 let running = false;
@@ -26,66 +25,45 @@ let abort: AbortController | null = null;
 let player: Player | null = null;
 let lastResult: { result: ClipResult; source: string; jobId: string } | null = null;
 
-// ------------------------------------------------------------------ server status
-function setServer(state: ServerState, detail = "") {
-  serverState = state;
+// ------------------------------------------------------------------ what runs here
+const backendName = () => (local.backend === "webgpu" ? "WebGPU" : "WebAssembly on the CPU");
+
+function setEngine(state: EngineState, detail = "") {
+  engineState = state;
   const box = $("server");
   box.dataset.state = state;
-  const text: Record<ServerState, string> = {
-    checking: "Checking the analysis server",
-    online: "Analysis server online",
-    waking: "Waking up the server",
-    offline: "Server not reachable: replay mode",
+  const text: Record<EngineState, string> = {
+    checking: "Checking what this browser can run",
+    online: `Runs in this browser, on ${backendName()}`,
+    offline: "This browser cannot run the pipeline: replay mode",
     mock: "Replay mode",
   };
   $("server-text").textContent = text[state];
   $("server-detail").textContent = detail;
-  $("btn-use-mock").hidden = state !== "waking";
-  $("btn-retry-server").hidden = state !== "offline";
-  const replay = state === "offline" || state === "mock";
-  $("replay-note").hidden = !replay;
-  document.querySelectorAll<HTMLButtonElement>("[data-needs-server]").forEach((b) => (b.disabled = state === "checking" || state === "waking" || running));
+  $("replay-note").hidden = !(state === "offline" || state === "mock");
+  document.querySelectorAll<HTMLButtonElement>("[data-needs-engine]").forEach((b) => (b.disabled = state === "checking" || running));
   updateAnalyse();
 }
 
-async function checkServer() {
-  const token = ++checkToken;
-  if (forceMock) {
-    api = new MockApi({ fail: mockParam === "error" });
-    setServer("mock", "Started with ?mock=1. Nothing is uploaded; the page plays back a stored example job.");
-    return loadSamples();
-  }
-  api = new HttpApi(API_BASE_URL);
-  setServer("checking", API_BASE_URL.replace(/^https?:\/\//, ""));
-  const t0 = performance.now();
-  let first = true;
-  for (;;) {
-    const h = await (api as HttpApi).health();
-    if (token !== checkToken) return;
-    const el = (performance.now() - t0) / 1000;
-    if (h === "ok") {
-      setServer("online", API_BASE_URL.replace(/^https?:\/\//, ""));
-      return loadSamples();
-    }
-    if ((h === "unreachable" && el >= UNREACHABLE_LIMIT_S) || el >= WAKE_LIMIT_S) {
-      return fallbackToMock();
-    }
-    setServer(
-      "waking",
-      first
-        ? "The server sleeps when nobody uses it. The first request wakes it; this can take up to a minute."
-        : `Still waking, ${Math.round(el)} s so far. The server sleeps when nobody uses it.`,
-    );
-    first = false;
-    await new Promise((r) => setTimeout(r, 4000));
-    if (token !== checkToken) return;
-  }
+function onlineDetail() {
+  return local.backend === "webgpu"
+    ? "Nothing is uploaded. The detector runs on this device's graphics chip through WebGPU."
+    : "Nothing is uploaded. This browser offers no WebGPU, so the detector runs on the CPU through WebAssembly. It works, only slower.";
 }
 
-function fallbackToMock() {
-  checkToken++;
-  api = new MockApi();
-  setServer("offline", "We could not reach the analysis server, so the page plays back a stored example job. Nothing you pick is uploaded.");
+async function checkEngine() {
+  if (forceMock) {
+    setEngine("mock", "Started with ?mock=1. Nothing is analysed; the page plays back a stored example job.");
+    return loadSamples();
+  }
+  setEngine("checking");
+  if ((await local.health()) !== "ok") {
+    api = new MockApi();
+    setEngine("offline", "It needs Web Workers, WebAssembly and built-in gzip decompression, and this browser lacks one of them. The page plays back a stored example job instead.");
+    return loadSamples();
+  }
+  api = local;
+  setEngine("online", onlineDetail());
   loadSamples();
 }
 
@@ -101,25 +79,29 @@ async function loadSamples() {
     note.textContent = e instanceof Error ? e.message : "Could not load the sample clips.";
     return;
   }
-  note.textContent = samples.length ? "Short clips cut from the organisers' footage, hosted on our server." : "No sample clips on the server right now.";
+  note.textContent = !samples.length
+    ? "No sample clips right now."
+    : api.mock
+      ? "In replay mode every clip gives the same stored result."
+      : "Cuts from the organisers' footage, about 11 MB each. The clip downloads to this browser and is analysed here.";
   for (const s of samples) {
     const b = document.createElement("button");
     b.type = "button";
     b.className = "sample";
-    b.dataset.needsServer = "";
+    b.dataset.needsEngine = "";
     b.innerHTML = `<span class="s-label"></span><span class="s-meta mono"></span>`;
     b.querySelector(".s-label")!.textContent = s.label;
     b.querySelector(".s-meta")!.textContent = `${s.name}, ${s.seconds} s`;
     b.addEventListener("click", () => startSample(s));
     box.append(b);
   }
-  setServer(serverState, $("server-detail").textContent || "");
+  setEngine(engineState, $("server-detail").textContent || "");
 }
 
 // ------------------------------------------------------------------ file choice
 function updateAnalyse() {
   const btn = $<HTMLButtonElement>("btn-analyse");
-  btn.disabled = !file || !fileOk || running || serverState === "checking" || serverState === "waking";
+  btn.disabled = !file || !fileOk || running || engineState === "checking";
 }
 
 function fileMsg(text: string, kind: "ok" | "warn" | "err") {
@@ -171,24 +153,17 @@ async function chooseFile(f: File | null) {
     $("file-dur").textContent = "-";
     return fileMsg("Pick an .mp4 file. Other containers are not supported.", "err");
   }
-  if (f.size > UPLOAD_MAX_BYTES) {
-    $("file-dur").textContent = "-";
-    return fileMsg(`This file is ${fmtBytes(f.size)}. The limit is ${fmtBytes(UPLOAD_MAX_BYTES)}.`, "err");
-  }
   const meta = await readDuration(f);
   if (file !== f) return;
-  if (!meta) {
+  if (!meta || !meta.width) {
     $("file-dur").textContent = "unknown";
-    fileOk = true;
-    fileMsg("Your browser cannot read this file's length (4K 10-bit files often do this). The server will check it.", "warn");
-    return updateAnalyse();
+    return fileMsg("This browser cannot open the file, so it cannot analyse it. H.264 .mp4 files play in every browser; 4K HEVC (H.265) only in some.", "err");
   }
-  $("file-dur").textContent = `${fmtTime(meta.duration)}${meta.width ? `, ${meta.width}x${meta.height}` : ""}`;
-  if (meta.duration > UPLOAD_MAX_SECONDS + 0.5) {
-    return fileMsg(`This clip is ${fmtTime(meta.duration, 0)} long. The limit is ${fmtTime(UPLOAD_MAX_SECONDS, 0)}; cut it first.`, "err");
-  }
+  $("file-dur").textContent = `${fmtTime(meta.duration)}, ${meta.width}x${meta.height}`;
   fileOk = true;
-  if (meta.width >= 3000) fileMsg("4K works, but it takes several times longer than 1080p.", "warn");
+  if (meta.duration > UPLOAD_MAX_SECONDS + 0.5)
+    fileMsg(`This clip is ${fmtTime(meta.duration, 0)} long. Only the first ${fmtTime(UPLOAD_MAX_SECONDS, 0)} is analysed.`, "warn");
+  else if (meta.width >= 3000) fileMsg("4K works, but the browser takes longer to seek through it than through 1080p.", "warn");
   else fileMsg("Ready.", "ok");
   updateAnalyse();
 }
@@ -202,25 +177,23 @@ function show(section: "idle" | "job" | "error" | "result") {
 
 function setRunning(v: boolean) {
   running = v;
-  document.querySelectorAll<HTMLButtonElement>("[data-needs-server]").forEach((b) => (b.disabled = v || serverState === "checking" || serverState === "waking"));
+  document.querySelectorAll<HTMLButtonElement>("[data-needs-engine]").forEach((b) => (b.disabled = v || engineState === "checking"));
   $<HTMLInputElement>("file-input").disabled = v;
   $("drop").classList.toggle("disabled", v);
   updateAnalyse();
 }
 
-function renderStages(stage: string, status: Job["status"] | "uploading") {
+function renderStages(stage: string, status: Job["status"] | "starting") {
   const ol = $("stages");
   ol.textContent = "";
   const cur = stage.toLowerCase();
   let idx = STAGES.findIndex((s) => s === cur);
   if (idx < 0) idx = STAGES.findIndex((s) => cur.includes(s) || s.includes(cur));
-  const items = ["uploading", ...STAGES];
-  const curItem = status === "uploading" ? 0 : status === "done" ? items.length : idx >= 0 ? idx + 1 : -1;
-  items.forEach((name, i) => {
+  const curItem = status === "starting" ? 0 : status === "done" ? STAGES.length : idx;
+  STAGES.forEach((name, i) => {
     const li = document.createElement("li");
     li.textContent = name;
-    if (curItem < 0) li.className = i === 0 ? "done" : "pending";
-    else li.className = i < curItem ? "done" : i === curItem ? "active" : "pending";
+    li.className = curItem < 0 ? "pending" : i < curItem ? "done" : i === curItem ? "active" : "pending";
     if (i === curItem) li.setAttribute("aria-current", "step");
     ol.append(li);
   });
@@ -233,7 +206,7 @@ function renderStages(stage: string, status: Job["status"] | "uploading") {
   }
 }
 
-function setProgress(f: number, stage: string, eta: number | null, status: Job["status"] | "uploading") {
+function setProgress(f: number, stage: string, eta: number | null, status: Job["status"] | "starting") {
   const pct = Math.round(Math.max(0, Math.min(1, f)) * 100);
   const bar = $("bar");
   bar.style.setProperty("--p", `${pct}%`);
@@ -262,6 +235,20 @@ function fail(msg: string) {
   $("job-error").focus();
 }
 
+function idle() {
+  clearInterval(elapsedTimer);
+  setRunning(false);
+  show("idle");
+}
+
+// Browsers slow down pages that are not in front, and seeking a hidden video can stall.
+document.addEventListener("visibilitychange", () => {
+  if (!running || api.mock || !document.hidden) return;
+  const warn = $("job-warn");
+  warn.textContent = "This tab was in the background, where the browser slows the analysis down. Keep it in front to finish sooner.";
+  warn.hidden = false;
+});
+
 async function runJob(source: string, start: (signal: AbortSignal) => Promise<string>) {
   if (running) return;
   abort = new AbortController();
@@ -269,71 +256,52 @@ async function runJob(source: string, start: (signal: AbortSignal) => Promise<st
   setRunning(true);
   show("job");
   $("job-title").textContent = source;
-  $("job-mode").textContent = api.mock ? "replay" : "live";
+  $("job-mode").textContent = api.mock ? "replay" : "on this device";
+  $("job-warn").hidden = true;
   startElapsed();
-  setProgress(0, "uploading", null, "uploading");
+  setProgress(0, STAGES[0], null, "starting");
   $("job").scrollIntoView({ block: "nearest" });
 
   let jobId: string;
   try {
     jobId = await start(signal);
   } catch (e) {
-    if (e instanceof ApiError && e.kind === "aborted") {
-      clearInterval(elapsedTimer);
-      setRunning(false);
-      return show("idle");
-    }
+    if (e instanceof ApiError && e.kind === "aborted") return idle();
     return fail(e instanceof Error ? e.message : "Could not start the job.");
   }
 
-  let misses = 0;
   for (;;) {
-    if (signal.aborted) {
-      clearInterval(elapsedTimer);
-      setRunning(false);
-      return show("idle");
-    }
+    if (signal.aborted) return idle();
     let job: Job;
     try {
       job = await api.job(jobId);
-      misses = 0;
-      $("job-warn").hidden = true;
     } catch (e) {
-      const err = e as ApiError;
-      if (err.kind === "not_found") return fail(err.message);
-      if (++misses > 8) return fail(`${err.message} We gave up after several tries.`);
-      $("job-warn").hidden = false;
-      $("job-warn").textContent = "Lost contact with the server, retrying.";
-      await new Promise((r) => setTimeout(r, 1500 * misses));
-      continue;
+      return fail(e instanceof Error ? e.message : "Lost track of the job.");
     }
-    if (job.status === "error") return fail(job.error || "The server reported an error without a message.");
+    if (signal.aborted) return idle();
+    if (job.status === "error") return fail(job.error || "The analysis stopped without saying why.");
     if (job.status === "done") {
       if (!job.result) return fail("The job finished but returned no result.");
       setProgress(1, "done", 0, "done");
       clearInterval(elapsedTimer);
       setRunning(false);
+      // the model may have fallen back from WebGPU to WebAssembly while it loaded
+      if (api === local) setEngine("online", onlineDetail());
       return showResult(job.result, source, jobId);
     }
     setProgress(job.progress ?? 0, job.stage || job.status, job.eta_sec, job.status);
-    await new Promise((r) => setTimeout(r, api.mock ? 400 : 1200));
+    await new Promise((r) => setTimeout(r, api.mock ? 400 : 500));
   }
 }
 
 function startUpload() {
   if (!file || !fileOk) return;
   const f = file;
-  runJob(f.name, (signal) =>
-    api.submitFile(
-      f,
-      (p) => setProgress(p * 0.1, p < 1 ? `uploading, ${Math.round(p * 100)}%` : "upload finished", null, "uploading"),
-      signal,
-    ),
-  );
+  runJob(f.name, (signal) => api.submitFile(f, signal));
 }
 
 function startSample(s: Sample) {
-  runJob(`${s.label} (${s.name})`, () => api.submitSample(s.name));
+  runJob(`${s.label} (${s.name})`, (signal) => api.submitSample(s.name, signal));
 }
 
 // ------------------------------------------------------------------ result
@@ -342,9 +310,18 @@ function showResult(result: ClipResult, source: string, jobId: string) {
   show("result");
   const video = result.video ? api.videoUrl(result.video) : "";
   $("result-title").textContent = source;
-  $("result-mode").textContent = api.mock ? "Stored example result from replay mode, not an analysis of your file." : `Job ${jobId}`;
+  $("result-mode").textContent = api.mock
+    ? "Stored example result from replay mode, not an analysis of your file."
+    : [
+        `Analysed on this device with ${backendName()}: ${result.risk.length} frames, 5 per second.`,
+        result.aligned === false
+          ? "The first frame did not match our view of the junction, so the rules looked in the wrong places and these events are not to be trusted."
+          : "",
+      ].join(" ");
   const root = document.querySelector<HTMLElement>('[data-player="demo"]')!;
-  const src = { result, video, poster: "/media/demo_poster.jpg", title: `${source}, ${result.duration.toFixed(1)} s` };
+  // the clip's own first frame instead of a stock poster, which the tracked boxes would not fit
+  const poster = result.overlay ? undefined : "/media/demo_poster.jpg";
+  const src = { result, video, poster, title: `${source}, ${result.duration.toFixed(1)} s` };
   if (!player) player = new Player(root, src, { theta: RISK_THETA, mergeGap: RISK_MERGE_GAP });
   else player.load(src);
   $("result").scrollIntoView({ block: "start" });
@@ -354,7 +331,11 @@ function showResult(result: ClipResult, source: string, jobId: string) {
 function downloadJson() {
   if (!lastResult) return;
   const { result, source, jobId } = lastResult;
-  const payload = { job_id: jobId, source, mode: api.mock ? "mock" : "live", ...result };
+  // the result as the Python demo server returned it: no object URL, no per-frame boxes
+  const data: Partial<ClipResult> = { ...result };
+  delete data.video;
+  delete data.overlay;
+  const payload = { job_id: jobId, source, mode: api.mock ? "mock" : `browser, ${local.backend}`, ...data };
   const blob = new Blob([JSON.stringify(payload, null, 1)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -396,8 +377,6 @@ export function initDemo() {
   });
   $("btn-err-back").addEventListener("click", () => show("idle"));
   $("btn-download").addEventListener("click", downloadJson);
-  $("btn-use-mock").addEventListener("click", fallbackToMock);
-  $("btn-retry-server").addEventListener("click", () => checkServer());
   show("idle");
-  checkServer();
+  checkEngine();
 }

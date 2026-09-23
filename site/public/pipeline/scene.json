@@ -297,7 +297,7 @@
    "illegal_u_turn"
   ],
   "gap": {
-   "jaywalking": 0.5,
+   "jaywalking": 3.0,
    "failure_to_yield": 0.0,
    "red_light": 0.0,
    "stop_line": 0.5,
@@ -416,6 +416,7 @@
   "STEP": 0.1,
   "TARGET_HZ": 10.0,
   "TOTAL_LIMIT": 2.8,
+  "TRACK_BUFFER_SEC": 1.5,
   "TTC_HALF": 0.9,
   "WORK_WIDTH": 1280
  },

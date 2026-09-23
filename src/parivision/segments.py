@@ -34,7 +34,8 @@ def finalize(per_class: dict[str, list[tuple[float, float]]], duration: float,
     events = []
     for label, ivs in per_class.items():
         for s, e in union(ivs, gap.get(label, 0.0)):
-            s, e = max(0.0, s), min(duration, e)
+            # plain floats: round() on a NumPy float rounds differently, and the times come from both
+            s, e = float(max(0.0, s)), float(min(duration, e))
             if e - s >= min_len.get(label, 0.0):
                 events.append([round(s, 2), round(e, 2), label])
     events.sort()

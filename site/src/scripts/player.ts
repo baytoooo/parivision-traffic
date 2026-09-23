@@ -1,8 +1,9 @@
 // Ties one annotated video to its timeline, risk curve, signal lamp and event
 // table. Used by the Results page (sample clips) and the Demo page (job result).
+// A demo result also carries the tracker's boxes, which are drawn over the video.
 import { className, zoneFor, ZONE_BY_KEY } from "../lib/classes";
 import { fmtTime, iou } from "../lib/format";
-import type { ClipResult, Evidence, Seg } from "../lib/types";
+import type { ClipResult, Evidence, Overlay, Seg } from "../lib/types";
 import { RiskCurve } from "./riskcurve";
 import { Timeline, type Mode } from "./timeline";
 
@@ -23,6 +24,167 @@ interface Row {
 
 const $ = <T extends Element = HTMLElement>(root: Element, sel: string) => root.querySelector<T>(`[data-el="${sel}"]`);
 
+// The colours of the rendered videos on the Results page (src/parivision/render.py GROUP_COLORS and
+// CLASS_COLORS, BGR there): a box takes its group's colour, or its event's while it is in one.
+const GROUP_RGB: Record<string, string> = {
+  vehicle: "120, 200, 235",
+  person: "140, 235, 140",
+  bicycle: "250, 170, 230",
+  animal: "255, 200, 90",
+};
+const CLASS_RGB: Record<string, string> = {
+  accident: "230, 40, 40",
+  near_miss: "255, 120, 60",
+  red_light: "255, 50, 50",
+  wrong_way: "200, 60, 200",
+  illegal_u_turn: "180, 120, 220",
+  stopped_vehicle: "255, 190, 0",
+  jaywalking: "255, 220, 0",
+  failure_to_yield: "255, 170, 60",
+  illegal_turn: "255, 110, 180",
+  solid_line_crossing: "80, 180, 255",
+  stop_line: "255, 80, 80",
+  congestion: "120, 120, 120",
+  road_obstacle: "120, 200, 60",
+  fire_smoke: "180, 30, 30",
+};
+const OTHER_RGB = "200, 200, 200";
+
+/**
+ * Draws a result's tracked boxes on a canvas laid over the video: the analysed frame nearest the
+ * playhead, placed inside the picture as object-fit: contain shows it. An actor named in the
+ * evidence of an event that is on at that moment gets the event's colour and its class name.
+ */
+class BoxOverlay {
+  private canvas: HTMLCanvasElement;
+  private video: HTMLVideoElement;
+  private toggle: HTMLElement | null;
+  private data: Overlay | null = null;
+  private times: number[] = [];
+  /** Per track id: when it is an actor of an event that is on, and which. */
+  private roles = new Map<number, { s: number; e: number; label: string }[]>();
+  private visible = true;
+  private t = 0;
+  private drawn = "";
+
+  constructor(canvas: HTMLCanvasElement, video: HTMLVideoElement, toggle: HTMLElement | null, box: HTMLInputElement | null) {
+    this.canvas = canvas;
+    this.video = video;
+    this.toggle = toggle;
+    box?.addEventListener("change", () => {
+      this.visible = box.checked;
+      this.draw(this.t);
+    });
+    new ResizeObserver(() => this.draw(this.t)).observe(canvas);
+    video.addEventListener("loadeddata", () => this.draw(this.t));
+  }
+
+  set(result: ClipResult) {
+    const o = result.overlay;
+    this.data = o && o.frames.length ? o : null;
+    this.times = this.data ? this.data.frames.map((f) => f.t) : [];
+    this.roles.clear();
+    const events = result.events ?? [];
+    for (const ev of result.evidence ?? []) {
+      // only the part of the evidence inside a final event of its class
+      for (const [s, e, label] of events) {
+        if (label !== ev.label) continue;
+        const a = Math.max(s, ev.start), b = Math.min(e, ev.end);
+        if (a > b) continue;
+        for (const id of ev.actors ?? []) {
+          const list = this.roles.get(id) ?? [];
+          list.push({ s: a, e: b, label });
+          this.roles.set(id, list);
+        }
+      }
+    }
+    this.canvas.hidden = !this.data;
+    if (this.toggle) this.toggle.hidden = !this.data;
+    this.drawn = "";
+    this.draw(this.t);
+  }
+
+  /** Index of the analysed frame nearest t, or -1 when none is within one frame step. */
+  private nearest(t: number): number {
+    const ts = this.times;
+    if (!ts.length) return -1;
+    let lo = 0, hi = ts.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (ts[mid] < t) lo = mid + 1;
+      else hi = mid;
+    }
+    const i = lo > 0 && Math.abs(ts[lo - 1] - t) <= Math.abs(ts[lo] - t) ? lo - 1 : lo;
+    const step = ts.length > 1 ? (ts[ts.length - 1] - ts[0]) / (ts.length - 1) : 0.2;
+    return Math.abs(ts[i] - t) <= step * 0.75 ? i : -1;
+  }
+
+  draw(t: number) {
+    this.t = t;
+    const c = this.canvas;
+    if (!this.data) return;
+    const dpr = window.devicePixelRatio || 1;
+    const cr = c.getBoundingClientRect();
+    const W = Math.round(cr.width * dpr), H = Math.round(cr.height * dpr);
+    // no boxes over a video that shows no frame yet
+    const i = this.visible && this.video.readyState >= 2 ? this.nearest(t) : -1;
+    const key = `${i} ${W}x${H} ${this.video.videoWidth}`;
+    if (key === this.drawn) return;
+    this.drawn = key;
+    if (c.width !== W || c.height !== H) {
+      c.width = W;
+      c.height = H;
+    }
+    const g = c.getContext("2d");
+    if (!g) return;
+    g.clearRect(0, 0, W, H);
+    if (i < 0 || !W || !H) return;
+
+    // the picture inside the video element (object-fit: contain), in canvas pixels
+    const vr = this.video.getBoundingClientRect();
+    const [ww, wh] = this.data.work;
+    const vw = this.video.videoWidth || ww, vh = this.video.videoHeight || wh;
+    const scale = Math.min(vr.width / vw, vr.height / vh);
+    const pw = vw * scale, ph = vh * scale;
+    const ox = (vr.left - cr.left + (vr.width - pw) / 2) * dpr, oy = (vr.top - cr.top + (vr.height - ph) / 2) * dpr;
+    const sx = (pw * dpr) / ww, sy = (ph * dpr) / wh;
+
+    const frame = this.data.frames[i];
+    const font = `600 ${Math.round(11 * dpr)}px "Overpass Mono", ui-monospace, monospace`;
+    const actors: [number[], string[]][] = [];
+    g.lineJoin = "round";
+    for (const b of frame.boxes) {
+      const labels = [...new Set((this.roles.get(b[4]) ?? []).filter((r) => frame.t >= r.s - 1e-3 && frame.t <= r.e + 1e-3).map((r) => r.label))];
+      if (labels.length) {
+        actors.push([b, labels]);
+        continue;
+      }
+      g.strokeStyle = `rgba(${GROUP_RGB[this.data.groups[Math.floor(b[4] / 1_000_000) - 1]] ?? OTHER_RGB}, 0.85)`;
+      g.lineWidth = 1.25 * dpr;
+      g.strokeRect(ox + b[0] * sx, oy + b[1] * sy, (b[2] - b[0]) * sx, (b[3] - b[1]) * sy);
+    }
+    // actors last, so that their labels sit on top
+    g.font = font;
+    g.textBaseline = "bottom";
+    for (const [b, labels] of actors) {
+      const rgb = CLASS_RGB[labels[0]] ?? OTHER_RGB;
+      const x = ox + b[0] * sx, y = oy + b[1] * sy;
+      g.strokeStyle = `rgb(${rgb})`;
+      g.lineWidth = 2.5 * dpr;
+      g.strokeRect(x, y, (b[2] - b[0]) * sx, (b[3] - b[1]) * sy);
+      const text = labels.map(className).join(", ");
+      const pad = 4 * dpr, h = 16 * dpr;
+      const tw = g.measureText(text).width + 2 * pad;
+      const tx = Math.min(Math.max(x - 1 * dpr, 0), Math.max(0, W - tw));
+      const ty = y - h >= 0 ? y - h : y;
+      g.fillStyle = `rgb(${rgb})`;
+      g.fillRect(tx, ty, tw, h);
+      g.fillStyle = "#151618";
+      g.fillText(text, tx + pad, ty + h - 3 * dpr);
+    }
+  }
+}
+
 export class Player {
   private root: HTMLElement;
   readonly video: HTMLVideoElement;
@@ -34,11 +196,13 @@ export class Player {
   private raf = 0;
   private theta: number;
   private lastPhase = "";
+  private overlay: BoxOverlay;
 
   constructor(root: HTMLElement, src: PlayerSource, opts: { theta: number; mergeGap: number }) {
     this.root = root;
     this.theta = opts.theta;
     this.video = $<HTMLVideoElement>(root, "video")!;
+    this.overlay = new BoxOverlay($<HTMLCanvasElement>(root, "overlay")!, this.video, $(root, "boxes-toggle"), $<HTMLInputElement>(root, "boxes"));
     const seek = (t: number) => this.seek(t);
     this.timeline = new Timeline($(root, "timeline")!, this.tlData(src.result), seek);
     this.risk = new RiskCurve($(root, "risk")!, { duration: src.result.duration, risk: src.result.risk ?? [] }, { ...opts, onSeek: seek });
@@ -70,6 +234,7 @@ export class Player {
     if (v.getAttribute("src") !== src.video) {
       v.pause();
       if (src.poster) v.poster = src.poster;
+      else v.removeAttribute("poster");
       v.setAttribute("src", src.video);
       v.preload = "metadata";
       v.load();
@@ -81,6 +246,7 @@ export class Player {
 
     this.buildRows();
     this.renderSummary();
+    this.overlay.set(r);
     this.update(startAt);
     if (startAt > 0) this.seek(startAt);
   }
@@ -273,6 +439,7 @@ export class Player {
   private update(t: number) {
     this.timeline.setTime(t);
     this.risk.setTime(t);
+    this.overlay.draw(t);
     const time = $(this.root, "time");
     if (time) time.textContent = fmtTime(t);
 

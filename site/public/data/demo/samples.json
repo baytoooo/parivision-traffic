@@ -1,0 +1,20 @@
+[
+ {
+  "name": "north_crossing_midday",
+  "label": "Midday, pedestrians on the north crossing",
+  "seconds": 30,
+  "url": "/media/demo/north_crossing_midday.mp4"
+ },
+ {
+  "name": "west_crossing_turns",
+  "label": "Right turns over the west crossing",
+  "seconds": 30,
+  "url": "/media/demo/west_crossing_turns.mp4"
+ },
+ {
+  "name": "dusk_queue",
+  "label": "Dusk, red-light queue and U-turn",
+  "seconds": 30,
+  "url": "/media/demo/dusk_queue.mp4"
+ }
+]

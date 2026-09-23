@@ -38,13 +38,26 @@ export interface ClipResult {
   duration: number;
   events: Seg[];
   labels?: Seg[];
-  /** [t_sec, score] at 10 Hz */
+  /** [t_sec, score] per analysed frame (10 Hz on the Results page, 5 Hz in the demo) */
   risk: [number, number][];
   signal?: Seg[];
   evidence?: Evidence[];
   counts?: Counts;
-  /** Only in demo job results: URL of the annotated video, relative to the API. */
+  /** Only in demo job results: the video to play, the analysed clip itself (an object URL) or a stored video in replay mode. */
   video?: string;
+  /** Only in demo job results: whether the first frame matched our reference view of the junction. */
+  aligned?: boolean;
+  /** Only in demo job results: the tracker's boxes per analysed frame, drawn over the video. */
+  overlay?: Overlay;
+}
+
+/** Tracked boxes of a demo job (src/pipeline/analyse.ts), in work pixels: the clip scaled to work[0] wide. */
+export interface Overlay {
+  work: [number, number];
+  /** Object group of each track id: ids in [(i + 1) * 1e6, (i + 2) * 1e6) belong to groups[i]. */
+  groups: string[];
+  /** One entry per analysed frame, in time order; a box is [x1, y1, x2, y2, track_id, coco_class]. */
+  frames: { t: number; boxes: [number, number, number, number, number, number][] }[];
 }
 
 export interface PRF {
@@ -177,14 +190,16 @@ export interface Team {
   members: Member[];
 }
 
-/** GET /api/samples */
+/** A demo sample clip (/data/demo/samples.json). */
 export interface Sample {
   name: string;
   label: string;
   seconds: number;
+  /** Where the clip is served; the replay mode's list has none. */
+  url?: string;
 }
 
-/** GET /api/jobs/<id> */
+/** A demo job as the page polls it (the shape of the Python demo server's GET /api/jobs/<id>). */
 export interface Job {
   status: "queued" | "running" | "done" | "error";
   progress: number;

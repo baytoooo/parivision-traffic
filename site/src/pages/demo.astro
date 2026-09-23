@@ -1,41 +1,36 @@
 ---
 import Base from "../layouts/Base.astro";
 import ClipPanel from "../components/ClipPanel.astro";
-import { UPLOAD_MAX_BYTES, UPLOAD_MAX_SECONDS } from "../config";
+import { UPLOAD_MAX_SECONDS } from "../config";
 
-const maxMb = Math.round(UPLOAD_MAX_BYTES / 1024 / 1024);
 const maxMin = UPLOAD_MAX_SECONDS / 60;
 ---
-<Base title="Demo" description="Upload a short clip of the junction and get traffic events, a risk curve, annotated playback and a JSON file back." active="demo">
+<Base title="Demo" description="Run our pipeline on a clip of the junction in your browser and get traffic events, tracked boxes over the video, a risk curve and a JSON file. Nothing is uploaded." active="demo">
   <header class="page-head wrap">
     <p class="kicker">Demo</p>
     <h1>Run it on a clip</h1>
-    <p class="lede">Upload an .mp4 from this camera, or pick one of our sample clips. You get the event timeline, the annotated video, the risk curve, an event table and a JSON file. Our rules are drawn for this one junction, so footage from anywhere else will give wrong answers.</p>
+    <p class="lede">Pick one of our sample clips or an .mp4 from this camera. The whole pipeline runs in your browser, on this device, and nothing is uploaded. You get the event timeline, the tracked boxes over the video, the risk curve, an event table and a JSON file. Our rules are drawn for this one junction, so footage from anywhere else will give wrong answers.</p>
   </header>
 
   <section class="wrap">
     <div class="server panel" id="server" data-state="checking" role="status" aria-live="polite">
       <span class="srv-dot" aria-hidden="true"></span>
       <div class="srv-body">
-        <strong id="server-text">Checking the analysis server</strong>
+        <strong id="server-text">Checking what this browser can run</strong>
         <span id="server-detail" class="srv-detail"></span>
       </div>
-      <div class="srv-actions">
-        <button type="button" class="btn small" id="btn-use-mock" hidden>Use the example replay now</button>
-        <button type="button" class="btn small" id="btn-retry-server" hidden>Try the server again</button>
-      </div>
     </div>
-    <p class="replay-note" id="replay-note" hidden>Replay mode: the page plays back a stored example job for a 30 s clip instead of analysing anything. Your file, if you pick one, stays in your browser.</p>
+    <p class="replay-note" id="replay-note" hidden>Replay mode: the page plays back a stored example job for a 30 s clip instead of analysing anything. Your file, if you pick one, stays on this device.</p>
   </section>
 
   <section class="wrap inputs" id="inputs" aria-label="Choose a clip">
     <div class="panel panel-pad upload">
-      <h2 class="h-card">Upload a clip</h2>
+      <h2 class="h-card">Analyse your own clip</h2>
       <label class="drop" id="drop" for="file-input">
         <input type="file" id="file-input" accept=".mp4,video/mp4" class="visually-hidden" />
         <span class="drop-icon" aria-hidden="true"></span>
         <span class="drop-main">Choose an .mp4 or drop it here</span>
-        <span class="drop-sub">Up to {maxMin} minutes and {maxMb} MB. 1080p is recommended; 4K works but is slower.</span>
+        <span class="drop-sub">The first {maxMin} minutes are analysed. The file stays on this device. 1080p is recommended; 4K works but is slower.</span>
       </label>
       <div class="file-info" id="file-info" hidden>
         <dl>
@@ -53,9 +48,6 @@ const maxMin = UPLOAD_MAX_SECONDS / 60;
       <h2 class="h-card">Or try a sample clip</h2>
       <p class="samples-note" id="samples-note">Loading sample clips</p>
       <div class="samples" id="samples"></div>
-      <ul class="facts-list">
-        <li>A 30 s clip takes TBD s on the server.</li>
-      </ul>
     </div>
   </section>
 
@@ -104,20 +96,31 @@ const maxMin = UPLOAD_MAX_SECONDS / 60;
     </div>
     <ClipPanel name="demo" poster="/media/demo_poster.jpg" />
   </section>
+
+  <section class="wrap" aria-labelledby="notes-heading">
+    <div class="panel panel-pad notes">
+      <h2 class="h-card" id="notes-heading">How the browser run differs from our submission</h2>
+      <ul class="facts-list">
+        <li>The first run downloads the detector (10 MB) and the ONNX Runtime engine (14 MB for WebAssembly, 27 MB for WebGPU, less when the server compresses it). The browser keeps both in its cache for the next runs.</li>
+        <li>The detector runs on WebGPU where the browser offers it. Elsewhere it runs on the CPU through WebAssembly, which is slower.</li>
+        <li>It reads the first {maxMin} minutes of a clip at 5 frames per second. The submission reads 10 frames per second.</li>
+        <li>The detector is the small YOLO26n at 960 px wide, about a thirtieth of the compute of the submission's YOLO26m at 1280 px and 10 frames per second. On the two clips we could compare, it scores within 0.01 mean F1 of it (see the <a href="/results#ablations">ablations</a>).</li>
+        <li>To line the camera view up with our reference view, the page searches edge maps for the scale and shift that fit best and then refines them. The submission matches SIFT features.</li>
+        <li>Tracking, the signal reader, the event rules and the risk model are the same algorithms with the same settings, ported to TypeScript and checked against the Python output.</li>
+      </ul>
+    </div>
+  </section>
 </Base>
 
 <style is:global>
   .server { display: flex; align-items: center; gap: 14px; padding: 12px 16px; flex-wrap: wrap; }
   .srv-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--sig-off); flex: none; }
   .server[data-state="online"] .srv-dot { background: var(--sig-green); box-shadow: 0 0 10px var(--sig-green); }
-  .server[data-state="waking"] .srv-dot { background: var(--sig-amber); box-shadow: 0 0 10px var(--sig-amber); animation: blink 1.2s steps(2) infinite; }
   .server[data-state="checking"] .srv-dot { background: var(--sig-amber); }
   .server[data-state="offline"] .srv-dot { background: var(--sig-red); box-shadow: 0 0 10px var(--sig-red); }
   .server[data-state="mock"] .srv-dot { background: var(--paint-2); }
-  @keyframes blink { 50% { opacity: .25; } }
   .srv-body { display: grid; gap: 2px; flex: 1; min-width: 200px; }
   .srv-detail { font-size: .85rem; color: var(--paint-2); }
-  .srv-actions { display: flex; gap: 8px; }
   .replay-note { margin: 10px 0 0; font-size: .88rem; color: var(--zebra); font-family: var(--font-mono); }
 
   .inputs { display: grid; gap: 14px; margin-top: 18px; }
@@ -157,7 +160,8 @@ const maxMin = UPLOAD_MAX_SECONDS / 60;
   .sample[disabled] { opacity: .45; cursor: not-allowed; }
   .s-label { font-weight: 700; }
   .s-meta { font-size: .72rem; color: var(--muted); }
-  .facts-list { margin: 14px 0 0; padding-left: 1.1em; font-size: .85rem; color: var(--muted); }
+  .notes { margin-top: 18px; }
+  .facts-list { margin: 0; padding-left: 1.1em; font-size: .88rem; color: var(--paint-2); display: grid; gap: 4px; max-width: 78ch; }
 
   #job, #job-error, .result { margin-top: 18px; }
   .job-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }

@@ -41,6 +41,7 @@ TTC_HALF = 0.9         # s: contact predicted this soon gives half the maximum h
 PERSIST = 3            # a pair must look dangerous in this many consecutive updates
 RADIUS_M = {PERSON: 0.35, 1: 0.6, 3: 0.7, 2: 1.3, 5: 2.0, 7: 1.8}  # footprint radius by COCO class
 EMA = 0.35
+TRACK_BUFFER_SEC = 1.5  # shorter than Part A's 2 s: a lost pair should stop counting quickly
 
 
 @lru_cache(maxsize=1)
@@ -107,7 +108,7 @@ class Anticipator:
         self.stride = max(1, int(round(self.fps / TARGET_HZ)))
         self.width = int(meta.get("width") or 3840)
         self.height = int(meta.get("height") or 2160)
-        self.tracker = MultiTracker(fps=self.fps / self.stride, buffer_sec=1.5)
+        self.tracker = MultiTracker(fps=self.fps / self.stride, buffer_sec=TRACK_BUFFER_SEC)
         self.alignment: Alignment | None = None
         self.history: dict[int, list[tuple[float, np.ndarray, float, int]]] = {}
         self.base_stride = self.stride

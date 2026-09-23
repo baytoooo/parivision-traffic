@@ -1,6 +1,7 @@
 ---
-// Markup for one synced player: video, signal lamp, event timeline, risk
-// curve, event table. src/scripts/player.ts fills it in.
+// Markup for one synced player: video (with the tracked boxes of a demo result
+// drawn over it), signal lamp, event timeline, risk curve, event table.
+// src/scripts/player.ts fills it in.
 import "../styles/player.css";
 
 interface Props {
@@ -14,6 +15,7 @@ const { name, poster, title = "" } = Astro.props;
   <div class="pl-stage">
     <div class="pl-video frame">
       <video data-el="video" controls muted playsinline preload="none" poster={poster}></video>
+      <canvas class="pl-overlay" data-el="overlay" aria-hidden="true" hidden></canvas>
       <p class="pl-video-error" data-el="video-error" hidden>The video did not load. The timeline and table below still work.</p>
     </div>
     <aside class="pl-side" aria-label="State at the playhead">
@@ -47,6 +49,7 @@ const { name, poster, title = "" } = Astro.props;
       <label><input type="radio" name={`mode-${name}`} value="both" /><span>Both</span></label>
     </fieldset>
     <label class="check"><input type="checkbox" data-el="all" /> All 14 classes</label>
+    <label class="check" data-el="boxes-toggle" hidden><input type="checkbox" data-el="boxes" checked /> Tracked boxes</label>
     <span class="pl-legend" aria-hidden="true">
       <span><i class="sw pred"></i>prediction</span>
       <span class="lg-label"><i class="sw label"></i>label</span>
@@ -79,3 +82,8 @@ const { name, poster, title = "" } = Astro.props;
     </div>
   </div>
 </div>
+
+<style>
+  /* over the video's box; player.ts places the boxes inside the letterboxed picture */
+  .pl-overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+</style>

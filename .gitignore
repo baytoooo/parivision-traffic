@@ -18,3 +18,5 @@ labels/dev_labels_partial.json
 demo/samples/
 
 site/tests/fixtures/
+site/public/media/demo/
+site/public/media/*.mp4

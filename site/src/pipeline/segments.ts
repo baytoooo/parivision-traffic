@@ -27,9 +27,11 @@ export function union(intervals: [number, number][], gap = 0): [number, number][
   return merged;
 }
 
-/** Python's round(x, 2). */
+/** Python's round(x, 2): the exact binary value rounded to 2 decimals, halves to even. toFixed rounds
+ * the exact value too but sends exact halves up; those are only x.125, x.375, x.625 and x.875. */
 export function round2(v: number): number {
-  return roundHalfEven(v * 100) / 100;
+  const tie = Number.isInteger(v * 8) && !Number.isInteger(v * 4);
+  return tie ? roundHalfEven(v * 100) / 100 : Number(v.toFixed(2));
 }
 
 /** Union per class, drop short blips, clip to the video, emit [start, end, label] sorted like Python lists. */

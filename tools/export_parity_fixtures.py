@@ -13,6 +13,8 @@ Writes site/tests/fixtures/<clip>/ (gitignored; rebuilt by this script):
                     it was computed from, as a PNG next to it (frame0.png)
   lamps.json        lamp patch boxes and scores for a few full-size frames saved as lamp_<t>.png
   rules.json        Python evidence and final events for trajectories.json + signal.json
+  rules_perturbed.json  the same for three perturbed inputs (phases rolled, slow traffic on green,
+                    every 10th trajectory played backwards), so red_light, congestion and wrong_way fire
   risk.json         Part B's risk curve replayed over detections.json (Anticipator.observe)
   scene_samples.json  mask bits, zone bits and distances at 3000 random reference points
   det_frame.rgb     one frame at 960x540, raw RGB, and det_expected.json: what Ultralytics gets from
@@ -21,7 +23,8 @@ Writes site/tests/fixtures/<clip>/ (gitignored; rebuilt by this script):
 Images are also written as raw bytes (.gray, .rgb) so the Node tests need no image decoder;
 site/tests/fixtures/refs/ holds the two references as raw grey 480x270.
 
-Each stage's input is the previous stage's Python output, so a JS module can be checked on its
+Trajectories are written at full precision (event edges are rounded to 0.01 s, and a value cut to a
+few decimals can land on a rounding tie, or move an interpolated crossing time, where the real one does not). Each stage's input is the previous stage's Python output, so a JS module can be checked on its
 own: tracker on detections, build on tracks, rules on trajectories, and so on.
 """
 from __future__ import annotations
@@ -82,9 +85,9 @@ def main() -> None:
         d = Detections.empty() if rows is None else Detections(
             rows[:, 2:6].astype(np.float32), rows[:, 6].astype(np.float32), rows[:, 7].astype(np.int16))
         t = f / fps
-        frames.append({"t": round(t, 4), "boxes": [r(list(b) + [c, k]) for b, c, k in zip(d.xyxy, d.conf, d.cls)]})
+        frames.append({"t": t, "boxes": [[*map(float, b), float(c), int(k)] for b, c, k in zip(d.xyxy, d.conf, d.cls)]})
         out_rows = tracker.update(d, (h, w))
-        track_rows.append({"t": round(t, 4), "rows": [r(x) for x in out_rows]})
+        track_rows.append({"t": t, "rows": [r(x) for x in out_rows]})
         collect(tracks, t, out_rows)
         risk.append([round(t, 3), round(risk_model.observe(d, (h, w), t), 5)])
     duration = n_frames / fps
@@ -95,8 +98,8 @@ def main() -> None:
 
     trajs = build(tracks, H)
     (out / "trajectories.json").write_text(json.dumps([{
-        "tid": tr.tid, "group": tr.group, "cls": tr.cls, "t": r(tr.t, 4), "box": r(tr.box, 2), "foot": r(tr.foot, 3),
-        "vel": r(tr.vel, 3), "height": r(tr.height, 3), "conf": r(tr.conf, 4)} for tr in trajs]))
+        "tid": tr.tid, "group": tr.group, "cls": tr.cls, "t": tr.t.tolist(), "box": tr.box.tolist(), "foot": tr.foot.tolist(),
+        "vel": tr.vel.tolist(), "height": tr.height.tolist(), "conf": tr.conf.tolist()} for tr in trajs]))
 
     sig = json.loads((ROOT / "cache/signal" / f"{args.clip}.json").read_text())
     (out / "signal.json").write_text(json.dumps({k: sig[k] for k in ("times", "raw", "phases", "scores")}))
@@ -106,6 +109,33 @@ def main() -> None:
         "dt": ctx.dt, "people": sorted(tr.tid for tr in ctx.people), "events": events,
         "evidence": [{"label": e.label, "start": round(e.start, 4), "end": round(e.end, 4), "actors": e.actors,
                       "note": e.note} for e in evidence]}, indent=1))
+
+    # the sample clips never trigger red_light, congestion or wrong_way on their own, so the same inputs
+    # are perturbed until they do (tests/rules.test.ts applies the same perturbations to the same files)
+    import dataclasses
+
+    def flipped(tr):
+        return dataclasses.replace(tr, box=tr.box[::-1].copy(), foot=tr.foot[::-1].copy(), vel=-tr.vel[::-1],
+                                   height=tr.height[::-1].copy(), conf=tr.conf[::-1].copy())
+
+    phases = np.array(sig["phases"])
+    perturbations = {
+        "phases_rolled_37": (trajs, np.roll(phases, 37), ["red_light", "congestion"]),
+        "slow_on_green": ([dataclasses.replace(tr, vel=tr.vel * 0.3) for tr in trajs], np.full(len(phases), "green"),
+                          ["congestion"]),
+        "every_10th_reversed": ([flipped(tr) if i % 10 == 0 else tr for i, tr in enumerate(trajs)], phases,
+                                ["wrong_way", "illegal_u_turn"]),
+    }
+    perturbed = {}
+    for name, (tr_p, ph_p, labels) in perturbations.items():
+        ev_p, evid_p = E.detect_from_context(Context(tr_p, np.array(sig["times"]), ph_p, duration), H)
+        counts: dict[str, int] = {}
+        for e in evid_p:
+            counts[e.label] = counts.get(e.label, 0) + 1
+        perturbed[name] = {"labels": labels, "counts": counts,
+                           "evidence": [[e.label, e.start, e.end, e.actors, e.note] for e in evid_p if e.label in labels],
+                           "events": [x for x in ev_p if x[2] in labels]}
+    (out / "rules_perturbed.json").write_text(json.dumps(perturbed, indent=1))
 
     # alignment input and the lamp reader on real pixels
     video = ROOT / "kit/samples" / f"{args.clip}.MP4"
@@ -160,7 +190,7 @@ def main() -> None:
     (out / "det_expected.json").write_text(json.dumps({"size": [960, 540], "boxes": [
         r(list(b) + [c, k]) for b, c, k in zip(res.xyxy.cpu().numpy(), res.conf.cpu().numpy(), res.cls.cpu().numpy())]}))
 
-    (out / "alignment.json").write_text(json.dumps({"H": r(H, 8), "frame": "frame0.png", "frame_size": [480, 270],
+    (out / "alignment.json").write_text(json.dumps({"H": H.tolist(), "frame": "frame0.png", "frame_size": [480, 270],
                                                     "work_size": [w, h]}))
     (out / "lamps.json").write_text(json.dumps({"boxes": [list(map(int, b)) for b in boxes], "frames": lamps}))
     print(f"{args.clip}: {len(frames)} frames, {len(trajs)} trajectories, {len(events)} events -> {out}")

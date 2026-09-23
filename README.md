@@ -143,7 +143,7 @@ weights/               YOLO26 n/s/m COCO weights
 labels/dev_labels.json our labels of the four sample clips (dev set)
 tools/                 caching, EDA, dev-set labelling, tuning and site-data scripts; t4_check.sh times a run on a T4
 tests/                 pytest checks for the core pieces and the solution interface
-demo/                  web API for the live demo (Hugging Face Space)
+demo/                  FastAPI server that runs the full Python pipeline on a clip, for trying it locally (the website demo runs site/src/pipeline/ in the browser)
 site/                  the team website (Astro)
 docs/                  scene description, labelling guide, figures
 predictions_samples.json  our output on the sample clips
