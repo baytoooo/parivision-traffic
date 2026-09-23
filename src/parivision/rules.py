@@ -27,6 +27,7 @@ PARAMS = {
     # pedestrians
     "rider_speed": 110.0,          # px/s median speed above which a "person" is on a bike
     "rider_overlap": 0.3,          # fraction of person box covered by a two-wheeler box
+    "rider_rel_speed": 1.2,        # body heights per second (median): walkers stay under ~0.9
     "jay_margin_cw": 0.35,         # x person height outside the zebra before we call it off-crossing
     "jay_margin_kerb": 0.25,       # x person height into the carriageway
     "jay_min_dur": 1.0,            # s
@@ -51,11 +52,12 @@ PARAMS = {
     "stop_line_min": 1.0,          # s stopped
     "stopped_min": 10.0,           # s for stopped_vehicle
     "stopped_ne_corner_x": 1720.0, # east of this the NB lanes meet the plaza entrance: cars wait there to leave
-    "cong_green_n": 6,             # standing SB vehicles (approach + box) that make a jam on green
+    "cong_green_n": 8,             # standing SB vehicles (approach + box) that make a jam on green: five lanes and the box
     "cong_red_n": 5,               # standing vehicles left in the box after the green ended
     "cong_min": 6.0,               # s
     "cong_gap": 4.0,               # s
     "cong_after_green": 8.0,       # s into green before standing traffic counts as a jam
+    "cong_speed": 15.0,            # px/s: at or below this a vehicle counts as standing in the jam
     # direction
     "ww_min_speed": 40.0,
     "ww_angle": 120.0,             # deg away from the lane direction
@@ -120,6 +122,9 @@ class Context:
         self.zones["flow_approach"] = _raster(SB_FLOW_APPROACH, road.shape)
         self.zones["flow_box"] = _raster(SB_FLOW_BOX, road.shape)
         self.by_id = {tr.tid: tr for tr in self.trajectories}
+        # sampling step: 0.1 s at 10 fps, longer where Part A thinned frames on a slow machine
+        frames = np.unique(np.concatenate([tr.t for tr in self.trajectories])) if self.trajectories else np.array([])
+        self.dt = float(np.percentile(np.diff(frames), 90)) if len(frames) > 2 else 0.1
         self.vehicles = [tr for tr in self.trajectories if tr.is_vehicle]
         self.two_wheelers = [tr for tr in self.trajectories if tr.group == "bicycle" or tr.cls == 3]
         self._boxes_at = _index_boxes(self.vehicles + self.two_wheelers)
@@ -140,6 +145,11 @@ class Context:
             return "unknown"
         i = int(np.clip(np.searchsorted(self.signal_t, t), 0, len(self.signal_t) - 1))
         return str(self.signal_phase[i])
+
+    def gap(self, seconds: float) -> float:
+        """A gap to bridge between samples: never shorter than 1.5 sampling steps, so a
+        thinned run (5 or 3.3 fps when the machine is slow) is not cut into single samples."""
+        return max(seconds, 1.5 * self.dt)
 
     def phases_at(self, ts: np.ndarray) -> np.ndarray:
         if len(self.signal_t) == 0:
@@ -165,6 +175,10 @@ class Context:
     def _not_a_pedestrian(self, person: Trajectory) -> bool:
         """Cyclists and scooter riders (person on a two-wheeler), and people seen through a car window."""
         if np.median(person.speed) > PARAMS["rider_speed"]:
+            return True
+        # the same test in the person's own scale: a moped rider far up the avenue is only ~40 px
+        # tall, and when the detector misses the bike this is all that gives them away
+        if np.median(person.speed / np.maximum(person.height, 20.0)) > PARAMS["rider_rel_speed"]:
             return True
         inside = 0
         for i, t in enumerate(person.t):
@@ -231,11 +245,11 @@ def jaywalking(ctx: Context) -> list[Evidence]:
         h = np.maximum(tr.height, 20.0)  # perspective: margins in units of the person's apparent height
         strict = road & (kerb > p["jay_margin_kerb"] * h) & (cw > p["jay_margin_cw"] * h)
         loose = road & (cw > 2.0)
-        for s, e in runs(tr.t, strict, p["jay_gap"]):
+        for s, e in runs(tr.t, strict, ctx.gap(p["jay_gap"])):
             if e - s < p["jay_min_dur"]:
                 continue
             # boundaries from the enclosing loose run: the moment the foot left the kerb / zebra
-            for ls, le in runs(tr.t, loose, p["jay_gap"]):
+            for ls, le in runs(tr.t, loose, ctx.gap(p["jay_gap"])):
                 if ls <= s and le >= e:
                     s, e = ls, le
                     break
@@ -267,7 +281,7 @@ def failure_to_yield(ctx: Context, H_work_to_ref: np.ndarray) -> list[Evidence]:
             on = (ctx.sample(m, fp.reshape(-1, 2)).reshape(len(veh.t), 5) > 0).any(axis=1)
             if not on.any():
                 continue
-            for s_, e_ in runs(veh.t, on, 0.3):
+            for s_, e_ in runs(veh.t, on, ctx.gap(0.3)):
                 sel = (veh.t >= s_) & (veh.t <= e_)
                 if e_ - s_ < 0.2 or np.median(veh.speed[sel]) < p["fty_min_speed"]:
                     continue
@@ -321,7 +335,7 @@ def stop_line(ctx: Context, H: np.ndarray) -> list[Evidence]:
         in_zone = ctx.sample(ctx.zones["stop"], front) > 0
         stopped = veh.speed < p["stop_speed"]
         red = ctx.phases_at(veh.t) == "red"
-        for s, e in runs(veh.t, past & in_zone & stopped & red, 0.4):
+        for s, e in runs(veh.t, past & in_zone & stopped & red, ctx.gap(0.4)):
             if e - s < p["stop_line_min"]:
                 continue
             end = min(ctx.next_green(s), float(veh.t[-1]))
@@ -348,7 +362,7 @@ def stopped_vehicle(ctx: Context) -> list[Evidence]:
     spans = []  # (start, end, x, y, tid)
     for veh in ctx.vehicles:
         on_road = ctx.sample(ctx.road, veh.foot) > 0
-        for s, e in runs(veh.t, (veh.speed < p["stop_speed"]) & on_road, 0.5):
+        for s, e in runs(veh.t, (veh.speed < p["stop_speed"]) & on_road, ctx.gap(0.5)):
             sel = (veh.t >= s) & (veh.t <= e)
             x, y = np.median(veh.foot[sel], axis=0)
             spans.append([s, e, float(x), float(y), veh.tid])
@@ -392,7 +406,7 @@ def congestion(ctx: Context) -> list[Evidence]:
     for v in ctx.vehicles:
         idx = np.round(v.t / step).astype(int)
         ok = (idx >= 0) & (idx < len(ts))
-        still = v.speed < p["stop_speed"] + 3
+        still = v.speed < p["cong_speed"]
         in_app = ctx.sample(ctx.zones["flow_approach"], v.foot) > 0
         in_box = (ctx.sample(ctx.zones["flow_box"], v.foot) > 0) | (ctx.sample(ctx.zones["stop"], v.foot) > 0)
         for sel, acc in ((ok & still & in_app, approach), (ok & still & in_box, box)):
@@ -437,7 +451,7 @@ def wrong_way(ctx: Context) -> list[Evidence]:
             ang = np.degrees(np.arctan2(tr.vel[:, 1], tr.vel[:, 0]))
             diff = np.abs((ang - heading + 180) % 360 - 180)
             bad = inside & (tr.speed > p["ww_min_speed"]) & (diff > p["ww_angle"])
-            for s, e in runs(tr.t, bad, 0.5):
+            for s, e in runs(tr.t, bad, ctx.gap(0.5)):
                 if e - s >= p["ww_min_dur"]:
                     out.append(Evidence("wrong_way", s, e, [tr.tid], note=name))
     return out

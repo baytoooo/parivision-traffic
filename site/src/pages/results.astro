@@ -157,19 +157,21 @@ const statusText = { on: "emitted", off: "rule off", none: "no rule" } as const;
 
   <section class="section wrap" id="ablations">
     <SecHead num="04" title="Ablations">
-      <p>Same rules, same dev labels, one change per row. Cost is detector compute (model size, input pixels and frames) relative to the submitted configuration.</p>
+      <p>Same rules, same dev labels, one change per row. Score A is the official number; it also averages in the zeros for U-turns and illegal turns, which our labels have and no variant predicts. The next column is the mean F1 over the classes we emit. Detector variants could only be scored on the two clips we cached their detections for, so they come with the submitted configuration scored on the same two clips. Cost is detector compute (model size, input pixels and frames) relative to the submitted configuration.</p>
     </SecHead>
     <div class="table-scroll">
       <table>
         <caption class="visually-hidden">Ablations</caption>
         <thead>
-          <tr><th scope="col">Configuration</th><th scope="col" class="num">Score A</th><th scope="col" class="num">Detector cost</th><th scope="col">Note</th></tr>
+          <tr><th scope="col">Configuration</th><th scope="col" class="num">Clips</th><th scope="col" class="num">Score A</th><th scope="col" class="num">Emitted classes</th><th scope="col" class="num">Detector cost</th><th scope="col">Note</th></tr>
         </thead>
         <tbody>
           {ablations.map((a, i) => (
-            <tr class={i === 0 ? "chosen" : ""}>
+            <tr class={a.name.startsWith(ablations[0].name) ? "chosen" : ""}>
               <th scope="row" class="mono abl-name">{a.name}{i === 0 && <span class="chip on">submitted</span>}</th>
+              <td class="num">{a.clips ? a.clips.length : "-"}</td>
               <td class={`num${isNum(a.score_a) ? "" : " tbd"}`}>{fmtNum(a.score_a, 3)}</td>
+              <td class={`num${isNum(a.emitted_mean) ? "" : " tbd"}`}>{fmtNum(a.emitted_mean, 3)}</td>
               <td class={`num${isNum(a.cost_x) ? "" : " tbd"}`}>{isNum(a.cost_x) ? `${a.cost_x.toFixed(2)}x` : fmtNum(a.cost_x)}</td>
               <td class="abl-note">{a.note}</td>
             </tr>

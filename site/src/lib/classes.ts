@@ -63,7 +63,7 @@ export const CLASSES: ClassMeta[] = [
     name: "Jaywalking",
     code: "JAY",
     status: "on",
-    rule: "A person who is not riding a bike has their feet on the carriageway, clearly outside every zebra, for at least 1 s. Riders are found by a two-wheeler box over the person or a speed above 110 px/s.",
+    rule: "A person who is not riding a bike has their feet on the carriageway, clearly outside every zebra, for at least 1 s. Riders are found by a two-wheeler box over the person, or by a median speed above 110 px/s or above 1.2 of their own height per second (walkers stay under about 0.9).",
   },
   {
     key: "failure_to_yield",
@@ -98,7 +98,7 @@ export const CLASSES: ClassMeta[] = [
     name: "Congestion",
     code: "CONG",
     status: "on",
-    rule: "Southbound traffic stands still on green. From 8 s into the green, 6 or more vehicles under 15 px/s on roughly the last 40 m of the approach and past the stop line on the way to the south exit make a jam, and so do 5 or more past the stop line alone. A jam must start on green or yellow and last at least 6 s, and it carries on into the red while 5 or more still stand past the stop line.",
+    rule: "Southbound traffic stands still on green. From 8 s into the green, 8 or more vehicles under 15 px/s on roughly the last 40 m of the approach and past the stop line on the way to the south exit make a jam, and so do 5 or more past the stop line alone. A jam must start on green or yellow and last at least 6 s, and it carries on into the red while 5 or more still stand past the stop line.",
   },
   {
     key: "road_obstacle",

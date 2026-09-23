@@ -1,10 +1,16 @@
 """Ablations on the dev set: detector, frame rate, and the design choices we made.
 
-    python tools/ablation.py --clips C3897 C3905 --gt labels/dev_labels.json --out out/ablations.json
+    python tools/ablation.py --gt labels/dev_labels.json --out out/ablations.json
 
 Every variant re-tracks cached detections and re-runs the rules, then scores with
-the organisers' evaluate.py. Detector variants need their caches first
-(tools/cache_detections.py --weights ... --imgsz ...).
+the organisers' evaluate.py, on every clip that has the detections it needs
+(tools/cache_detections.py --weights ... --imgsz ...). A variant scored on fewer
+clips also gets the submitted configuration scored on the same clips, so each
+row has a like-for-like baseline.
+
+Two numbers per row: the official Score A, and the mean F1 over the classes we
+emit. The first also averages in zeros for classes our labels have and we never
+predict (U-turns, illegal turns), which are the same for every variant.
 """
 from __future__ import annotations
 
@@ -68,19 +74,17 @@ def trajectories(clip: str, tag: str, every: int, no_registration: bool):
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--clips", nargs="+", required=True)
+    ap.add_argument("--clips", nargs="+", default=["C3896", "C3897", "C3902", "C3905"])
     ap.add_argument("--gt", default="labels/dev_labels.json")
     ap.add_argument("--out", default="out/ablations.json")
     args = ap.parse_args()
-    gt_all = json.loads((ROOT / args.gt).read_text())
-    gt = {k: v for k, v in gt_all.items() if Path(k).stem in args.clips}
+    gt = json.loads((ROOT / args.gt).read_text())
     rows = []
-    for name, tag, every, opt, note in VARIANTS:
-        if not all((ROOT / "cache/det" / f"{c}__{tag}.npz").exists() for c in args.clips):
-            print("skip (no cache):", name)
-            continue
+    base_tag = VARIANTS[0][1]
+
+    def score(tag, every, opt, clips):
         pred = {"team": "ablation", "videos": {}}
-        for clip in args.clips:
+        for clip in clips:
             trajs, H, duration = trajectories(clip, tag, every, opt.get("no_registration", False))
             sig = json.loads((ROOT / "cache/signal" / f"{clip}.json").read_text())
             masks = S.masks()
@@ -89,13 +93,25 @@ def main() -> None:
             ctx = Context(trajs, np.array(sig["times"]), np.array(sig["phases"]), duration, masks=masks)
             events, _ = E.detect_from_context(ctx, H)
             pred["videos"][f"{clip}.MP4"] = {"events": events, "risk": []}
-        rep = evaluate(gt, pred)
+        rep = evaluate({f"{c}.MP4": gt[f"{c}.MP4"] for c in clips}, pred)["part_a"]
+        per = {c: round(v["f1_mean"], 3) for c, v in rep["per_class"].items()}
+        emitted = [v for c, v in per.items() if c in E.ENABLED]
+        return round(rep["score_a"], 4), round(float(np.mean(emitted)), 4) if emitted else None, per
+
+    for name, tag, every, opt, note in VARIANTS:
+        clips = [c for c in args.clips if (ROOT / "cache/det" / f"{c}__{tag}.npz").exists()]
+        if not clips:
+            print("skip (no cache):", name)
+            continue
+        if tag != base_tag and len(clips) < len(args.clips) and not any(r["clips"] == clips for r in rows[1:]):
+            a, m, per = score(base_tag, 1, {}, clips)
+            rows.append({"name": f"{VARIANTS[0][0]}, same clips", "clips": clips, "score_a": a, "emitted_mean": m,
+                         "cost_x": 1.0, "note": "Baseline for the row below.", "per_class": per})
+        a, m, per = score(tag, every, opt, clips)
         det_key = "_".join(tag.split("_")[:2])
-        row = {"name": name, "score_a": round(rep["part_a"]["score_a"], 4),
-               "cost_x": round(REL_COST.get(det_key, 1.0) / every, 2), "note": note,
-               "per_class": {c: round(v["f1_mean"], 3) for c, v in rep["part_a"]["per_class"].items()}}
-        rows.append(row)
-        print(f"{name:28s} Score A {row['score_a']:.3f}  cost x{row['cost_x']}")
+        rows.append({"name": name, "clips": clips, "score_a": a, "emitted_mean": m,
+                     "cost_x": round(REL_COST.get(det_key, 1.0) / every, 2), "note": note, "per_class": per})
+        print(f"{name:28s} {len(clips)} clips  Score A {a:.3f}  emitted-class mean {m:.3f}  cost x{rows[-1]['cost_x']}")
     Path(ROOT / args.out).parent.mkdir(parents=True, exist_ok=True)
     (ROOT / args.out).write_text(json.dumps(rows, indent=1))
 

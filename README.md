@@ -67,7 +67,7 @@ map (`scene.PERSON_HEIGHT_PX`, fitted on ~150k pedestrian boxes).
 | stop_line | a southbound vehicle stands still with its front past the stop line, between the line and the far side of the north crossing, while the signal is red |
 | stopped_vehicle | a vehicle stands still 10 s or more on the northbound carriageway (not at the bus stop or at the right edge of the frame) or in the junction box; the southbound approach, where the red-light queue stands, does not count |
 | wrong_way | a vehicle or bike moves against the lane direction on either carriageway for 1.5 s or more |
-| congestion | southbound traffic stands still while it has green: at least 8 s into the green, 6 or more vehicles stand on the last stretch of the approach and past the stop line (or 5 past the stop line alone) for 6 s or more; it carries on into the red while 5 or more still stand past the stop line |
+| congestion | southbound traffic stands still while it has green: at least 8 s into the green, 8 or more vehicles stand on the last stretch of the approach and past the stop line (or 5 past the stop line alone) for 6 s or more; it carries on into the red while 5 or more still stand past the stop line |
 | others | <!-- ENABLED_NOTE --> |
 
 Segments of one class are merged when they overlap, as the task asks, and

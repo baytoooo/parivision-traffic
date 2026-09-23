@@ -81,7 +81,11 @@ export interface Metrics {
 
 export interface Ablation {
   name: string;
+  /** Clips the row was scored on. */
+  clips?: string[];
   score_a: Num;
+  /** Mean F1 over the classes we emit (ENABLED in events.py) that occur in the labels or the predictions. */
+  emitted_mean?: Num;
   /** Detector compute relative to the submitted configuration (input pixels x frames). */
   cost_x: Num;
   note: string;
