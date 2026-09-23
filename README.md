@@ -68,7 +68,8 @@ map (`scene.PERSON_HEIGHT_PX`, fitted on ~150k pedestrian boxes).
 | stopped_vehicle | a vehicle stands still 10 s or more on the northbound carriageway (not at the bus stop or at the right edge of the frame) or in the junction box; the southbound approach, where the red-light queue stands, does not count |
 | wrong_way | a vehicle or bike moves against the lane direction on either carriageway for 1.5 s or more |
 | congestion | southbound traffic stands still while it has green: at least 8 s into the green, 8 or more vehicles stand on the last stretch of the approach and past the stop line (or 5 past the stop line alone) for 6 s or more; it carries on into the red while 5 or more still stand past the stop line |
-| others | <!-- ENABLED_NOTE --> |
+| illegal_u_turn | detected (SB traffic round the median nose into NB) and shown on the website, not submitted: nothing in view says these U-turns are prohibited, and a predicted class the test set lacks costs a zero in the macro average |
+| others | no rule: accident, near_miss, illegal_turn, solid_line_crossing, road_obstacle, fire_smoke |
 
 Segments of one class are merged when they overlap, as the task asks, and
 when the gap between them is short (0 to 3 s depending on the class, 8 s for
@@ -156,9 +157,9 @@ LICENSE                AGPL-3.0
   Licence: AGPL-3.0. We use them as they are.
 * **COCO 2017** (through those weights). Annotations: CC BY 4.0.
 * **Sample clips** from the organisers. Used for scene analysis, our dev
-  labels and tuning. The clips themselves are not in this repository. The
-  website shows annotated renders of them, as the task asks, and the demo
-  Space has three 30 s cuts so judges can try it without uploading anything.
+  labels and tuning. The clips are not in this repository. The website shows
+  annotated renders of them, as the task asks, and three 30 s cuts for the
+  in-browser demo.
 * No other datasets are used.
 
 Open-source code we build on: Ultralytics (AGPL-3.0; YOLO inference and the
@@ -169,4 +170,8 @@ repository is released under AGPL-3.0 (`LICENSE`).
 
 ## Team
 
-<!-- TEAM -->
+| member | role | did |
+|---|---|---|
+| Amal Karimov (captain) | scene layout, signal and vehicle rules | traced the junction in the reference view; found the vehicle signal head and wrote its phase reader; red_light, stop_line, stopped_vehicle and congestion rules |
+| Komronbek Qodirov | pipeline, live demo, website | video decoding, detection, tracking, registration and the time budget; Part B; the in-browser port of the pipeline and the website |
+| Aziza Adizova | dev set, pedestrian rules, report | the labelling guide, the labelling runs and the review of disputed events; jaywalking and failure_to_yield rules and their error analysis; EDA and the report |

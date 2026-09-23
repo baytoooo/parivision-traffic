@@ -73,12 +73,8 @@ test("Anticipator on a hand-made scene matches risk.py (H = identity, so work pi
     b.push([x3 - 55, 250, x3 + 55, 330, 0.9, 2]);
     return b;
   };
-  const expected = [
-    0, 0, 0, 0, 0, 0.0673826982310318, 0.13431087834347027, 0.21330597973326276, 0.284879153214727, 0.3441984153941615,
-    0.3849985708775281, 0.4104370516439064, 0.26678408356853917, 0.17340965431955047, 0.11271627530770781,
-    0.07326557895001008, 0.04762262631750656, 0.030954707106379264, 0.020120559619146522, 0.013078363752445239,
-    0.008500936439089406, 0.005525608685408114, 0.0035916456455152746, 0.0023345696695849286, 0.0015174702852302038,
-  ];
+  // with PERSIST_SEC = 0.6 no pair here stays dangerous long enough: ByteTrack keeps losing the fast car
+  const expected = new Array(25).fill(0);
   const model = new Anticipator({ fps: 5, width: 1920, height: 1080 }, scene);
   model.setAlignment([1, 0, 0, 0, 1, 0, 0, 0, 1]);
   expected.forEach((e, k) => {
@@ -91,11 +87,11 @@ test("Anticipator on a hand-made scene matches risk.py (H = identity, so work pi
 test("a user unseen for exactly 1.0 s keeps its history (risk.py drops it only when t - last > 1.0)", async () => {
   // A car driving at a still pedestrian is hidden on frames 6-10: at frame 10, t - last = 2.0 - 1.0 = 1.0
   // exactly, so the history stays; ByteTrack finds the car again at frame 11 with the same id and the
-  // pair can score from its third update (frame 13). Scores from risk.py, H = identity, t = k / 5.
+  // pair scores once it has looked dangerous for PERSIST_SEC (frame 14). Scores from risk.py, H = identity, t = k / 5.
   const scene = await loadScene(read);
   const expected = [
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.04524631492194854, 0.09297266108385688, 0.1530913562683682,
-    0.21105034009846868, 0.2650212342875765, 0.3132297364045877, 0.35184264288331446,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.08237428972438286, 0.1559815848754392, 0.22158108610714908,
+    0.27836063966346325, 0.32544707850310184, 0.35986817166319274,
   ];
   const model = new Anticipator({ fps: 5, width: 1920, height: 1080 }, scene);
   model.setAlignment([1, 0, 0, 0, 1, 0, 0, 0, 1]);

@@ -61,9 +61,20 @@ def align(frame: np.ndarray, reference: np.ndarray, min_inliers: int = 60, work_
     return Alignment(H_full / H_full[2, 2], H[1], True)
 
 
+_REF_FEATURES: dict[tuple, tuple] = {}
+
+
+def _reference_features(reference: np.ndarray):
+    """The references are the same few images all run long: compute their features once."""
+    key = (reference.shape, reference.tobytes()[::4099])
+    if key not in _REF_FEATURES:
+        _REF_FEATURES[key] = _features(reference)
+    return _REF_FEATURES[key]
+
+
 def _align_small(frame: np.ndarray, reference: np.ndarray, min_inliers: int):
     k1, d1 = _features(frame)
-    k2, d2 = _features(reference)
+    k2, d2 = _reference_features(reference)
     if d1 is None or d2 is None or len(k1) < 8 or len(k2) < 8:
         return None
     matcher = cv2.FlannBasedMatcher({"algorithm": 1, "trees": 5}, {"checks": 64})
@@ -86,8 +97,13 @@ def align_best(frame: np.ndarray, references: list[np.ndarray]) -> Alignment:
     All references are already expressed in reference-view pixels, so any of
     them gives a homography into the same coordinate frame.
     """
-    results = [align(frame, ref) for ref in references]
-    return max(results, key=lambda a: (a.ok, a.inliers))
+    return align_best_with(frame, references)[0]
+
+
+def align_best_with(frame: np.ndarray, references: list[np.ndarray]) -> tuple[Alignment, np.ndarray]:
+    """align_best, and the reference that won (later frames are registered against it alone)."""
+    results = [(align(frame, ref), ref) for ref in references]
+    return max(results, key=lambda r: (r[0].ok, r[0].inliers))
 
 
 def _fallback(frame: np.ndarray, reference: np.ndarray) -> Alignment:

@@ -14,7 +14,7 @@ import numpy as np
 from . import scene as S
 from .detector import Detector, pick_device
 from .events import detect_from_context
-from .registration import Alignment, align_best
+from .registration import Alignment, align, align_best, align_best_with, background
 from .rules import Context, Evidence
 from .signal import fill_phases, lamp_patches, lamp_scores, phase_from_scores
 from .tracking import MultiTracker, collect
@@ -23,6 +23,12 @@ from .video import VideoInfo, probe, sample_frames
 
 WORK_WIDTH = 1920       # frames are decoded straight to this width (reference view resolution)
 BATCH = 8
+# The camera can still be settling when a recording starts (C3896 drifts 9 px over its first 40 s),
+# so the view is registered again on keyframes: every 2 s for the first 30 s, then every 10 s. The
+# signal lamps are read with the latest registration; trajectories and rules use one registration of
+# the median of the keyframes, where traffic and the settling frames wash out.
+REALIGN_EARLY = (2.0, 30.0)
+REALIGN_EVERY = 10.0
 TIME_SHARE = float(os.environ.get("PARIVISION_TIME_SHARE", 1.3))  # Part A's share of the 3x budget
 
 # Wall time Part A spent on the last clip. The harness runs Part B on the same clip
@@ -94,6 +100,9 @@ def analyse(video_path: str, time_share: float = TIME_SHARE, progress=None,
     tracks: dict = {}
     alignment: Alignment | None = None
     boxes = None
+    reference = None
+    keyframes: list[np.ndarray] = []  # 960 px copies of the frames registered on the way
+    next_align = 0.0
     sig_t: list[float] = []
     sig_raw: list[str] = []
     pending: list[tuple[float, np.ndarray]] = []
@@ -116,9 +125,16 @@ def analyse(video_path: str, time_share: float = TIME_SHARE, progress=None,
     for _, t, img in sample_frames(video_path, sample_fps, WORK_WIDTH):
         if t > limit:
             break
-        if alignment is None:
-            alignment = align_best(img, list(references()))
+        if t >= next_align:
+            if alignment is None or not alignment.ok:
+                alignment, reference = align_best_with(img, list(references()))
+            else:
+                again = align(img, reference)
+                if again.ok:
+                    alignment = again
             boxes = lamp_patches(np.linalg.inv(alignment.H))
+            keyframes.append(cv2.resize(img, (img.shape[1] // 2, img.shape[0] // 2), interpolation=cv2.INTER_AREA))
+            next_align = t + (REALIGN_EARLY[0] if t < REALIGN_EARLY[1] else REALIGN_EVERY)
         sig_t.append(t)
         sig_raw.append(phase_from_scores(lamp_scores(img, boxes)))
         n_seen += 1
@@ -143,6 +159,10 @@ def analyse(video_path: str, time_share: float = TIME_SHARE, progress=None,
     work_h = int(round(info.height * WORK_WIDTH / info.width))
     if alignment is None:  # unreadable clip
         alignment = Alignment(np.diag([S.REF_SIZE[0] / WORK_WIDTH, S.REF_SIZE[1] / work_h, 1.0]), 0, False)
+    elif len(keyframes) > 2:
+        settled = align_best(background(keyframes), list(references()))
+        if settled.ok:  # found on 960 px keyframes: rescale to work pixels
+            alignment = Alignment(settled.H @ np.diag([0.5, 0.5, 1.0]), settled.inliers, True)
     if progress is not None:
         progress("applying event rules", 1.0)
     trajectories = build(tracks, alignment.H)

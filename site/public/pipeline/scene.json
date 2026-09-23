@@ -403,7 +403,7 @@
   "MAX_STRIDE_FACTOR": 10,
   "MIN_SPEED": 1.0,
   "OWN_TIME_SHARE": 0.4,
-  "PERSIST": 3,
+  "PERSIST_SEC": 0.6,
   "PERSON": 0,
   "RADIUS_M": {
    "0": 0.35,

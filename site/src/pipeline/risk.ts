@@ -1,7 +1,7 @@
 // Part B's accident anticipation, the observe() path of risk.py's Anticipator: one frame's
 // detections -> ByteTrack (1.5 s buffer) -> per-user history of foot points in the reference
 // view -> constant-velocity hazard of every closing pair (pair_hazard), boosted by hard braking
-// and gated by a persistence streak -> the worst pair, smoothed with an EMA.
+// and gated by how long the pair has looked dangerous -> the worst pair, smoothed with an EMA.
 //
 // The browser feeds frames at its own pace, so step()'s frame decimation and time budget are
 // not ported. Positions are metres from scene.metres_per_px at the user's latest foot point.
@@ -25,7 +25,7 @@ export interface RiskConstants {
   CLOSING_MIN: number;
   CLOSING_FULL: number;
   TTC_HALF: number;
-  PERSIST: number;
+  PERSIST_SEC: number;
   RADIUS_M: Record<string, number>;
   EMA: number;
 }
@@ -110,13 +110,13 @@ function slope(x: number[], y: number[]): number {
 type Sample = [number, Vec, number, number];
 
 interface User {
-  p: Vec;
+  /** Velocity in reference px/s. */
   v: Vec;
   r: number;
   cls: number;
   speed: number;
   braking: number;
-  /** Latest foot point in reference px, for the mask lookups. */
+  /** Latest foot point in reference px. */
   q: Vec;
   tid: number;
 }
@@ -185,13 +185,12 @@ export class Anticipator {
       const last = h[h.length - 1];
       if (h.length < 4 || t - last[0] > 0.25) continue;
       const ts = h.map((s) => s[0]);
-      // reference pixels -> metres with the local scale at the user's latest position
-      const m = metresPerPx(this.scene, last[1][0], last[1][1]);
-      const ps = h.map((s): Vec => [s[1][0] * m, s[1][1] * m]);
+      const ps = h.map((s): Vec => [s[1][0], s[1][1]]); // reference pixels
       const dt = ts.map((x) => x - ts[ts.length - 1]);
-      // least-squares velocity, robust to box jitter
+      // px/s, least squares: robust to box jitter
       const v: Vec = [slope(dt, ps.map((p) => p[0])), slope(dt, ps.map((p) => p[1]))];
-      users.push({ p: ps[ps.length - 1], v, r: last[2], cls: last[3], speed: norm(v), braking: braking(ts, ps), q: last[1], tid });
+      const m = metresPerPx(this.scene, last[1][0], last[1][1]); // for this user's own speed and braking only
+      users.push({ v, r: last[2], cls: last[3], speed: norm(v) * m, braking: braking(ts, ps.map((q): Vec => [q[0] * m, q[1] * m])), q: last[1], tid });
     }
     let best = 0.0;
     const streak = new Map<string, number>();
@@ -200,18 +199,22 @@ export class Anticipator {
       for (let j = i + 1; j < users.length; j++) {
         const b = users[j];
         if (a.cls === k.PERSON && b.cls === k.PERSON) continue;
-        if (Math.max(a.speed, b.speed) < k.MIN_SPEED || norm([b.p[0] - a.p[0], b.p[1] - a.p[1]]) > 30.0) continue;
+        // one scale for both users, taken between them: positions scaled by each user's own scale
+        // would not share a frame, and users far apart would look close
+        const m = metresPerPx(this.scene, (a.q[0] + b.q[0]) / 2, (a.q[1] + b.q[1]) / 2);
+        const pa: Vec = [a.q[0] * m, a.q[1] * m], pb: Vec = [b.q[0] * m, b.q[1] * m];
+        if (Math.max(a.speed, b.speed) < k.MIN_SPEED || norm([pb[0] - pa[0], pb[1] - pa[1]]) > 30.0) continue;
         // moving car vs parked or queued car: never on its own
         if (Math.min(a.speed, b.speed) < k.MIN_SPEED && a.cls !== k.PERSON && b.cls !== k.PERSON) continue;
         if ((a.cls === k.PERSON && !this.onRoad(a.q)) || (b.cls === k.PERSON && !this.onRoad(b.q))) continue;
         const ca = this.carriageway(a.q), cb = this.carriageway(b.q);
         if (ca !== cb && ca !== 0 && cb !== 0) continue; // opposite sides of the median
-        const hz = pairHazard(a.p, a.v, a.r, b.p, b.v, b.r, k);
+        const hz = pairHazard(pa, [a.v[0] * m, a.v[1] * m], a.r, pb, [b.v[0] * m, b.v[1] * m], b.r, k);
         if (hz <= 0.0) continue;
         const key = `${Math.min(a.tid, b.tid)} ${Math.max(a.tid, b.tid)}`;
-        const n = (this.streaks.get(key) ?? 0) + 1;
-        streak.set(key, n);
-        if (n >= k.PERSIST) best = Math.max(best, Math.min(1.0, hz * (1.0 + 0.5 * Math.max(a.braking, b.braking))));
+        const since = this.streaks.get(key) ?? t; // when the pair started to look dangerous
+        streak.set(key, since);
+        if (t - since >= k.PERSIST_SEC - 1e-6) best = Math.max(best, Math.min(1.0, hz * (1.0 + 0.5 * Math.max(a.braking, b.braking))));
       }
     }
     this.streaks = streak;

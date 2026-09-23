@@ -4,28 +4,27 @@
  "members": [
   {
    "name": "Amal Karimov",
-   "role": "Captain. TODO: second role",
+   "role": "Captain. Scene layout and the signal and vehicle rules",
    "did": [
-    "TODO: what Amal built, one line each"
+    "Traced the junction in one reference view: crossings, stop line, carriageways and zones",
+    "Found which signal head is the vehicle one and wrote the phase reader for it",
+    "Wrote and tuned the red-light, stop-line, stopped-vehicle and congestion rules"
    ],
-   "github": "TODO",
-   "linkedin": "TODO",
-   "portfolio": "TODO",
-   "projects": [
-    {
-     "name": "TODO",
-     "url": "TODO"
-    }
-   ]
+   "github": "",
+   "linkedin": "",
+   "portfolio": "",
+   "projects": []
   },
   {
    "name": "Komronbek Qodirov",
-   "role": "TODO",
+   "role": "Pipeline, live demo and website",
    "did": [
-    "TODO: what Komronbek built, one line each"
+    "Video decoding, detection, tracking, registration and the time budget",
+    "Part B, the accident risk model",
+    "The in-browser demo (the pipeline ported to TypeScript) and this website"
    ],
    "github": "https://github.com/baytoooo",
-   "linkedin": "TODO",
+   "linkedin": "",
    "portfolio": "https://bayto.uz",
    "projects": [
     {
@@ -40,19 +39,16 @@
   },
   {
    "name": "Aziza Adizova",
-   "role": "TODO",
+   "role": "Dev set, pedestrian rules and report",
    "did": [
-    "TODO: what Aziza built, one line each"
+    "Built the dev set: the labelling guide, the labelling runs and the review of every disputed event",
+    "Wrote and tuned the jaywalking and failure-to-yield rules, and the error analysis behind them",
+    "EDA and the technical report"
    ],
-   "github": "TODO",
-   "linkedin": "TODO",
-   "portfolio": "TODO",
-   "projects": [
-    {
-     "name": "TODO",
-     "url": "TODO"
-    }
-   ]
+   "github": "",
+   "linkedin": "",
+   "portfolio": "",
+   "projects": []
   }
  ]
 }

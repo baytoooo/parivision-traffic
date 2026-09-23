@@ -38,7 +38,8 @@ MIN_SPEED = 1.0        # m/s: parked or queued users never trigger
 CLOSING_MIN = 4.0      # m/s: slower approaches are ordinary traffic
 CLOSING_FULL = 10.0    # m/s: approach speed that gives the full hazard
 TTC_HALF = 0.9         # s: contact predicted this soon gives half the maximum hazard
-PERSIST = 3            # a pair must look dangerous in this many consecutive updates
+PERSIST_SEC = 0.6      # a pair must look dangerous for this long without a break: at 0.2 s (3 updates) queues
+                       # and following cars set off about one alarm per clip at 10 Hz
 RADIUS_M = {PERSON: 0.35, 1: 0.6, 3: 0.7, 2: 1.3, 5: 2.0, 7: 1.8}  # footprint radius by COCO class
 EMA = 0.35
 TRACK_BUFFER_SEC = 1.5  # shorter than Part A's 2 s: a lost pair should stop counting quickly
@@ -121,7 +122,7 @@ class Anticipator:
         self.budget = max(10.0, TOTAL_LIMIT * duration - spent_a) if duration else float("inf")
         self.duration = duration
         self.started: float | None = None
-        self.streaks: dict[tuple[int, int], int] = {}
+        self.streaks: dict[tuple[int, int], float] = {}
 
     def step(self, frame: np.ndarray, t_sec: float) -> float:
         k = self.calls
@@ -186,20 +187,22 @@ class Anticipator:
             if len(h) < 4 or t - h[-1][0] > 0.25:
                 continue
             ts = np.array([x[0] for x in h])
-            ps = np.array([x[1] for x in h])
-            # reference pixels -> metres with the local scale at the user's latest position
-            ps = ps * metres_per_px(*ps[-1])
-            v = np.polyfit(ts - ts[-1], ps, 1)[0]  # least-squares velocity, robust to box jitter
-            speed = float(np.linalg.norm(v))
-            users.append((ps[-1], v, h[-1][2], h[-1][3], speed, self._braking(ts, ps), h[-1][1], tid))
+            ps = np.array([x[1] for x in h])  # reference pixels
+            v = np.polyfit(ts - ts[-1], ps, 1)[0]  # px/s, least squares: robust to box jitter
+            m = metres_per_px(*ps[-1])  # for this user's own speed and braking only
+            users.append((ps[-1], v, h[-1][2], h[-1][3], float(np.linalg.norm(v)) * m, self._braking(ts, ps * m), tid))
         best = 0.0
-        streak = {}
+        streak = {}  # pair -> time it started to look dangerous
         for i in range(len(users)):
-            p1, v1, r1, c1, s1, b1, q1, k1 = users[i]
+            q1, v1, r1, c1, s1, b1, k1 = users[i]
             for j in range(i + 1, len(users)):
-                p2, v2, r2, c2, s2, b2, q2, k2 = users[j]
+                q2, v2, r2, c2, s2, b2, k2 = users[j]
                 if c1 == PERSON and c2 == PERSON:
                     continue
+                # one scale for both users, taken between them: positions scaled by each user's own
+                # scale would not share a frame, and users far apart would look close
+                m = metres_per_px(*((q1 + q2) / 2))
+                p1, p2 = q1 * m, q2 * m
                 if max(s1, s2) < MIN_SPEED or np.linalg.norm(p2 - p1) > 30.0:
                     continue
                 if min(s1, s2) < MIN_SPEED and PERSON not in (c1, c2):
@@ -208,12 +211,12 @@ class Anticipator:
                     continue
                 if {self._lookup(_carriageways(), q1), self._lookup(_carriageways(), q2)} == {1, 2}:
                     continue  # opposite sides of the median
-                h = pair_hazard(p1, v1, r1, p2, v2, r2)
+                h = pair_hazard(p1, v1 * m, r1, p2, v2 * m, r2)
                 if h <= 0.0:
                     continue
                 key = (min(k1, k2), max(k1, k2))
-                streak[key] = self.streaks.get(key, 0) + 1
-                if streak[key] >= PERSIST:
+                streak[key] = self.streaks.get(key, t)
+                if t - streak[key] >= PERSIST_SEC - 1e-6:
                     best = max(best, min(1.0, h * (1.0 + 0.5 * max(b1, b2))))
         self.streaks = streak
         return best
