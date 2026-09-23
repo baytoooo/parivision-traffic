@@ -39,6 +39,9 @@ def _overlaps(a, b) -> bool:
 
 def adjudicate(kept: dict[str, list], items: list[dict]) -> None:
     changes = {"added": 0, "removed": 0, "retimed": 0}
+    # added events join the labels after the loop, so that a removal (which drops every claim of its
+    # class it overlaps) cannot take out an event the adjudicator has just confirmed
+    added: dict[str, list] = {}
     for it in items:
         v = it.get("verdict")
         if not v:
@@ -47,7 +50,7 @@ def adjudicate(kept: dict[str, list], items: list[dict]) -> None:
         seg = (it["start"], it["end"])
         cat = v["category"]
         if it["kind"] == "fp" and cat == "label_missed_it" and v["real_event"] and v["end"] > v["start"]:
-            claims.append([round(v["start"], 2), round(v["end"], 2), v["label"]])
+            added.setdefault(it["clip"], []).append([round(v["start"], 2), round(v["end"], 2), v["label"]])
             changes["added"] += 1
         elif it["kind"] == "fn" and cat == "label_wrong" and not v["real_event"]:
             before = len(claims)
@@ -60,6 +63,8 @@ def adjudicate(kept: dict[str, list], items: list[dict]) -> None:
                 claims[:] = [c for c in claims if not any(c is h for h in hit)]
                 claims.append([round(v["start"], 2), round(v["end"], 2), v["label"]])
                 changes["retimed"] += 1
+    for clip, events in added.items():
+        kept[clip].extend(events)
     print("adjudication:", changes)
 
 
