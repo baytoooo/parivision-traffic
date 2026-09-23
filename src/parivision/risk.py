@@ -19,15 +19,16 @@ import cv2
 import numpy as np
 
 from .detector import PERSON, Detector, pick_device
-from .pipeline import references
+from .pipeline import LAST_RUN, references
 from .registration import Alignment, align_best, warp_points
 from .scene import masks, metres_per_px
 from .tracking import MultiTracker
 
 WORK_WIDTH = 1280
 TARGET_HZ = 10.0
-MAX_STRIDE_FACTOR = 4   # may fall back to TARGET_HZ / 4 when the machine is slow
-OWN_TIME_SHARE = 0.5    # our processing may use at most this x video time (the harness decode comes on top)
+MAX_STRIDE_FACTOR = 10  # on a slow machine fall back to 1 Hz, and skip processing entirely if even that is late
+OWN_TIME_SHARE = 0.4    # our processing may use at most this x video time (the harness decode comes on top)
+TOTAL_LIMIT = 2.8       # stay under this x clip duration for Part A + Part B (the harness allows 3.0)
 HISTORY = 8            # samples used for the velocity estimate (0.8 s)
 HORIZON = 3.0          # s of constant-velocity look-ahead
 STEP = 0.1
@@ -111,20 +112,39 @@ class Anticipator:
         self.calls = 0
         self.score = 0.0
         self.busy = 0.0  # seconds spent inside step() doing real work
+        # wall-clock budget for this whole pass, including the harness decoding frames for us
+        duration = float(meta.get("n_frames") or 0) / self.fps if meta.get("n_frames") else 0.0
+        spent_a = LAST_RUN.get("seconds", 0.0) if LAST_RUN.get("video") == meta.get("video_id") else 0.0
+        self.budget = max(10.0, TOTAL_LIMIT * duration - spent_a) if duration else float("inf")
+        self.duration = duration
+        self.started: float | None = None
         self.streaks: dict[tuple[int, int], int] = {}
 
     def step(self, frame: np.ndarray, t_sec: float) -> float:
         k = self.calls
         self.calls += 1
-        if k % self.stride:
+        now = time.perf_counter()
+        if self.started is None:
+            self.started = now
+        if k % self.stride or self._out_of_time(now, t_sec):
             return self.score
-        t0 = time.perf_counter()
         self._process(frame, t_sec)
-        self.busy += time.perf_counter() - t0
+        self.busy += time.perf_counter() - now
         # stay inside our share of the time budget: thin out frames if we fall behind
-        if t_sec > 5.0 and self.busy > OWN_TIME_SHARE * t_sec:
+        behind = self.busy > OWN_TIME_SHARE * t_sec or self._projected(now, t_sec) > 0.9 * self.budget
+        if t_sec > 5.0 and behind:
             self.stride = min(self.base_stride * MAX_STRIDE_FACTOR, self.stride + self.base_stride)
         return self.score
+
+    def _projected(self, now: float, t_sec: float) -> float:
+        """Wall time this pass will take at the pace so far (harness decoding included)."""
+        if t_sec < 1.0 or not self.duration:
+            return 0.0
+        return (now - self.started) / t_sec * self.duration
+
+    def _out_of_time(self, now: float, t_sec: float) -> bool:
+        """Past 95% of the budget: stop processing and hold the last score to the end."""
+        return (now - self.started) > 0.95 * self.budget
 
     def _process(self, frame: np.ndarray, t_sec: float) -> None:
         step = max(1, int(round(frame.shape[1] / WORK_WIDTH)))

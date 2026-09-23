@@ -18,6 +18,7 @@ import numpy as np
 from . import scene as S
 from .registration import warp_points
 from .segments import runs
+from .detector import MOTORCYCLE
 from .trajectories import Trajectory
 
 PARAMS = {
@@ -28,15 +29,18 @@ PARAMS = {
     "jay_margin_kerb": 0.25,       # x person height into the carriageway
     "jay_min_dur": 1.0,            # s
     "jay_gap": 0.6,                # s, bridged inside one person's run
+    "jay_min_height": 0.65,        # x expected person height; shorter boxes are occluded
     # failure to yield
     "fty_near_px": 160.0,          # lateral distance ped <-> vehicle along the crossing
     "fty_cw_dilate": 10.0,         # px, person counts as on the crossing within this margin
     "fty_min_speed": 20.0,         # px/s, the vehicle must actually be driving through
     "fty_kerb": 0.4,               # x person height: out on the zebra, not standing at its kerb end
+    "fty_pad_start": 0.3,          # s
+    "fty_pad_end": 0.1,            # s
     # signal
     "red_settle": 1.0,             # s of red before a crossing counts as red-light running
     "red_before_green": 1.5,       # s of red still to go: jumping the light by a fraction of a second is noise
-    "red_max_len": 10.0,           # s, a red-light run ends when the car clears the junction
+    "red_max_len": 60.0,           # s, cap for a car that sits in the junction after running the red
     # stopping
     "stop_speed": 12.0,            # px/s below which a vehicle counts as stopped
     "stop_line_margin": 8.0,       # px past the line
@@ -46,6 +50,7 @@ PARAMS = {
     "cong_red_n": 5,               # standing vehicles left in the box after the green ended
     "cong_min": 6.0,               # s
     "cong_gap": 4.0,               # s
+    "cong_after_green": 8.0,       # s into green before standing traffic counts as a jam
     # direction
     "ww_min_speed": 40.0,
     "ww_angle": 120.0,             # deg away from the lane direction
@@ -210,7 +215,12 @@ def jaywalking(ctx: Context) -> list[Evidence]:
     p = PARAMS
     out = []
     for tr in ctx.people:
-        road = ctx.sample(ctx.walk, tr.foot) > 0
+        # a box much shorter than a person standing there is cut off (legs hidden behind a car):
+        # its bottom edge is not the feet, so those samples cannot put anyone on the road
+        c0, cx, cy = S.PERSON_HEIGHT_PX
+        expected = c0 + cx * tr.foot[:, 0] + cy * tr.foot[:, 1]
+        whole = tr.height >= p["jay_min_height"] * expected
+        road = (ctx.sample(ctx.walk, tr.foot) > 0) & whole
         kerb = ctx.sample(ctx.walk_dist, tr.foot)
         cw = ctx.sample(ctx.cw_dist, tr.foot)
         h = np.maximum(tr.height, 20.0)  # perspective: margins in units of the person's apparent height
@@ -244,6 +254,8 @@ def failure_to_yield(ctx: Context, H_work_to_ref: np.ndarray) -> list[Evidence]:
         if not on_cw:
             continue
         for veh in ctx.vehicles:
+            if veh.cls == MOTORCYCLE:
+                continue  # scooters ride and get walked along the zebras; only cars, buses and trucks count
             fp = _footprint_points(veh, H_work_to_ref)  # (N, 5, 2)
             on = (ctx.sample(m, fp.reshape(-1, 2)).reshape(len(veh.t), 5) > 0).any(axis=1)
             if not on.any():
@@ -258,7 +270,10 @@ def failure_to_yield(ctx: Context, H_work_to_ref: np.ndarray) -> list[Evidence]:
                         if np.linalg.norm(f_ - veh.foot[i]) < p["fty_near_px"]:
                             victims.add(tid)
                 if victims:
-                    out.append(Evidence("failure_to_yield", s_, e_, [veh.tid, *sorted(victims)], note=name))
+                    # our footprint points sit low in the box; the convention runs from the front
+                    # entering the zebra to the rear leaving it, which is a little longer
+                    out.append(Evidence("failure_to_yield", s_ - p["fty_pad_start"], e_ + p["fty_pad_end"],
+                                        [veh.tid, *sorted(victims)], note=name))
     return out
 
 
@@ -284,13 +299,8 @@ def red_light(ctx: Context, H: np.ndarray) -> list[Evidence]:
     for veh, tc, _ in _stop_line_crossings(ctx, H):
         if ctx.red_since(tc) < p["red_settle"] or ctx.next_green(tc) - tc < p["red_before_green"]:
             continue
-        # end: the car leaves the frame, or stops moving through the junction (joins a queue), capped
-        after = veh.t > tc
-        end = float(veh.t[-1])
-        slow = np.nonzero(after & (veh.speed < p["stop_speed"]))[0]
-        if len(slow):
-            end = min(end, float(veh.t[slow[0]]))
-        end = min(end, tc + p["red_max_len"])
+        # end: the car leaves the junction or the frame (its track ends), even if it waits inside first
+        end = min(float(veh.t[-1]), tc + p["red_max_len"])
         out.append(Evidence("red_light", tc, end, [veh.tid], note=f"red for {ctx.red_since(tc):.1f}s"))
     return out
 
@@ -372,14 +382,28 @@ def congestion(ctx: Context) -> list[Evidence]:
         for sel, acc in ((ok & still & in_app, approach), (ok & still & in_box, box)):
             np.add.at(acc, np.unique(idx[sel]), 1)
     phase = ctx.phases_at(ts)
-    jam = ((phase == "green") & (approach + box >= p["cong_green_n"])) | (box >= p["cong_red_n"])
+    # seconds since the green started: the red-light queue needs a while to get going
+    into_green = np.array([t - _green_start(ctx, t) for t in ts])
+    settled = (phase == "green") & (into_green >= p["cong_after_green"])
+    jam = (settled & (approach + box >= p["cong_green_n"])) | (box >= p["cong_red_n"])
     # a jam has to start on green; standing in the box on red only continues one
     out = []
     for s, e in runs(ts, jam, p["cong_gap"]):
-        started_green = ctx.phase_at(s) in ("green", "yellow")
+        started_green = ctx.phase_at(s) in ("green", "yellow") and s - _green_start(ctx, s) >= p["cong_after_green"]
         if e - s >= p["cong_min"] and started_green:
             out.append(Evidence("congestion", s, e, [], note=f"max {int((approach + box)[(ts >= s) & (ts <= e)].max())} standing"))
     return out
+
+
+def _green_start(ctx: Context, t: float) -> float:
+    """Start of the green phase that is on (or last was on) at time t."""
+    idx = np.nonzero((ctx.signal_t <= t) & (ctx.signal_phase == "green"))[0]
+    if not len(idx):
+        return -1e9
+    j = idx[-1]
+    while j > 0 and ctx.signal_phase[j - 1] == "green":
+        j -= 1
+    return float(ctx.signal_t[j])
 
 
 # ---------------------------------------------------------------------------

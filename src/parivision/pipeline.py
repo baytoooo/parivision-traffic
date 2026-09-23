@@ -23,7 +23,13 @@ from .video import VideoInfo, probe, sample_frames
 
 WORK_WIDTH = 1920       # frames are decoded straight to this width (reference view resolution)
 BATCH = 8
-TIME_SHARE = 1.5        # stop Part A after this many x clip duration (the harness allows 3x for A+B)
+TIME_SHARE = float(os.environ.get("PARIVISION_TIME_SHARE", 1.3))  # Part A's share of the 3x budget
+
+# Wall time Part A spent on the last clip. The harness runs Part B on the same clip
+# right after Part A in the same process, so the risk model can budget the rest of
+# the 3x limit. This is timing only: no Part A result ever reaches Part B.
+LAST_RUN: dict = {}
+MAX_THIN = 3            # on a slow machine analyse at most every 3rd sampled frame (10 -> 3.3 fps)
 ASSETS = Path(__file__).resolve().parent / "assets"
 
 # (weights, detector input size, analysed frames per second). The GPU profile is
@@ -92,6 +98,8 @@ def analyse(video_path: str, time_share: float = TIME_SHARE, progress=None,
     sig_raw: list[str] = []
     pending: list[tuple[float, np.ndarray]] = []
     last_t = 0.0
+    thin, n_seen = 1, 0  # analyse every `thin`-th sampled frame; raised if we would miss the deadline
+    mark = (0.0, t_start)  # (video time, wall time) at the last pace check
 
     def flush() -> None:
         results = det([img for _, img in pending])
@@ -113,12 +121,22 @@ def analyse(video_path: str, time_share: float = TIME_SHARE, progress=None,
             boxes = lamp_patches(np.linalg.inv(alignment.H))
         sig_t.append(t)
         sig_raw.append(phase_from_scores(lamp_scores(img, boxes)))
+        n_seen += 1
+        if n_seen % thin:
+            continue
         pending.append((t, img))
         last_t = t
         if len(pending) == BATCH:
             flush()
-            if time.perf_counter() > deadline:
+            now = time.perf_counter()
+            if now > deadline:
                 break
+            # projected finish at the recent pace; thin out frames rather than stop early
+            if t - mark[0] >= 10.0:
+                pace = (now - mark[1]) / (t - mark[0])  # wall seconds per video second
+                if thin < MAX_THIN and now + pace * (limit - t) > t_start + 0.95 * (deadline - t_start):
+                    thin += 1
+                mark = (t, now)
     if pending:
         flush()
 
@@ -133,6 +151,7 @@ def analyse(video_path: str, time_share: float = TIME_SHARE, progress=None,
     events, evidence = detect_from_context(ctx, alignment.H)
     result = Analysis(info, events, evidence, trajectories, np.asarray(sig_t), np.asarray(phases),
                       alignment, (WORK_WIDTH, work_h), last_t, time.perf_counter() - t_start)
+    LAST_RUN.update(video=Path(video_path).name, seconds=result.seconds, duration=info.duration)
     _keep(result)
     return result
 

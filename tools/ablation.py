@@ -1,0 +1,98 @@
+"""Ablations on the dev set: detector, frame rate, and the design choices we made.
+
+    python tools/ablation.py --clips C3897 C3905 --gt labels/dev_labels.json --out out/ablations.json
+
+Every variant re-tracks cached detections and re-runs the rules, then scores with
+the organisers' evaluate.py. Detector variants need their caches first
+(tools/cache_detections.py --weights ... --imgsz ...).
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+import numpy as np
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT))
+
+from evaluate import evaluate  # noqa: E402
+
+from parivision import events as E  # noqa: E402
+from parivision import scene as S  # noqa: E402
+from parivision.detector import Detections  # noqa: E402
+from parivision.rules import Context  # noqa: E402
+from parivision.tracking import MultiTracker, collect  # noqa: E402
+from parivision.trajectories import build  # noqa: E402
+
+VARIANTS = [
+    # name, detector cache tag, keep every n-th cached frame, options
+    ("YOLO26m @1280, 10 fps (submitted)", "yolo26m_1280_1920_10fps", 1, {}),
+    ("YOLO26m @1280, 5 fps", "yolo26m_1280_1920_10fps", 2, {}),
+    ("YOLO26m @1280, 3.3 fps", "yolo26m_1280_1920_10fps", 3, {}),
+    ("YOLO26s @1280, 10 fps", "yolo26s_1280_1920_10fps", 1, {}),
+    ("YOLO26m @960, 10 fps", "yolo26m_960_1920_10fps", 1, {}),
+    ("no registration (pixel polygons as drawn)", "yolo26m_1280_1920_10fps", 1, {"no_registration": True}),
+    ("hand-drawn road instead of learned drivable area", "yolo26m_1280_1920_10fps", 1, {"hand_road": True}),
+]
+# wall time per video second for the detector alone on a T4 is not measurable here;
+# we report the relative cost of each variant instead (detector input pixels x frames).
+REL_COST = {"yolo26m_1280": 1.0, "yolo26s_1280": 0.46, "yolo26m_960": 0.56}
+
+
+def trajectories(clip: str, tag: str, every: int, no_registration: bool):
+    z = np.load(ROOT / "cache/det" / f"{clip}__{tag}.npz")
+    det, fps, stride = z["det"], float(z["fps"]), int(z["stride"]) * every
+    w, h = int(z["width"]), int(z["height"])
+    tracker = MultiTracker(fps=fps / stride)
+    tracks: dict = {}
+    by_frame = {int(f): det[det[:, 0] == f] for f in np.unique(det[:, 0])}
+    for f in range(0, int(z["n_frames"]), stride):
+        rows = by_frame.get(f)
+        d = Detections.empty() if rows is None else Detections(
+            rows[:, 2:6].astype(np.float32), rows[:, 6].astype(np.float32), rows[:, 7].astype(np.int16))
+        collect(tracks, f / fps, tracker.update(d, (h, w)))
+    scale = np.diag([S.REF_SIZE[0] / w, S.REF_SIZE[1] / h, 1.0])
+    H = scale if no_registration else np.load(ROOT / "cache/align" / f"{clip}.npz")["H"] @ scale
+    return build(tracks, H), H, int(z["n_frames"]) / fps
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--clips", nargs="+", required=True)
+    ap.add_argument("--gt", default="labels/dev_labels.json")
+    ap.add_argument("--out", default="out/ablations.json")
+    args = ap.parse_args()
+    gt_all = json.loads((ROOT / args.gt).read_text())
+    gt = {k: v for k, v in gt_all.items() if Path(k).stem in args.clips}
+    rows = []
+    for name, tag, every, opt in VARIANTS:
+        if not all((ROOT / "cache/det" / f"{c}__{tag}.npz").exists() for c in args.clips):
+            print("skip (no cache):", name)
+            continue
+        pred = {"team": "ablation", "videos": {}}
+        for clip in args.clips:
+            trajs, H, duration = trajectories(clip, tag, every, opt.get("no_registration", False))
+            sig = json.loads((ROOT / "cache/signal" / f"{clip}.json").read_text())
+            masks = S.masks()
+            if opt.get("hand_road"):
+                masks["walk_check"] = masks["road"]
+            ctx = Context(trajs, np.array(sig["times"]), np.array(sig["phases"]), duration, masks=masks)
+            events, _ = E.detect_from_context(ctx, H)
+            pred["videos"][f"{clip}.MP4"] = {"events": events, "risk": []}
+        rep = evaluate(gt, pred)
+        det_key = "_".join(tag.split("_")[:2])
+        row = {"name": name, "score_a": round(rep["part_a"]["score_a"], 4),
+               "per_class": {c: round(v["f1_mean"], 3) for c, v in rep["part_a"]["per_class"].items()},
+               "relative_cost": round(REL_COST.get(det_key, 1.0) / every, 2)}
+        rows.append(row)
+        print(f"{name:52s} Score A {row['score_a']:.3f}  cost x{row['relative_cost']}")
+    Path(ROOT / args.out).parent.mkdir(parents=True, exist_ok=True)
+    (ROOT / args.out).write_text(json.dumps(rows, indent=1))
+
+
+if __name__ == "__main__":
+    main()

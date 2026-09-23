@@ -13,10 +13,12 @@ median background.
 A Sony camcorder on a tripod, high up on a building at the south-west corner
 of a signalised four-way junction in Tashkent. It looks north-west, straight
 up the avenue. Files are XAVC S: 3840x2160, 29.97 fps, H.264 High 4:2:2
-10-bit at about 140 Mbit/s. There is no camera motion inside a clip and all
-four samples have the same framing to within a pixel (checked with a
-homography between median backgrounds), but we still register every clip
-against the reference in case a test clip is framed slightly differently.
+10-bit at about 140 Mbit/s. There is no camera motion inside a clip, and the
+two morning samples have the same framing to within a pixel. The two
+afternoon clips do not: C3902 is shifted by about 60 px horizontally and
+36 px vertically with a 2% zoom, C3905 by about 15 and 22 px. So every clip
+is registered to the reference view with a homography from SIFT features
+(`src/parivision/registration.py`), against a midday and a dusk reference.
 
 | clip  | length  | local time (Tashkent)   | light                         |
 |-------|---------|-------------------------|-------------------------------|
@@ -30,7 +32,7 @@ against the reference in case a test clip is framed slightly differently.
 * **Avenue, north arm.** Runs from the top-left of the frame down to the
   junction. A raised concrete median splits it.
   * **Southbound (SB) carriageway**, left of the median: traffic comes towards
-    the camera. Four lanes at the stop line. The white stop line runs from
+    the camera. The white stop line runs from
     (285, 527) to (930, 457), just before the north crossing.
   * **Northbound (NB) carriageway**, right of the median: traffic leaves the
     junction and drives away from the camera. There is a bus stop on its far
@@ -42,9 +44,9 @@ against the reference in case a test clip is framed slightly differently.
   NB crossing.
 * **South arm** of the avenue: under the camera, off the bottom edge.
 
-Southbound drivers at the stop line can go straight (exit bottom or
-bottom-right), turn right into the west arm (they drive over the west
-crossing), or turn left into the east arm.
+Southbound drivers at the stop line can go straight (exit bottom-right),
+turn right into the west arm (they drive over the west crossing), turn left
+into the east arm, or U-turn round the median nose into the NB carriageway.
 
 ## Crossings
 
@@ -60,16 +62,41 @@ Nothing else in view is a legal place to cross.
 
 * The gantry over the SB lanes carries the signal heads for SB traffic. They
   face away from the camera, so we only see their backs.
-* Two heads **face the camera**: one on the pole at the left corner (about
-  (280, 520)) and one on the median nose (about (1165, 385)). They are
-  readable in every clip, including dusk. In all four samples they follow the
-  avenue phase: red while pedestrians use the north crossing and the SB queue
-  waits at the stop line, green while the SB queue moves.
-* No pedestrian signal heads are readable.
+* The head on the **median nose** faces the camera. It is a three-lamp vehicle
+  signal for the approach from the south, which runs in the same phase as the
+  SB approach: in every sample the SB queue starts moving 1 to 2 s after this
+  head turns green, and nothing but the odd violator crosses the SB stop line
+  while it is red. We read the phase from it.
+* The head on the **left corner pole** also faces the camera, but it is a
+  two-lamp pedestrian signal (walking and standing man) for the west
+  crossing. Its walk phase runs with the avenue green, because people on the
+  west crossing walk parallel to the avenue. We first mistook it for the
+  vehicle signal; it turns red about 7 s before the vehicle signal does, and
+  that made every car in the last platoon look like a red-light runner.
 
-We read the phase from those two heads (HSV colour of the lit lamp) and use
-it as the SB signal state. If the junction ever gave the south approach its
-own phase this would be wrong, but nothing in the samples suggests it does.
+The vehicle cycle is the same in all four clips: 35.8 s green (the last 3 s
+flashing), 2.8 s yellow, 35.8 s red, with a short red-and-yellow before green
+in the afternoon clips. That is a 75 s cycle.
+
+The phase comes from the colour contrast of each lamp (`src/parivision/signal.py`):
+red lamp redder than its housing, yellow lamp warmer, green lamp greener. The
+green LED looks cyan in sunlight, so it gets a lower threshold. A dark spell
+of up to 4 s keeps the previous phase, which covers the flashing green and a
+car briefly hiding the head.
+
+## Traffic flows (from the tracks)
+
+* SB traffic comes down the left carriageway, crosses the stop line and the
+  north crossing, and mostly goes straight on, leaving the frame at the
+  bottom right. Right-turners curve down over the west crossing into the
+  west arm. Left-turners and U-turners swing round the median nose; the
+  U-turners leave up the NB carriageway.
+* NB traffic enters from the right edge (from the south arm) and drives up
+  the right carriageway away from the camera.
+* Cross traffic runs along the bottom of the frame into the west arm.
+* When the south exit backs up, SB cars fill the junction box on green and
+  stand there into the next red. The labellers called these episodes
+  congestion.
 
 ## Things that are easy to get wrong
 
@@ -77,8 +104,10 @@ own phase this would be wrong, but nothing in the samples suggests it does.
   carriageway.
 * Buses sit at the NB bus stop for 20 to 60 s. They are at a stop, not a
   stopped vehicle.
-* The SB queue at a red light can stand still for a minute or more. That is
+* The SB queue at a red light can stand still for 35 s or more. That is
   a queue at a signal, not congestion and not a stopped vehicle, unless it
   still does not move when the light is green.
+* Drivers and passengers are often detected as people through the car
+  windows. They are dropped when the person box sits inside a vehicle box.
 * Cyclists and delivery riders are detected as a person plus a bicycle or
   motorcycle. They are vehicles, not pedestrians.
