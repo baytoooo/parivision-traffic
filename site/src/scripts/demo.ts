@@ -1,5 +1,5 @@
 // Demo page controller: what this browser can run, file or sample, job progress, result.
-import { RISK_MERGE_GAP, RISK_THETA, UPLOAD_MAX_SECONDS } from "../config";
+import { CONVERT_CMD, RISK_MERGE_GAP, RISK_THETA, UPLOAD_MAX_SECONDS } from "../config";
 import { fmtBytes, fmtTime } from "../lib/format";
 import type { ClipResult, Job, Sample } from "../lib/types";
 import { ApiError, MockApi, STAGES, type Api } from "./api";
@@ -157,7 +157,7 @@ async function chooseFile(f: File | null) {
   if (file !== f) return;
   if (!meta || !meta.width) {
     $("file-dur").textContent = "unknown";
-    return fileMsg("This browser cannot open the file, so it cannot analyse it. H.264 .mp4 files play in every browser; 4K HEVC (H.265) only in some.", "err");
+    return fileMsg(`This browser cannot open the file, so it cannot analyse it. The camera's own files are 10-bit 4:2:2 H.264, which Safari and Chrome on a Mac decode but browsers on Windows and Linux may not. Convert it first: ${CONVERT_CMD}`, "err");
   }
   $("file-dur").textContent = `${fmtTime(meta.duration)}, ${meta.width}x${meta.height}`;
   fileOk = true;
@@ -308,7 +308,7 @@ function startSample(s: Sample) {
 function showResult(result: ClipResult, source: string, jobId: string) {
   lastResult = { result, source, jobId };
   show("result");
-  const video = result.video ? api.videoUrl(result.video) : "";
+  const video = result.video ?? "";
   $("result-title").textContent = source;
   $("result-mode").textContent = api.mock
     ? "Stored example result from replay mode, not an analysis of your file."

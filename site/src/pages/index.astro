@@ -11,6 +11,7 @@ const rt = loadRuntime();
 const scoreA = metrics?.part_a?.score_a;
 const runtime = runtimeFactor(rt);
 const emitted = CLASSES.filter((c) => c.status === "on").length;
+const noRule = CLASSES.filter((c) => c.status === "none").length;
 const footageMin = clips.reduce((a, c) => a + c.duration, 0) / 60;
 const hero = clips[0];
 const times = clips.map((c) => c.local_time.split(" ")[1]).filter(Boolean).sort();
@@ -76,11 +77,12 @@ const pages = [
         <span class={`v${isNum(runtime) ? "" : " is-tbd"}`}>{isNum(runtime) ? runtime.toFixed(2) : fmtNum(runtime)}<small>min</small></span>
         <span class="k">Processing per minute of 4K video</span>
         <span class="s">{rt ? `Part A + Part B, ${rt.machine}` : "Part A + Part B"}</span>
+        <span class="s">The harness allows 3x. Default settings thin frames to aim under 2.8x; not timed on a T4 yet.</span>
       </div>
       <div class="stat">
         <span class="v">{emitted}<small>of {CLASSES.length}</small></span>
         <span class="k">Event classes we emit</span>
-        <span class="s">the rest stay off until they work</span>
+        <span class="s">U-turns found but not submitted; {noRule} have no rule</span>
       </div>
       <div class="stat">
         <span class="v">{footageMin.toFixed(1)}<small>min</small></span>

@@ -1,8 +1,9 @@
 # How we labelled the sample clips
 
-The organisers keep their labels hidden, so we built a dev set by labelling
-the four sample clips ourselves with the start/end conventions from the task.
-This page is the guide we labelled with. Read `docs/scene.md` first for the
+The organisers keep their labels hidden, so we built our own dev set on the
+four sample clips with the start/end conventions from the task. This page is
+the guide the labelling, verifier and adjudicator agents (Claude) worked from;
+`docs/report.md` describes the runs. Read `docs/scene.md` first for the
 layout, the crossings and the signal.
 
 ## Output

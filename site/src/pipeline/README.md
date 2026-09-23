@@ -11,7 +11,7 @@ What differs from the submission, on purpose:
 |---|---|---|
 | frames | every 3rd frame (10 fps), 4K decoded to 1920 px | 5 fps, drawn from a `<video>` element |
 | detector | YOLO26m at 1280 px (PyTorch) | the ONNX export in `public/pipeline/model.onnx` (see `scene.json` `detector`) on WebGPU or WASM |
-| registration | SIFT + RANSAC homography | similarity (scale + shift) found by searching edge maps against the two references |
+| registration | SIFT + MAGSAC homography | scale + shift search on edge maps against the two references, refined to an affine and then a full homography (Gauss-Newton) |
 | everything after | tracker, trajectories, signal, rules, risk | the same algorithms and constants |
 
 ## Files
@@ -19,7 +19,7 @@ What differs from the submission, on purpose:
 ```
 types.ts         shared types (below)
 scene.ts         loads public/pipeline/scene.json + scene.bin.gz; point lookups in the reference view
-geometry.ts      homographies, polygons, signed side of a line, rounding like NumPy
+geometry.ts      homographies, signed side of a line, rounding like NumPy
 segments.ts      runs / union / finalize (segments.py)
 tracker.ts       ByteTrack as in Ultralytics 8.4 (Kalman filter, two-stage matching), one per object group
 trajectories.ts  build(): foot points, smoothing, velocities (trajectories.py)
@@ -73,8 +73,8 @@ worker is built as an ES module (`vite.worker.format` in `astro.config.mjs`).
 * Constants come from `scene.json`, never retyped. If a constant is missing,
   add it to `tools/export_browser_assets.py` and re-export.
 * Match NumPy where it matters: `np.round` rounds half to even
-  (`geometry.roundHalfEven`), `scipy.ndimage.uniform_filter1d` reflects at the
-  edges, `np.percentile` interpolates linearly, `np.median` of an even count
+  (`geometry.roundHalfEven`), `scipy.ndimage.uniform_filter1d` with mode
+  "nearest" repeats the edge value, `np.percentile` interpolates linearly, `np.median` of an even count
   averages the middle two.
 
 ## Coordinates

@@ -10,7 +10,6 @@ import numpy as np
 PERSON = 0
 BICYCLE, CAR, MOTORCYCLE, BUS, TRUCK = 1, 2, 3, 5, 7
 VEHICLES = (CAR, BUS, TRUCK, MOTORCYCLE)
-TWO_WHEELERS = (BICYCLE, MOTORCYCLE)
 ANIMALS = (14, 15, 16, 17, 18, 19)  # bird, cat, dog, horse, sheep, cow
 KEEP = (PERSON, BICYCLE, CAR, MOTORCYCLE, BUS, TRUCK) + ANIMALS
 COCO_NAMES = {PERSON: "person", BICYCLE: "bicycle", CAR: "car", MOTORCYCLE: "motorcycle", BUS: "bus", TRUCK: "truck",

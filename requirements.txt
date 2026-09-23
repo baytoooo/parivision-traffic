@@ -1,10 +1,14 @@
-# Tested with Python 3.10 and 3.11. torch 2.6.0 from PyPI ships CUDA 12.4 kernels,
-# which run on the T4 (sm_75) with any NVIDIA driver >= 525.
+# Python 3.10 to 3.13. torch 2.6.0 from PyPI ships CUDA 12.4 kernels, which run on
+# the T4 (sm_75) with any NVIDIA driver >= 525; newer torch wheels need newer drivers.
+# ultralytics-opencv-headless is Ultralytics built against opencv-python-headless, so
+# only one OpenCV is installed and it needs no libGL.
+# Checked in a fresh Python 3.11 environment (macOS): installs, pytest passes, the harness runs.
+# There it resolves to numpy 2.4.6, scipy 1.17.1, opencv-python-headless 5.0.0.93, av 18.1.0.
 torch==2.6.0
 torchvision==0.21.0
-ultralytics==8.4.159
+ultralytics-opencv-headless==8.4.159
 lap==0.5.13
-numpy>=1.24,<2.3
-scipy>=1.11,<1.16
-opencv-python-headless>=4.8,<4.13
-av>=14,<16
+numpy>=1.24,<2.5
+scipy>=1.11,<1.18
+opencv-python-headless>=4.8,<5.1
+av>=14,<19

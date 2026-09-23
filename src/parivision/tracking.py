@@ -83,10 +83,6 @@ class Track:
         vals, counts = np.unique(np.asarray(self.cls), return_counts=True)
         return int(vals[np.argmax(counts)])
 
-    @property
-    def duration(self) -> float:
-        return self.t[-1] - self.t[0] if self.t else 0.0
-
 
 def group_of(track_id: float) -> str:
     return list(GROUPS)[int(track_id) // 1_000_000 - 1]

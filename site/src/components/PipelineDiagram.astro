@@ -31,7 +31,7 @@ const partB: Node[] = [
   { id: "b1", title: "Frames as they arrive", lines: ["causal: past frames only", "every 3rd, 1280 px wide"], kind: "data", c: 0, r: 3 },
   { id: "b2", title: "Detect and track", lines: ["YOLO26s at 960 px, conf 0.2", "ByteTrack, 1.5 s buffer (A: 2 s)"], kind: "learned", c: 1, r: 3 },
   { id: "b3", title: "Look ahead", lines: ["constant velocity, 3 s", "footprints in metres"], kind: "geometry", c: 2, r: 3 },
-  { id: "b4", title: "Risk per frame", lines: ["worst pair hazard, EMA", "0.5 = contact likely in 5 s"], kind: "output", c: 3, r: 3 },
+  { id: "b4", title: "Risk per frame", lines: ["worst pair hazard, EMA", "alarm threshold 0.5"], kind: "output", c: 3, r: 3 },
 ];
 const all = [...partA, ...inputs, ...partB];
 

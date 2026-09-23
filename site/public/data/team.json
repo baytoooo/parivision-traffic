@@ -41,7 +41,7 @@
    "name": "Aziza Adizova",
    "role": "Dev set, pedestrian rules and report",
    "did": [
-    "Built the dev set: the labelling guide, the labelling runs and the review of every disputed event",
+    "Built the dev set: wrote the labelling guide, ran the labelling, verifier and adjudicator agents, and checked part of their reasoning by hand",
     "Wrote and tuned the jaywalking and failure-to-yield rules, and the error analysis behind them",
     "EDA and the technical report"
    ],

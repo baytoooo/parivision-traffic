@@ -3,7 +3,7 @@
 Rule development then iterates on the cache (tracking takes seconds) instead
 of decoding 4K video again.
 
-    python tools/cache_detections.py kit/samples/*.MP4 --fps 10 --width 1920
+    python tools/cache_detections.py samples/*.MP4 --fps 10 --width 1920
 """
 from __future__ import annotations
 

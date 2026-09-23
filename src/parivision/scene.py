@@ -64,27 +64,13 @@ STOP_LINE_SB = [(285, 527), (930, 457)]
 # Vehicle signal head on the median nose, facing the camera (it serves the
 # approach from the south, which runs in the same phase as the SB approach).
 # Lamp centres, top to bottom. A 2-lamp pedestrian head on the left corner
-# pole (walking man for the west crossing) is not used for the vehicle phase.
+# pole (walking man for the west crossing) is not used for the vehicle phase;
+# docs/scene.md gives its lamp positions and the reason.
 SIGNAL_LAMPS = {"red": (1157, 371), "yellow": (1157, 388), "green": (1156, 406)}
-# Two-lamp pedestrian head for the west crossing, on the left corner pole. Not used
-# by the pipeline (docs/scene.md explains why); kept as a record of where it is.
-PED_SIGNAL_LAMPS = {"red": (267, 493), "green": (266, 510)}
 
 
 def poly(points) -> np.ndarray:
     return np.asarray(points, np.float32)
-
-
-def warp(points, H: np.ndarray) -> np.ndarray:
-    pts = poly(points)
-    return cv2.perspectiveTransform(pts[None].astype(np.float64), H)[0].astype(np.float32)
-
-
-def inside(points: np.ndarray, polygon) -> np.ndarray:
-    """Vectorised point-in-polygon for (N, 2) points."""
-    contour = poly(polygon).reshape(-1, 1, 2)
-    pts = np.asarray(points, np.float32).reshape(-1, 2)
-    return np.array([cv2.pointPolygonTest(contour, (float(x), float(y)), False) >= 0 for x, y in pts], bool)
 
 
 def signed_side(points: np.ndarray, line) -> np.ndarray:

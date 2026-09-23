@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 import pickle
+import sys
 import time
 from dataclasses import dataclass
 from functools import lru_cache
@@ -30,10 +31,12 @@ BATCH = 8
 REALIGN_EARLY = (2.0, 30.0)
 REALIGN_EVERY = 10.0
 TIME_SHARE = float(os.environ.get("PARIVISION_TIME_SHARE", 1.3))  # Part A's share of the 3x budget
+DETECTOR_CONF = 0.1    # ByteTrack's track_low_thresh: its second pass uses the weak boxes to keep tracks alive
 
 # Wall time Part A spent on the last clip. The harness runs Part B on the same clip
 # right after Part A in the same process, so the risk model can budget the rest of
 # the 3x limit. This is timing only: no Part A result ever reaches Part B.
+# processed_until is the last analysed second, short of the clip's end if the deadline hit.
 LAST_RUN: dict = {}
 MAX_THIN = 3            # on a slow machine analyse at most every 3rd sampled frame (10 -> 3.3 fps)
 ASSETS = Path(__file__).resolve().parent / "assets"
@@ -61,14 +64,13 @@ class Analysis:
     signal_phase: np.ndarray
     alignment: Alignment
     work_size: tuple[int, int]
-    processed_until: float
     seconds: float
 
 
 @lru_cache(maxsize=1)
 def detector() -> Detector:
     weights, imgsz, _ = profile()
-    return Detector(weights, imgsz=imgsz, conf=0.1)
+    return Detector(weights, imgsz=imgsz, conf=DETECTOR_CONF)
 
 
 @lru_cache(maxsize=1)
@@ -85,15 +87,19 @@ def analyse(video_path: str, time_share: float = TIME_SHARE, progress=None,
     """Detect events in one clip.
 
     ``progress(stage, fraction)`` is called as the clip is processed (used by
-    the web demo), ``max_seconds`` stops early (demo upload limit), and
-    ``on_frame(t, detections, frame, H)`` sees every analysed frame's
-    detections in time order (the demo feeds them to the causal risk model
-    instead of running a second detector).
+    the local demo server, demo/worker.py), ``max_seconds`` stops early (its
+    upload limit), and ``on_frame(t, detections, frame, H)`` sees every
+    analysed frame's detections in time order (demo/worker.py feeds them to
+    the causal risk model instead of running a second detector). The
+    official run (solution.py) passes none of these.
     """
     t_start = time.perf_counter()
     info = probe(video_path)
     limit = min(info.duration, max_seconds) if max_seconds else info.duration
-    deadline = t_start + max(60.0, time_share * info.duration)
+    # Short clips get up to 60 s for the fixed costs (loading the model, registering the view),
+    # but never more than 1.8x the clip, so Part A and Part B stay under 3x together (a 10 s
+    # clip gets 18 s). From about 33 s up the floor is a flat 60 s, and above 46 s the 1.3x share is larger.
+    deadline = t_start + max(time_share * info.duration, min(60.0, 1.8 * info.duration))
     det = detector()
     sample_fps = profile()[2]
     tracker = MultiTracker(fps=sample_fps)
@@ -170,8 +176,11 @@ def analyse(video_path: str, time_share: float = TIME_SHARE, progress=None,
     ctx = Context(trajectories, np.asarray(sig_t), np.asarray(phases), limit)
     events, evidence = detect_from_context(ctx, alignment.H)
     result = Analysis(info, events, evidence, trajectories, np.asarray(sig_t), np.asarray(phases),
-                      alignment, (WORK_WIDTH, work_h), last_t, time.perf_counter() - t_start)
-    LAST_RUN.update(video=Path(video_path).name, seconds=result.seconds, duration=info.duration)
+                      alignment, (WORK_WIDTH, work_h), time.perf_counter() - t_start)
+    LAST_RUN.update(video=Path(video_path).name, seconds=result.seconds, duration=info.duration,
+                    processed_until=last_t)
+    if last_t < limit - 1.0:  # otherwise a deadline stop leaves no trace: the tail simply has no events
+        print(f"{Path(video_path).name}: Part A analysed only {last_t:.1f} s of {limit:.1f} s", file=sys.stderr)
     _keep(result)
     return result
 

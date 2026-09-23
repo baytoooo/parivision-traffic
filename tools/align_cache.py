@@ -3,6 +3,14 @@
     python tools/align_cache.py C3896 C3897 C3902 C3905
 Writes cache/align/<clip>.npz with H (1920-wide working pixels -> reference pixels),
 the inlier count and the background warped into the reference view.
+
+The proxy is a small copy of each clip, 960x540 at 10 fps, that this script, eda.py,
+inspect_evidence.py and sheet.py read. We made it with ffmpeg, which the dev tools need on PATH:
+
+    mkdir -p cache/proxy
+    for c in C3896 C3897 C3902 C3905; do
+      ffmpeg -i samples/$c.MP4 -vf fps=10,scale=960:540 -an -c:v libx264 -preset veryfast -crf 22 -g 20 cache/proxy/$c.mp4
+    done
 """
 from __future__ import annotations
 

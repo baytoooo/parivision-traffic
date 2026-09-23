@@ -1,6 +1,9 @@
 """List every disagreement between predictions and dev labels, as input for the adjudication workflow.
 
-    python tools/disagreements.py --pred out/pred_dev.json --gt labels/dev_labels.json --out out/adjudicate_items.json
+    python tools/disagreements.py --gt labels/dev_labels.json --out out/adjudicate_items.json
+
+Runs the rules again on cache/tracks and cache/signal (tools/tracks_from_cache.py,
+tools/signal_timeline.py), so it reads no predictions file.
 
 A prediction with no label overlapping it at tIoU >= 0.3 is a false-positive candidate; a
 label with no prediction at tIoU >= 0.3 is a miss candidate. Actor ids and positions from

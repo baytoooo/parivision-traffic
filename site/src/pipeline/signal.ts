@@ -1,7 +1,6 @@
 // Vehicle signal phase from the three-lamp head on the median nose (signal.py): a box per
 // lamp, the colour contrast inside it, the phase per frame and the offline clean-up.
 // The Python frame is BGR; here pixels are RGB or RGBA as a canvas or decoder gives them.
-// CausalPhase is not ported: analyse() uses fill_phases, and nothing else reads the signal online.
 
 import { percentile, roundHalfEven, warpPoints, type Mat3 } from "./geometry.ts";
 

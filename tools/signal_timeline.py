@@ -14,7 +14,9 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "tools"))
 
+from common import SAMPLES  # noqa: E402
 from parivision.signal import fill_phases, lamp_patches, lamp_scores, phase_from_scores  # noqa: E402
 from parivision.video import sample_frames  # noqa: E402
 
@@ -40,7 +42,7 @@ def main() -> None:
         H = np.load(ROOT / "cache/align" / f"{clip}.npz")["H"]
         boxes = lamp_patches(np.linalg.inv(H))
         times, scores = [], []
-        for _, t, img in sample_frames(ROOT / "kit/samples" / f"{clip}.MP4", args.fps, 1920):
+        for _, t, img in sample_frames(SAMPLES / f"{clip}.MP4", args.fps, 1920):
             times.append(t)
             scores.append(lamp_scores(img, boxes).tolist())
         raw = [phase_from_scores(np.array(s)) for s in scores]

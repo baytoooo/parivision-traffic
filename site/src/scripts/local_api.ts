@@ -4,7 +4,7 @@
 // work scale, and posts them to the pipeline's worker, which owns the ONNX session and the
 // Analyser. The page polls job() as it polled the Python demo server; nothing leaves the device.
 
-import { UPLOAD_MAX_SECONDS } from "../config";
+import { CONVERT_CMD, UPLOAD_MAX_SECONDS } from "../config";
 import type { ClipResult, Counts, Job, Sample } from "../lib/types";
 import { ALIGN_DOWNSCALE, rgbaToGray } from "../pipeline/align";
 import { roundHalfEven } from "../pipeline/geometry";
@@ -21,7 +21,7 @@ const [READ, LOAD, ALIGN, DETECT, RULES] = STAGES;
 // where each stage starts on the progress bar; detection is most of the work
 const AT: Record<string, number> = { [READ]: 0, [LOAD]: 0.04, [ALIGN]: 0.12, [DETECT]: 0.14, [RULES]: 0.97 };
 
-const CANNOT_DECODE = "This browser cannot decode the clip. H.264 .mp4 files play in every browser; 4K HEVC (H.265) only in some.";
+const CANNOT_DECODE = `This browser cannot decode this clip. The camera's own files are 10-bit 4:2:2 H.264, which Safari and Chrome on a Mac decode but browsers on Windows and Linux may not. Convert it first: ${CONVERT_CMD}`;
 
 type Handler = (m: FromWorker) => void;
 
@@ -92,7 +92,7 @@ async function fetchClip(url: string, signal: AbortSignal, onProgress: (f: numbe
     if (signal.aborted) throw new ApiError("aborted", "Cancelled.");
     throw new ApiError("network", "Could not download the sample clip. Check your connection and try again.");
   }
-  if (!r.ok || !r.body) throw new ApiError("http", `Could not download the sample clip (HTTP ${r.status}).`, r.status);
+  if (!r.ok || !r.body) throw new ApiError("http", `Could not download the sample clip (HTTP ${r.status}).`);
   const total = Number(r.headers.get("content-length")) || 0;
   const reader = r.body.getReader();
   const chunks: Uint8Array<ArrayBuffer>[] = [];
@@ -274,7 +274,7 @@ export class LocalApi implements Api {
     } catch {
       throw new ApiError("network", "Could not load the list of sample clips.");
     }
-    if (!r.ok) throw new ApiError("http", "Could not load the list of sample clips.", r.status);
+    if (!r.ok) throw new ApiError("http", "Could not load the list of sample clips.");
     this.sampleList = await r.json();
     return this.sampleList;
   }
@@ -285,24 +285,20 @@ export class LocalApi implements Api {
 
   async submitSample(name: string, signal: AbortSignal): Promise<string> {
     const s = this.sampleList.find((x) => x.name === name);
-    if (!s?.url) throw new ApiError("not_found", "There is no sample clip of that name.", 404);
+    if (!s?.url) throw new ApiError("not_found", "There is no sample clip of that name.");
     const url = s.url;
     return this.start(url.split("/").pop() || name, signal, (job, onProgress) => fetchClip(url, job.signal, onProgress));
   }
 
   async job(id: string): Promise<Job> {
     const j = this.jobs.get(id);
-    if (!j) throw new ApiError("not_found", "This job is gone. Start the clip again.", 404);
+    if (!j) throw new ApiError("not_found", "This job is gone. Start the clip again.");
     let eta: number | null = null;
     if (j.status === "running" && j.stage === DETECT && j.framesDone >= 3) {
       const perFrame = (performance.now() - j.stageStarted) / 1000 / j.framesDone;
       eta = Math.round(perFrame * (j.framesTotal - j.framesDone)) + 1;
     } else if (j.status === "running" && j.stage === RULES) eta = 1;
     return { status: j.status, progress: Math.round(j.progress * 1000) / 1000, stage: j.stage, eta_sec: eta, error: j.error, result: j.result };
-  }
-
-  videoUrl(path: string): string {
-    return path;
   }
 
   // ---------------------------------------------------------------- jobs

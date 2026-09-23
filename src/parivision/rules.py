@@ -92,7 +92,6 @@ class Evidence:
     end: float
     actors: list[int]
     note: str = ""
-    score: float = 1.0
 
 
 @dataclass
@@ -126,7 +125,7 @@ class Context:
         frames = np.unique(np.concatenate([tr.t for tr in self.trajectories])) if self.trajectories else np.array([])
         self.dt = float(np.percentile(np.diff(frames), 90)) if len(frames) > 2 else 0.1
         self.vehicles = [tr for tr in self.trajectories if tr.is_vehicle]
-        self.two_wheelers = [tr for tr in self.trajectories if tr.group == "bicycle" or tr.cls == 3]
+        self.two_wheelers = [tr for tr in self.trajectories if tr.group == "bicycle" or tr.cls == MOTORCYCLE]
         self._boxes_at = _index_boxes(self.vehicles + self.two_wheelers)
         self.people = [tr for tr in self.trajectories if tr.is_person and not self._not_a_pedestrian(tr)]
 
@@ -198,7 +197,7 @@ def _index_boxes(trajectories: list[Trajectory]) -> dict[int, list[tuple[np.ndar
     """Boxes by 0.1 s time bin, flagged when they belong to a bicycle or motorbike."""
     out: dict[int, list[tuple[np.ndarray, bool]]] = {}
     for tr in trajectories:
-        two = tr.group == "bicycle" or tr.cls == 3
+        two = tr.group == "bicycle" or tr.cls == MOTORCYCLE
         for t, b in zip(tr.t, tr.box):
             out.setdefault(int(round(t * 10)), []).append((b, two))
     return out

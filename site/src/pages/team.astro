@@ -14,14 +14,14 @@ const links = (m: (typeof team.members)[number]) =>
   ].filter((l) => l.v);
 const todoCount = team.members.reduce((acc, m) => {
   const vals = [m.role, m.github, m.linkedin, m.portfolio, ...m.did, ...m.projects.flatMap((p) => [p.name, p.url])];
-  return acc + vals.filter((v) => isTodo(v) || /\bTODO\b/.test(v)).length;
+  return acc + vals.filter((v) => v && (isTodo(v) || /\bTODO\b/.test(v))).length;
 }, 0);
 ---
 <Base title="Team" description={`${team.team}: who we are and who did what.`} active="team">
   <header class="page-head wrap">
     <p class="kicker">Team</p>
     <h1>{team.team}</h1>
-    <p class="lede">{team.members.length} students from {team.university}. This page is read from <code>public/data/team.json</code>.</p>
+    <p class="lede">{team.members.length} students from {team.university}.</p>
     {todoCount > 0 && <p class="todo-note mono">{todoCount} fields still say TODO. They are marked with a dashed yellow border.</p>}
   </header>
 

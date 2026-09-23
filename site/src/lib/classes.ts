@@ -1,8 +1,8 @@
 // The 14 event classes, in the order the task lists them, with the text the
 // site shows for each. `status` says what the pipeline does with the class:
 //   on   - a rule exists and the class is emitted
-//   off  - a rule exists but the class is not emitted yet
-//   none - no rule yet
+//   off  - a rule exists but the class is not emitted (U-turns: see events.py)
+//   none - no rule
 // Keep `status` in step with ENABLED in src/parivision/events.py.
 
 export type ClassStatus = "on" | "off" | "none";
@@ -116,7 +116,6 @@ export const CLASSES: ClassMeta[] = [
   },
 ];
 
-export const CLASS_KEYS = CLASSES.map((c) => c.key);
 export const CLASS_BY_KEY: Record<string, ClassMeta> = Object.fromEntries(CLASSES.map((c) => [c.key, c]));
 
 export function className(key: string): string {

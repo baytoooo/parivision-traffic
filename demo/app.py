@@ -27,7 +27,6 @@ from pathlib import Path
 from queue import Queue
 
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
 from worker import Job, run
@@ -43,7 +42,6 @@ SAMPLE_LIST = [
 ]
 
 app = FastAPI(title="PariVision traffic events demo")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 jobs: "OrderedDict[str, Job]" = OrderedDict()
 queue: "Queue[Job]" = Queue()

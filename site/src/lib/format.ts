@@ -16,11 +16,6 @@ export function fmtTime(t: number, digits = 1): string {
   return `${neg ? "-" : ""}${m}:${ss}`;
 }
 
-/** Seconds as "340.3 s" */
-export function fmtSec(t: number, digits = 1): string {
-  return `${t.toFixed(digits)} s`;
-}
-
 /** A metric that may still be "TBD". */
 export function fmtNum(v: Num, digits = 3): string {
   if (isNum(v)) return v.toFixed(digits);
@@ -53,7 +48,7 @@ export function isTodo(v: string | undefined | null): boolean {
   return !v || /^\s*(TODO|TBD)\b/i.test(v);
 }
 
-/** Alarm start times, same definition as alarm_starts() in evaluate.py. */
+/** Merged alarm runs [start, end], as alarm_starts() in evaluate.py builds them before keeping only the starts. */
 export function alarmRuns(curve: [number, number][], theta: number, mergeGap: number): [number, number][] {
   const runs: [number, number][] = [];
   let start: number | null = null;

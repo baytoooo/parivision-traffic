@@ -3,7 +3,8 @@
     python tools/eda.py --out out/site_data
 
 Uses the cached detections/tracks (tools/cache_detections.py, tools/tracks_from_cache.py),
-the per-clip alignment and the signal timelines.
+the per-clip alignment, the signal timelines and the proxies in cache/proxy (tools/align_cache.py).
+Clip metadata comes from ffprobe, so ffmpeg must be on PATH (Homebrew or apt both ship it).
 """
 from __future__ import annotations
 
@@ -24,6 +25,7 @@ from parivision import scene as S  # noqa: E402
 from parivision.signal import fill_phases  # noqa: E402
 
 sys.path.insert(0, str(ROOT / "tools"))
+from common import SAMPLES  # noqa: E402
 from run_rules import load_context  # noqa: E402
 
 CLIPS = ["C3896", "C3897", "C3902", "C3905"]
@@ -34,7 +36,7 @@ BIN = 5.0
 def clip_meta(clip: str) -> dict:
     out = subprocess.run(["ffprobe", "-v", "error", "-show_entries",
                           "stream=width,height,r_frame_rate,codec_name,profile,pix_fmt,bit_rate:format=duration:format_tags=creation_time",
-                          "-of", "json", str(ROOT / "kit/samples" / f"{clip}.MP4")], capture_output=True, text=True)
+                          "-of", "json", str(SAMPLES / f"{clip}.MP4")], capture_output=True, text=True)
     d = json.loads(out.stdout)
     v = d["streams"][0]
     num, den = map(int, v["r_frame_rate"].split("/"))

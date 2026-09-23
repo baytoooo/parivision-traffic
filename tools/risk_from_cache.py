@@ -1,11 +1,15 @@
 """Replay cached detections through the Part B hazard model (calibration without decoding video).
 
-    python tools/risk_from_cache.py C3896 C3897 C3902 C3905
+    python tools/risk_from_cache.py C3896 C3897 C3902 C3905 [--tag yolo26s_960_1920_10fps]
 Prints the score distribution and the alarms (runs of score >= 0.5) per clip.
+
+Reads cache/det/<clip>__<tag>.npz (tools/cache_detections.py) and cache/align (tools/align_cache.py).
+The default tag is the cache closest to the GPU Part B detector (yolo26s at 960). Only C3897 and
+C3905 have it; for a clip without it we take the clip's first cache in name order and print which.
 """
 from __future__ import annotations
 
-import json
+import argparse
 import sys
 from pathlib import Path
 
@@ -18,10 +22,23 @@ from parivision.detector import Detections  # noqa: E402
 from parivision.registration import Alignment  # noqa: E402
 from parivision.risk import Anticipator  # noqa: E402
 
+DEFAULT_TAG = "yolo26s_960_1920_10fps"
 
-def replay(clip: str) -> tuple[np.ndarray, np.ndarray]:
-    npz = next((ROOT / "cache/det").glob(f"{clip}__*.npz"))
-    z = np.load(npz)
+
+def cache_for(clip: str, tag: str) -> Path:
+    """cache/det/<clip>__<tag>.npz, or the clip's first cache in name order when that one is missing."""
+    npz = ROOT / "cache/det" / f"{clip}__{tag}.npz"
+    if npz.exists():
+        return npz
+    found = sorted((ROOT / "cache/det").glob(f"{clip}__*.npz"))
+    if not found:
+        sys.exit(f"{clip}: no detector cache in cache/det (run tools/cache_detections.py first)")
+    print(f"{clip}: no {npz.name}, replaying {found[0].name}")
+    return found[0]
+
+
+def replay(clip: str, tag: str = DEFAULT_TAG) -> tuple[np.ndarray, np.ndarray]:
+    z = np.load(cache_for(clip, tag))
     det, fps, stride = z["det"], float(z["fps"]), int(z["stride"])
     w, h = int(z["width"]), int(z["height"])
     H = np.load(ROOT / "cache/align" / f"{clip}.npz")["H"]
@@ -58,12 +75,17 @@ def alarms(ts, scores, theta=0.5, gap=2.0):
     return merged
 
 
-if __name__ == "__main__":
-    out = {}
-    for clip in sys.argv[1:]:
-        ts, sc = replay(clip)
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("clips", nargs="+")
+    ap.add_argument("--tag", default=DEFAULT_TAG, help="detector cache to replay, cache/det/<clip>__<tag>.npz")
+    args = ap.parse_args()
+    for clip in args.clips:
+        ts, sc = replay(clip, args.tag)
         al = alarms(ts, sc)
-        out[clip] = {"t": ts.round(2).tolist(), "risk": sc.round(4).tolist()}
         print(f"{clip}: p50={np.median(sc):.3f} p99={np.percentile(sc, 99):.3f} max={sc.max():.3f} "
               f"alarms={len(al)} {[[round(a, 1), round(b, 1)] for a, b in al][:10]}")
-    (ROOT / "cache/risk_replay.json").write_text(json.dumps(out))
+
+
+if __name__ == "__main__":
+    main()

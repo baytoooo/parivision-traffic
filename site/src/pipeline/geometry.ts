@@ -45,17 +45,6 @@ export function signedSide(pts: number[][], line: [[number, number], [number, nu
   return pts.map(([x, y]) => (x2 - x1) * (y - y1) - (y2 - y1) * (x - x1));
 }
 
-/** Even-odd point-in-polygon test. */
-export function inPolygon(x: number, y: number, poly: [number, number][]): boolean {
-  let inside = false;
-  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const [xi, yi] = poly[i];
-    const [xj, yj] = poly[j];
-    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
-  }
-  return inside;
-}
-
 export function median(a: number[]): number {
   if (!a.length) return NaN;
   const s = [...a].sort((x, y) => x - y);

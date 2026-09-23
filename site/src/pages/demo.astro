@@ -1,7 +1,7 @@
 ---
 import Base from "../layouts/Base.astro";
 import ClipPanel from "../components/ClipPanel.astro";
-import { UPLOAD_MAX_SECONDS } from "../config";
+import { CONVERT_CMD, UPLOAD_MAX_SECONDS } from "../config";
 
 const maxMin = UPLOAD_MAX_SECONDS / 60;
 ---
@@ -30,8 +30,9 @@ const maxMin = UPLOAD_MAX_SECONDS / 60;
         <input type="file" id="file-input" accept=".mp4,video/mp4" class="visually-hidden" />
         <span class="drop-icon" aria-hidden="true"></span>
         <span class="drop-main">Choose an .mp4 or drop it here</span>
-        <span class="drop-sub">The first {maxMin} minutes are analysed. The file stays on this device. 1080p is recommended; 4K works but is slower.</span>
+        <span class="drop-sub">Any file size. The file is read on this device and not uploaded. We analyse the first {maxMin} minutes. 1080p is recommended; 4K works but is slower.</span>
       </label>
+      <p class="codec-note">The camera's own files are 10-bit 4:2:2 H.264. Safari and Chrome on a Mac decode them, but browsers on Windows and Linux may not. 8-bit H.264 at 1080p, the format of our sample clips, is the safest choice. To convert the first {maxMin} minutes of a camera file: <code>{CONVERT_CMD}</code></p>
       <div class="file-info" id="file-info" hidden>
         <dl>
           <div><dt>File</dt><dd id="file-name" class="mono"></dd></div>
@@ -138,6 +139,8 @@ const maxMin = UPLOAD_MAX_SECONDS / 60;
   .drop-icon { width: 44px; height: 30px; background: var(--stripes-tight); clip-path: polygon(0 100%, 50% 0, 100% 100%); opacity: .9; }
   .drop-main { font-weight: 800; font-size: 1.05rem; }
   .drop-sub { font-size: .85rem; color: var(--paint-2); }
+  .codec-note { margin: 10px 0 0; font-size: .82rem; color: var(--paint-2); }
+  .codec-note code { overflow-wrap: anywhere; }
 
   .file-info { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; margin-top: 12px; }
   .file-info dl { margin: 0; display: grid; gap: 2px; min-width: 0; }

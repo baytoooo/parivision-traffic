@@ -8,7 +8,9 @@ scored by how soon and how deep their predicted footprints overlap. Hard
 braking adds to the risk. The score is the worst pair, smoothed with an EMA.
 
 Calibration target: 0.5 should mean "contact is likely within 5 s". On the
-sample clips (normal traffic, no collisions) the score stays well below 0.5.
+sample clips (normal traffic, no collisions) the score crosses 0.5 once, for
+0.7 s (C3905 at 57.6 s, a dense platoon of cars crossing the junction box);
+on the other three clips the highest value is 0.499 (C3896).
 """
 from __future__ import annotations
 
@@ -28,7 +30,8 @@ from .tracking import MultiTracker
 WORK_WIDTH = 1280
 TARGET_HZ = 10.0
 MAX_STRIDE_FACTOR = 10  # on a slow machine fall back to 1 Hz, and skip processing entirely if even that is late
-# the defaults fit the official T4 run; the environment overrides are for slower machines (our laptop)
+# defaults chosen for the official T4 run (not timed on a T4 yet, see tools/t4_check.sh); the environment
+# overrides are for slower machines such as our M5 laptop
 OWN_TIME_SHARE = float(os.environ.get("PARIVISION_RISK_SHARE", 0.4))  # our processing, x video time (decode on top)
 TOTAL_LIMIT = float(os.environ.get("PARIVISION_TOTAL_LIMIT", 2.8))    # Part A + Part B, x clip duration (harness: 3.0)
 HISTORY = 8            # samples used for the velocity estimate (0.8 s)
@@ -61,8 +64,6 @@ def _road_mask() -> np.ndarray:
 @lru_cache(maxsize=1)
 def _carriageways() -> np.ndarray:
     """0 elsewhere, 1 on the southbound carriageway, 2 on the northbound one (the median separates them)."""
-    import cv2
-
     from .rules import DIRECTION_ZONES
 
     m = np.zeros(_road_mask().shape, np.uint8)
@@ -107,8 +108,6 @@ class Anticipator:
     def __init__(self, meta: dict):
         self.fps = float(meta.get("fps") or 25.0)
         self.stride = max(1, int(round(self.fps / TARGET_HZ)))
-        self.width = int(meta.get("width") or 3840)
-        self.height = int(meta.get("height") or 2160)
         self.tracker = MultiTracker(fps=self.fps / self.stride, buffer_sec=TRACK_BUFFER_SEC)
         self.alignment: Alignment | None = None
         self.history: dict[int, list[tuple[float, np.ndarray, float, int]]] = {}
@@ -119,7 +118,9 @@ class Anticipator:
         # wall-clock budget for this whole pass, including the harness decoding frames for us
         duration = float(meta.get("n_frames") or 0) / self.fps if meta.get("n_frames") else 0.0
         spent_a = LAST_RUN.get("seconds", 0.0) if LAST_RUN.get("video") == meta.get("video_id") else 0.0
-        self.budget = max(10.0, TOTAL_LIMIT * duration - spent_a) if duration else float("inf")
+        # if Part A overran, still take 10 s, or half the clip when that is shorter: a flat 10 s
+        # would take a clip under 20 s past the 3x limit
+        self.budget = max(min(10.0, 0.5 * duration), TOTAL_LIMIT * duration - spent_a) if duration else float("inf")
         self.duration = duration
         self.started: float | None = None
         self.streaks: dict[tuple[int, int], float] = {}
@@ -130,7 +131,7 @@ class Anticipator:
         now = time.perf_counter()
         if self.started is None:
             self.started = now
-        if k % self.stride or self._out_of_time(now, t_sec):
+        if k % self.stride or self._out_of_time(now):
             return self.score
         first = self.alignment is None
         self._process(frame, t_sec)
@@ -148,7 +149,7 @@ class Anticipator:
             return 0.0
         return (now - self.started) / t_sec * self.duration
 
-    def _out_of_time(self, now: float, t_sec: float) -> bool:
+    def _out_of_time(self, now: float) -> bool:
         """Past 95% of the budget: stop processing and hold the last score to the end."""
         return (now - self.started) > 0.95 * self.budget
 

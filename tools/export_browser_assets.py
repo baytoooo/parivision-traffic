@@ -31,6 +31,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from parivision import events as E  # noqa: E402
+from parivision import pipeline as P  # noqa: E402
 from parivision import risk as RK  # noqa: E402
 from parivision import rules as R  # noqa: E402
 from parivision import scene as S  # noqa: E402
@@ -101,7 +102,7 @@ def constants() -> dict:
         "signal_lamps": S.SIGNAL_LAMPS,
         "signal_min_contrast": SG.MIN_CONTRAST.tolist(),
         "events": {"enabled": list(E.ENABLED), "shown": list(E.SHOWN), "gap": E.GAP, "min_len": E.MIN_LEN},
-        "detector": {"keep_classes": sorted(int(c) for c in KEEP), "conf": 0.1},  # pipeline.make_detector
+        "detector": {"keep_classes": sorted(int(c) for c in KEEP), "conf": P.DETECTOR_CONF},  # as pipeline.detector()
         "tracking": {**{name: getattr(T, name) for name in dir(T) if name.isupper() and not name.startswith("_")},
                      "bytetrack": {k: v for k, v in vars(T._byte_args(10.0, 2.0)).items()
                                    if k not in ("tracker_type", "track_buffer")},

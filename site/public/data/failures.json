@@ -11,7 +11,7 @@
   "t": 68.8,
   "label": "failure_to_yield",
   "kind": "false positive",
-  "caption": "Two men wait at the kerb end of the zebra for their walk phase while a car with a green light drives past them. The rule counts them as out on the crossing. It cannot yet tell someone waiting at the end of the stripes from someone about to step off."
+  "caption": "Two men wait at the kerb end of the zebra for their walk phase while a car with a green light drives past them. One of them stands on the end of the stripes and, for 0.7 s, passes both our kerb margin and our walking test, so the rule counts him as out on the crossing."
  },
  {
   "clip": "C3897",
@@ -25,7 +25,7 @@
   "t": 33.6,
   "label": "red_light",
   "kind": "missed",
-  "caption": "A scooter creeps over the stop line 0.8 s before green, while the red and amber lamps are lit together. Our lamp reader calls red plus amber 'yellow', so the red-light rule never looks at it."
+  "caption": "A scooter creeps over the stop line about 0.9 s before green, while the red and amber lamps are lit together. Our lamp reader calls red plus amber 'yellow', and the rule also ignores crossings less than 1.5 s before green, so it never counts this one."
  },
  {
   "clip": "C3896",

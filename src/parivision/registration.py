@@ -19,12 +19,6 @@ class Alignment:
     inliers: int
     ok: bool
 
-    def to_ref(self, pts: np.ndarray) -> np.ndarray:
-        return warp_points(pts, self.H)
-
-    def from_ref(self, pts: np.ndarray) -> np.ndarray:
-        return warp_points(pts, np.linalg.inv(self.H))
-
 
 def warp_points(pts: np.ndarray, H: np.ndarray) -> np.ndarray:
     pts = np.asarray(pts, np.float64).reshape(-1, 2)

@@ -93,20 +93,3 @@ def fill_phases(raw: list[str], times: np.ndarray, max_off: float = 4.0) -> list
             out[k] = fill
         i = j
     return [_NAMES[c] for c in out]
-
-
-class CausalPhase:
-    """Online reader for Part B: keeps the last lit lamp through short dark spells."""
-
-    def __init__(self, max_off: float = 4.0):
-        self.max_off = max_off
-        self.phase = UNKNOWN
-        self.last_lit = -1e9
-
-    def update(self, scores: np.ndarray, t: float) -> str:
-        p = phase_from_scores(scores)
-        if p != OFF:
-            self.phase, self.last_lit = p, t
-        elif t - self.last_lit > self.max_off:
-            self.phase = UNKNOWN
-        return self.phase

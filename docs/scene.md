@@ -15,13 +15,15 @@ signalised four-way junction in Tashkent, looking straight up the avenue. We
 call the arms north, south, east and west as seen from the camera, with the
 avenue running "north" away from it. These are names, not compass bearings;
 we did not check them against a map. Files are XAVC S: 3840x2160, 29.97 fps, H.264 High 4:2:2
-10-bit at about 140 Mbit/s. There is no camera motion inside a clip, and the
-two morning samples have the same framing to within a pixel. The two
-afternoon clips do not: C3902 is shifted by about 60 px horizontally and
-36 px vertically with a 2% zoom, C3905 by about 15 and 23 px with a 1% zoom.
-So every clip is registered to the reference view with a homography from SIFT
-features (`src/parivision/registration.py`), against a midday and a dusk
-reference.
+10-bit at about 140 Mbit/s. Apart from C3896, whose camera drifts about 9 px
+over its first 40 s while it settles on the tripod, there is no camera motion
+inside a clip, and the two morning samples have the same framing to within a
+pixel. The two afternoon clips do not: C3902 is shifted by about 60 px
+horizontally and 36 px vertically with a 2% zoom, C3905 by about 15 and 23 px
+with a 1% zoom. So every clip is registered to the reference view with a
+homography from SIFT features (`src/parivision/registration.py`), against a
+midday and a dusk reference. Because of the drift in C3896, the registration
+is repeated on keyframes through the clip.
 
 | clip  | length  | local time (Tashkent)   | light                         |
 |-------|---------|-------------------------|-------------------------------|
@@ -72,8 +74,10 @@ Nothing else in view is a legal place to cross.
   while it is red. We read the phase from it.
 * The head on the **left corner pole** also faces the camera, but it is a
   two-lamp pedestrian signal (walking and standing man) for the west
-  crossing. Its walk phase runs with the avenue green, because people on the
-  west crossing walk parallel to the avenue. We first mistook it for the
+  crossing, with the red lamp at (267, 493) and the green lamp at (266, 510)
+  in reference pixels. The pipeline does not read it. Its walk phase runs with
+  the avenue green, because people on the west crossing walk parallel to the
+  avenue. We first mistook it for the
   vehicle signal; it turns red about 6 s before the vehicle signal does, at the
   moment the vehicle green starts to flash, and
   that made every car in the last platoon look like a red-light runner.

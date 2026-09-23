@@ -1,13 +1,22 @@
-"""Build the website's data files and media from the official sample run.
+r"""Build the website's data files and media from the official sample run.
 
-    PARIVISION_CACHE_DIR=out/analysis python run_submission.py --videos samples --out predictions_samples.json --team PariVision
+    PARIVISION_CACHE_DIR=out/analysis PARIVISION_TIME_SHARE=12 PARIVISION_TOTAL_LIMIT=30 PARIVISION_RISK_SHARE=10 \
+        python run_submission.py --videos samples --out predictions_samples.json --team PariVision --time-factor 40
     python evaluate.py --pred predictions_samples.json --gt labels/dev_labels.json --json out/metrics.json --per-video
     python tools/eda.py --out out/site_data
-    python tools/make_site_data.py --site site/public
+    python tools/make_site_data.py --site site/public --machine "Apple M5 laptop on MPS, time guards off" \
+        --runtime-note "The official harness on the four samples with PARIVISION_TIME_SHARE, PARIVISION_TOTAL_LIMIT \
+and PARIVISION_RISK_SHARE lifted, so nothing is thinned. We have not timed a T4 yet: a Google Drive download \
+quota blocked our Colab run."
+
+The first command is how we made predictions_samples.json on our laptop (Apple M5, MPS): the
+environment variables and --time-factor lift the time guards, so nothing is thinned.
+The clips are read from samples/ (tools/common.py); PARIVISION_SAMPLES or --samples point elsewhere.
 
 Writes data/clips.json, data/results/<clip>.json, data/metrics.json, data/examples.json,
-data/eda.json, data/ablations.json, data/runtime.json (with --machine), data/predictions_samples.json
-and media/ (annotated videos, posters, example frames, the home-page loop).
+data/eda.json, data/ablations.json, data/runtime.json (with --machine), data/predictions_samples.json,
+data/report.md (a copy of docs/report.md) and media/ (annotated videos, posters, example frames,
+the home-page loop).
 """
 from __future__ import annotations
 
@@ -23,7 +32,9 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "tools"))
 
+from common import SAMPLES  # noqa: E402
 from parivision.render import render  # noqa: E402
 from parivision.video import sample_frames  # noqa: E402
 
@@ -45,6 +56,11 @@ NOTE_ZONE = {"north_sb": ("north_crossing", "north crossing, SB half"),
              "sb": ("sb_approach", "SB carriageway"), "nb": ("nb_carriageway", "NB carriageway")}
 CLASS_ZONE = {"red_light": "stop_line", "stop_line": "stop_line", "congestion": "sb_approach",
               "illegal_u_turn": "median_nose"}
+# caption of an example card whose evidence has no note (jaywalking and stop_line never set one): "near the <zone>",
+# since the zone is only the marker nearest to the first actor
+ZONE_NAME = {"sb_approach": "SB carriageway", "stop_line": "stop line", "north_crossing": "north crossing",
+             "median_nose": "median nose", "nb_carriageway": "NB carriageway", "west_crossing": "west crossing",
+             "junction_box": "junction box"}
 
 
 def local_start(clip: str) -> str:
@@ -57,6 +73,11 @@ def local_start(clip: str) -> str:
         return LOCAL_TIME.get(clip, ("", ""))[0]
     utc = datetime.fromisoformat(meta["created_utc"].replace("Z", "+00:00"))
     return (utc + timedelta(hours=5)).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def clamp(t: float, duration: float) -> float:
+    """A time inside the clip: evidence padding can start before 0 or end after the last frame."""
+    return min(max(t, 0.0), duration)
 
 
 def signal_segments(t: np.ndarray, phase: np.ndarray) -> list:
@@ -167,8 +188,9 @@ def example_frames(clip: str, video: Path, a, media: Path, per_class: int = 3) -
             small = cv2.resize(img, (960, int(round(img.shape[0] * 960 / img.shape[1]))), interpolation=cv2.INTER_AREA)
             name = f"{clip}_{label}_{k}.jpg"
             cv2.imwrite(str(media / "examples" / name), small, [cv2.IMWRITE_JPEG_QUALITY, 82])
-            out.append({"label": label, "clip": clip, "t": round(ev.start, 1), "thumb": f"/media/examples/{name}",
-                        "caption": where(ev, boxes_at)[1]})
+            zone, note = where(ev, boxes_at)
+            out.append({"label": label, "clip": clip, "t": round(clamp(ev.start, a.info.duration), 1),
+                        "thumb": f"/media/examples/{name}", "caption": note or f"near the {ZONE_NAME[zone]}"})
             j += 1
         if j >= len(targets):
             break
@@ -192,7 +214,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--site", default=str(ROOT / "site/public"))
     ap.add_argument("--analysis", default=str(ROOT / "out/analysis"))
-    ap.add_argument("--samples", default=str(ROOT / "kit/samples"))
+    ap.add_argument("--samples", default=str(SAMPLES), help="folder with the sample clips (default samples/)")
     ap.add_argument("--no-video", action="store_true")
     ap.add_argument("--machine", default="", help="where predictions_samples.json was produced, for runtime.json")
     ap.add_argument("--runtime-note", default="")
@@ -224,8 +246,9 @@ def main() -> None:
             "labels": labels.get(key, {}).get("events", []),
             "risk": risk10,
             "signal": signal_segments(a.signal_t, a.signal_phase),
-            "evidence": [{"label": e.label, "start": round(e.start, 2), "end": round(e.end, 2), "actors": e.actors,
-                          "zone": z, "note": n} for e in a.evidence for z, n in [where(e, by_id)]],
+            "evidence": [{"label": e.label, "start": round(clamp(e.start, a.info.duration), 2),
+                          "end": round(clamp(e.end, a.info.duration), 2), "actors": e.actors, "zone": z, "note": n}
+                         for e in a.evidence for z, n in [where(e, by_id)]],
             "counts": counts(a),
         }
         (data / "results" / f"{clip}.json").write_text(json.dumps(result))
@@ -248,6 +271,7 @@ def main() -> None:
     if examples:
         (data / "examples.json").write_text(json.dumps(examples))
     shutil.copy(ROOT / "predictions_samples.json", data / "predictions_samples.json")
+    shutil.copy(ROOT / "docs/report.md", data / "report.md")  # the site's report page reads this copy
     if args.machine and preds.get("log"):
         rows = [{"clip": Path(k).stem, "duration": v["duration"], "part_a_sec": v.get("part_a_sec"),
                  "part_b_sec": v.get("part_b_sec"), "total_sec": v.get("total_sec")} for k, v in preds["log"].items()]

@@ -157,7 +157,7 @@ const statusText = { on: "emitted", off: "rule off", none: "no rule" } as const;
 
   <section class="section wrap" id="ablations">
     <SecHead num="04" title="Ablations">
-      <p>Same rules, same dev labels, one change per row. Score A is the official number; it also averages in the zeros for U-turns and illegal turns, which our labels have and no variant predicts. The next column is the mean F1 over the classes we emit. Detector variants could only be scored on the two clips we cached their detections for, so they come with the submitted configuration scored on the same two clips. Cost is detector compute (model size, input pixels and frames) relative to the submitted configuration.</p>
+      <p>Same rules, same dev labels, one change per row. Score A is the official number; it also averages in the zeros for U-turns and illegal turns, which our labels have and no variant predicts. The next column is the mean F1 over the classes we emit. Detector variants could only be scored on the two clips we cached their detections for, so they come with the submitted configuration scored on the same two clips. Cost is detector compute (model size, input pixels and frames) relative to the submitted configuration. The ablations re-track cached detections, so the first row differs slightly from the official run above (0.525 / 0.700).</p>
     </SecHead>
     <div class="table-scroll">
       <table>

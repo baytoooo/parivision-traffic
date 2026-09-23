@@ -2,7 +2,7 @@
 import Base from "../layouts/Base.astro";
 import SecHead from "../components/SecHead.astro";
 import { className } from "../lib/classes";
-import { loadAllResults, loadClips, loadEda } from "../lib/data";
+import { loadAblations, loadAllResults, loadClips, loadEda } from "../lib/data";
 import { fmtTime } from "../lib/format";
 import type { SignalStat } from "../lib/types";
 
@@ -51,6 +51,12 @@ const ped = eda?.pedestrians;
 const labelRows = Object.entries(eda?.labels ?? {}).sort((a, b) => b[1].n - a[1].n);
 const nLabels = labelRows.reduce((a, [, v]) => a + v.n, 0);
 const fty = eda?.labels?.failure_to_yield;
+// failure_to_yield F1 of the 10 fps and 5 fps ablation rows (all four clips)
+const ablations = loadAblations();
+const ftyF1 = (name: string) => ablations.find((a) => a.name === name)?.per_class?.failure_to_yield;
+const fty10 = ftyF1("YOLO26m @1280, 10 fps");
+const fty5 = ftyF1("YOLO26m @1280, 5 fps");
+const ftyDrop = fty10 != null && fty5 != null ? `, and on our labels 5 fps drops failure_to_yield F1 from ${fty10.toFixed(3)} to ${fty5.toFixed(3)} (see the ablations on the Results page)` : "";
 
 const luma = clips.map((c) => ({ id: c.id, light: c.light.split(",")[0], v: eda?.light[c.id]?.mean_luma ?? NaN }));
 const lumaDay = Math.max(...luma.map((l) => l.v).filter(Number.isFinite));
@@ -59,11 +65,11 @@ const plansText = plans.map((p) => `${p.cycle} s (${p.green} s green, ${p.yellow
 const reds = plans.map((p) => p.red);
 
 const findings = [
-  "The clips are not framed the same. The afternoon ones are shifted by up to 60 px and zoomed by about 2% against the morning ones, so every zone is drawn once in a reference view and each clip is registered onto it with a homography.",
+  "The clips are not framed the same. The afternoon ones are shifted by up to about 60 px and zoomed by 1 to 2% against the morning ones, so every zone is drawn once in a reference view and each clip is registered onto it with a homography.",
   plans.length ? `The signal plan changes during the day: a cycle of ${plansText}. The rules read the phase from the lamps in every sampled frame instead of assuming a timetable.` : "",
   reds.length ? `The southbound queue stands through every red, ${Math.min(...reds)} to ${Math.max(...reds)} s. So stopped_vehicle ignores the southbound approach, and congestion only counts a queue that still stands 8 s into the green.` : "",
   ped ? `${pct(ped.off_crossing_on_road)} of pedestrian positions are on the carriageway outside a zebra, against ${pct(ped.on_crossing)} on a zebra. The rest, ${pct(ped.pavement)}, are on pavements, kerbs, islands and the median, which is where the jaywalking rule must not fire.` : "",
-  fty ? `Failure to yield is the most frequent event in our labels and a short one: median ${fty.median_sec.toFixed(1)} s from the car entering the zebra to leaving it. At 5 fps that is about five frames, which is why Part A samples 10 frames per second.` : "",
+  fty ? `Failure to yield is the most frequent event in our labels and a short one: median ${fty.median_sec.toFixed(1)} s from the car entering the zebra to leaving it. At 5 fps that is about ${Math.round(fty.median_sec * 5)} frames${ftyDrop}, which is why Part A samples 10 frames per second.` : "",
   Number.isFinite(lumaDusk) ? `The dusk clip is much darker than the midday ones (mean brightness ${lumaDusk.toFixed(0)} against ${lumaDay.toFixed(0)} out of 255), so registration matches every clip against a dusk reference as well as a midday one.` : "",
 ].filter(Boolean);
 

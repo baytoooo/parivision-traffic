@@ -1,5 +1,6 @@
 .venv/
 kit/
+/samples
 weights_cache/
 __pycache__/
 *.pyc

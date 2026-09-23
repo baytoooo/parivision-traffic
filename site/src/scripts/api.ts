@@ -4,12 +4,10 @@
 import type { ClipResult, Job, Sample } from "../lib/types";
 
 export class ApiError extends Error {
-  kind: "network" | "http" | "not_found" | "aborted" | "bad_response";
-  status?: number;
-  constructor(kind: ApiError["kind"], message: string, status?: number) {
+  kind: "network" | "http" | "not_found" | "aborted";
+  constructor(kind: ApiError["kind"], message: string) {
     super(message);
     this.kind = kind;
-    this.status = status;
   }
 }
 
@@ -24,7 +22,6 @@ export interface Api {
   submitFile(file: File, signal: AbortSignal): Promise<string>;
   submitSample(name: string, signal: AbortSignal): Promise<string>;
   job(id: string): Promise<Job>;
-  videoUrl(path: string): string;
 }
 
 /** The stages a job reports as Job.stage, in order (named like those of the Python demo server,
@@ -78,7 +75,7 @@ export class MockApi implements Api {
 
   async job(id: string): Promise<Job> {
     const j = this.jobs.get(id);
-    if (!j) throw new ApiError("not_found", "Unknown job.", 404);
+    if (!j) throw new ApiError("not_found", "Unknown job.");
     const el = (performance.now() - j.started) / 1000;
     const total = MOCK_TIMES.reduce((a, b) => a + b, 0);
     if (j.fail && el > 5.5)
@@ -98,9 +95,5 @@ export class MockApi implements Api {
       error: null,
       result: null,
     };
-  }
-
-  videoUrl(path: string): string {
-    return path;
   }
 }

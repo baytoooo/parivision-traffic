@@ -1,5 +1,6 @@
 // The browser detector: public/pipeline/model.onnx, a YOLO26 export with the end-to-end head (no NMS).
-// Ports what Ultralytics does around the model when detector.py calls YOLO(...).predict on an ONNX file:
+// Ports what Ultralytics does around the model when YOLO(model.onnx).predict runs (tools/export_parity_fixtures.py
+// writes det_expected.json that way):
 // LetterBox(auto=False, center=True) + /255 (engine/predictor.py preprocess), the end2end branch of
 // utils/nms.non_max_suppression (score > conf, class filter) and ops.scale_boxes with clipping
 // (models/yolo/detect/predict.py). Works with onnxruntime-web and onnxruntime-node: the caller passes

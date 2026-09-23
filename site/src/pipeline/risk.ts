@@ -4,7 +4,8 @@
 // and gated by how long the pair has looked dangerous -> the worst pair, smoothed with an EMA.
 //
 // The browser feeds frames at its own pace, so step()'s frame decimation and time budget are
-// not ported. Positions are metres from scene.metres_per_px at the user's latest foot point.
+// not ported. Speeds use scene.metres_per_px at each user's latest foot point; a pair's
+// positions share one scale taken midway between them.
 
 import { roundHalfEven, warpPoints } from "./geometry.ts";
 import type { Mat3 } from "./geometry.ts";

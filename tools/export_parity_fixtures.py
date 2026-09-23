@@ -39,7 +39,9 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "tools"))
 
+from common import SAMPLES  # noqa: E402
 from parivision import events as E  # noqa: E402
 from parivision import scene as S  # noqa: E402
 from parivision.detector import Detections  # noqa: E402
@@ -110,8 +112,8 @@ def main() -> None:
         "evidence": [{"label": e.label, "start": round(e.start, 4), "end": round(e.end, 4), "actors": e.actors,
                       "note": e.note} for e in evidence]}, indent=1))
 
-    # the sample clips never trigger red_light, congestion or wrong_way on their own, so the same inputs
-    # are perturbed until they do (tests/rules.test.ts applies the same perturbations to the same files)
+    # the fixture clips (C3905, C3902) never trigger red_light, congestion or wrong_way on their own, so the
+    # same inputs are perturbed until they do (tests/rules.test.ts applies the same perturbations to the same files)
     import dataclasses
 
     def flipped(tr):
@@ -138,7 +140,7 @@ def main() -> None:
     (out / "rules_perturbed.json").write_text(json.dumps(perturbed, indent=1))
 
     # alignment input and the lamp reader on real pixels
-    video = ROOT / "kit/samples" / f"{args.clip}.MP4"
+    video = SAMPLES / f"{args.clip}.MP4"
     lamp_t = [1.0, 40.0, 76.0, 100.0]
     lamps, first = [], None
     boxes = lamp_patches(np.linalg.inv(H))

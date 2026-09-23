@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from parivision.detector import COCO_NAMES  # noqa: E402
-from parivision.pipeline import analyse  # noqa: E402
+from parivision.pipeline import analyse, profile  # noqa: E402
 from parivision.registration import Alignment  # noqa: E402
 from parivision.render import render  # noqa: E402
 from parivision.risk import Anticipator  # noqa: E402
@@ -52,6 +52,7 @@ def run(job: Job) -> None:
         # detection is ~85% of the work, rendering the rest
         job.stage, job.progress = stage, 0.85 * frac
 
+    fps = profile()[2]  # the rate analyse() samples at on this machine: 10 fps on a GPU, 5 on CPU
     risk_model: Anticipator | None = None
     risk: list[list[float]] = []
     kept: list[tuple[float, bytes]] = []  # JPEG copies of the analysed frames at render size
@@ -66,7 +67,7 @@ def run(job: Job) -> None:
                            interpolation=cv2.INTER_AREA)
         kept.append((t, cv2.imencode(".jpg", small, [cv2.IMWRITE_JPEG_QUALITY, 82])[1].tobytes()))
         if risk_model is None:
-            risk_model = Anticipator({"fps": 5.0, "width": shape[1], "height": shape[0]})
+            risk_model = Anticipator({"fps": fps, "width": shape[1], "height": shape[0]})
             risk_model.alignment = Alignment(H, 1, True)
         risk.append([round(t, 2), round(risk_model.observe(det, shape, t), 4)])
         b = int(t // 5)
@@ -83,7 +84,7 @@ def run(job: Job) -> None:
         out_video = job.workdir / "annotated.mp4"
         decoded = ((t, cv2.imdecode(np.frombuffer(b, np.uint8), cv2.IMREAD_COLOR)) for t, b in kept)
         render(str(job.video), str(out_video), a.trajectories, a.events, a.evidence, a.signal_t, a.signal_phase,
-               a.alignment.H, a.work_size[0], risk=risk, out_width=RENDER_WIDTH, fps=5.0, frames=decoded,
+               a.alignment.H, a.work_size[0], risk=risk, out_width=RENDER_WIDTH, fps=fps, frames=decoded,
                duration=min(a.info.duration, MAX_SECONDS))
         signal = []
         for t, p in zip(a.signal_t.tolist(), a.signal_phase.tolist()):

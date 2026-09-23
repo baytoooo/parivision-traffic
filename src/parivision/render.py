@@ -1,6 +1,7 @@
 """Annotated playback: boxes, tracks, scene layout, signal, active events and the risk curve.
 
-Used for the sample-video renders on the website and for the live demo.
+Used for the sample-video renders on the website (tools/make_site_data.py) and by
+the local demo server (demo/worker.py).
 Output is H.264 (PyAV / libx264), small enough to stream in a browser.
 """
 from __future__ import annotations

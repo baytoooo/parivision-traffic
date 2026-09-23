@@ -16,3 +16,5 @@ export const RISK_MERGE_GAP = 2.0;
 
 /** The demo analyses this many seconds from the start of a clip, at most (src/scripts/local_api.ts stops reading frames there). */
 export const UPLOAD_MAX_SECONDS = 120;
+/** The camera's own files are 10-bit 4:2:2 H.264, which not every browser decodes. The demo shows this command for turning one into a clip any browser can read. */
+export const CONVERT_CMD = `ffmpeg -i in.MP4 -t ${UPLOAD_MAX_SECONDS} -vf scale=1920:-2 -pix_fmt yuv420p -c:v libx264 out.mp4`;

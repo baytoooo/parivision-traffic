@@ -1,6 +1,6 @@
 {
  "machine": "Apple M5 laptop on MPS, time guards off",
- "note": "The official harness on the four samples with PARIVISION_TIME_SHARE, PARIVISION_TOTAL_LIMIT and PARIVISION_RISK_SHARE lifted, so nothing is thinned. The laptop is slower than the organisers' T4; with the default guards a run always ends inside the 3x budget.",
+ "note": "The official harness on the four samples with PARIVISION_TIME_SHARE, PARIVISION_TOTAL_LIMIT and PARIVISION_RISK_SHARE lifted, so nothing is thinned. We have not timed a T4 yet: a Google Drive download quota blocked our Colab run.",
  "clips": [
   {
    "clip": "C3896",

@@ -1,6 +1,6 @@
 """Print basic metadata for videos and dump evenly spaced frames for a first look.
 
-    python tools/probe.py kit/samples/*.MP4 --out out/probe --every 30
+    python tools/probe.py samples/*.MP4 --out out/probe --every 30
 """
 from __future__ import annotations
 

@@ -31,7 +31,3 @@ export const uid = (() => {
   let n = 0;
   return (p = "u") => `${p}${++n}`;
 })();
-
-export function prefersReducedMotion(): boolean {
-  return typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
-}

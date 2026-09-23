@@ -1,4 +1,5 @@
-// Shapes of the files in public/data. See BRIEF.md, "Data contract".
+// Shapes of the JSON files in public/data (most written by tools/make_site_data.py; team.json
+// and failures.json are edited by hand) and of the demo's jobs.
 
 /** [start_sec, end_sec, label] */
 export type Seg = [number, number, string];

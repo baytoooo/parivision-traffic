@@ -6,8 +6,12 @@ import numpy as np
 from . import rules as R
 from .segments import finalize
 
-# Classes we emit. A class we predict that never occurs in the test set adds a
-# zero to the macro average, so classes stay off until they are reliable.
+# Classes we emit. A class counts in the macro average when it is in the test
+# labels or in our predictions, so a false alarm in a class the test set does
+# not have adds a zero; classes stay off until they are reliable. wrong_way is
+# on although it never fired on the 18 minutes of sample clips: it made no
+# false alarms there, and if the test set has wrong-way driving, a class we
+# never predict scores zero anyway.
 # U-turns round the median nose are detected (the website shows them) but not
 # submitted: nothing in view says they are prohibited here, so we cannot tell
 # whether the organisers' annotators count them as illegal_u_turn.
