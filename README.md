@@ -42,7 +42,7 @@ To reproduce `predictions_samples.json` put the four sample clips in
 4K frame ─► every 3rd frame, decoded straight to 1920 px (PyAV, background thread)
           ├─► YOLO26m @1280 (COCO) ─► ByteTrack, separate trackers for vehicles / people / bicycles / animals
           ├─► vehicle signal phase (3-lamp head on the median, per-lamp colour contrast)
-          └─► homography to the reference view (SIFT on the first frame, day and dusk references)
+          └─► homography to the reference view (SIFT, day and dusk references; again on keyframes)
 trajectories in reference coordinates + signal phase + scene layout
           └─► one rule per class ─► per-actor intervals ─► union per class ─► segments
 ```
@@ -84,7 +84,7 @@ decimated to 1280 px and goes through YOLO26s @960 and the same tracker setup.
 For each pair of road users on the carriageway it predicts constant-velocity
 motion for 3 s (in metres, from the fitted scale map) and scores how soon and
 how deeply their footprints would overlap. Hard braking raises the score. A
-pair has to look dangerous for three updates in a row, and pairs on opposite
+pair has to look dangerous for 0.6 s without a break, and pairs on opposite
 sides of the median or a moving car next to a parked one are ignored. The score
 is the worst pair, smoothed. If the machine is slow, `step` thins out the
 frames it processes, down to 1 Hz, to keep its own work under 0.4x the clip
@@ -96,6 +96,10 @@ length and Parts A and B together under 2.8x (the harness allows 3x). Past
 * The four samples are not framed identically. The two afternoon clips are
   shifted by up to 60 px and scaled by about 2%, so fixed pixel polygons
   would have been wrong on them. Each clip is registered to a reference view.
+  C3896's camera also drifts 9 px over its first 40 s, as a camera settling on
+  its tripod does, so the view is registered again on keyframes (every 2 s for
+  the first 30 s, then every 10 s): the signal lamps are read with the latest
+  registration, and the rules use one registration of the keyframes' median.
 * The signal head that faces the camera on the left pole is a pedestrian
   signal for the west crossing. The vehicle phase comes from the three-lamp
   head on the median nose: 36 s green (the last 3 s flashing), 3 s yellow,

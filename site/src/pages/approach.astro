@@ -13,12 +13,12 @@ const statusText = { on: "emitted", off: "rule off", none: "no rule" } as const;
 const learned = [
   { part: "A", stage: "Detection", how: "Learned", detail: "YOLO26m with COCO weights, not fine-tuned. 1280 px input, confidence 0.1. Keeps person, bicycle, car, motorcycle, bus, truck and six animal classes." },
   { part: "A", stage: "Tracking", how: "Algorithm", detail: "ByteTrack (the Ultralytics implementation), one tracker per group so boxes of different kinds never get linked. High 0.3, low 0.1, new track 0.4, 2 s buffer." },
-  { part: "A", stage: "Registration", how: "Geometry", detail: "SIFT, 6000 features, on the clip's first sampled frame; homography by MAGSAC with 3 px tolerance on 960 px wide copies, against a midday and a dusk reference, both per-pixel median backgrounds." },
+  { part: "A", stage: "Registration", how: "Geometry", detail: "SIFT, 6000 features, on 960 px wide copies; homography by MAGSAC with 3 px tolerance against a midday and a dusk reference, both per-pixel median backgrounds. Done again on keyframes (every 2 s for 30 s, then every 10 s): the lamps use the latest, the rules one registration of the keyframes' median." },
   { part: "A", stage: "Signal phase", how: "Rule", detail: "Lamp patches on the median-nose head, mapped from the reference view; the lamp with the strongest colour contrast relative to its threshold wins (20 on a 0 to 255 scale for red and yellow, 6 for green)." },
   { part: "A", stage: "Rider or pedestrian", how: "Rule", detail: "A person whose box is more than 30% covered by a bicycle or motorbike box in over 40% of its samples, or whose median speed is above 110 px/s or above 1.2 of its own height per second, is a rider." },
   { part: "A", stage: "Events", how: "Rules", detail: "One function per class on trajectories, zones and phase. Thresholds were tuned on our dev labels, by hand and with a small grid search for jaywalking and failure to yield." },
   { part: "B", stage: "Detection", how: "Learned", detail: "YOLO26s with COCO weights at 960 px, confidence 0.2, every 3rd frame (10 Hz)." },
-  { part: "B", stage: "Risk", how: "Hand-built model", detail: "Constant-velocity look-ahead of 3 s from 0.8 s of history; pair hazard from closing speed, time to contact and footprint overlap, plus hard braking; the worst pair sets the score, EMA 0.35." },
+  { part: "B", stage: "Risk", how: "Hand-built model", detail: "Constant-velocity look-ahead of 3 s from 0.8 s of history; pair hazard from closing speed, time to contact and footprint overlap in metres (one scale per pair, taken between the two users), plus hard braking; a pair counts after 0.6 s of danger; the worst pair sets the score, EMA 0.35." },
 ];
 
 const licences = [
@@ -125,8 +125,8 @@ const licences = [
   <section class="section wrap" id="registration">
     <SecHead num="06" title="Why registration was needed" />
     <div class="prose">
-      <p>The camera does not move inside a clip, but the clips are not framed identically: the two afternoon clips are about 20 and 50 px off from the morning ones, and slightly zoomed. Every zone we test against (stop line, crossings, carriageways, bus stop) is drawn once, by hand, in the reference view. If we drew them per clip, a new test clip with slightly different framing would put the stop line in the wrong place.</p>
-      <p>So for every clip we match SIFT features of its first sampled frame against a midday and a dusk reference, each a per-pixel median background with most of the traffic removed, and keep the homography with the most inliers. Tracks are then mapped into the reference view before any rule looks at them.</p>
+      <p>The clips are not framed identically: the two afternoon clips are about 20 and 50 px off from the morning ones, and slightly zoomed. And the camera is not quite still at the start of a recording: in C3896 the view drifts 9 px over the first 40 s while the camera settles, enough to put the signal lamps outside the patches we read. Every zone we test against (stop line, crossings, carriageways, bus stop) is drawn once, by hand, in the reference view. If we drew them per clip, a new test clip with slightly different framing would put the stop line in the wrong place.</p>
+      <p>So we match SIFT features of the clip's frames against a midday and a dusk reference, each a per-pixel median background with most of the traffic removed, and keep the homography with the most inliers: on the first frame, then again every 2 s for the first 30 s and every 10 s after. The signal lamps are read with the latest homography. At the end the keyframes' per-pixel median is registered once more, and that homography maps the tracks into the reference view for the rules.</p>
     </div>
   </section>
 

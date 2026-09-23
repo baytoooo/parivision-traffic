@@ -52,7 +52,9 @@ misses in the samples.
 * The clips are not framed the same. The afternoon clips are shifted by up to
   60 px and zoomed by about 2% against the morning ones, so fixed pixel
   polygons would be wrong on them. Every zone is drawn once in a 1920x1080
-  reference view and each clip is registered onto it.
+  reference view and each clip is registered onto it. C3896's camera also
+  drifts 9 px over its first 40 s, so the view is registered again on
+  keyframes through the clip.
 * The signal head that faces the camera on the left pole is a pedestrian
   signal. Reading it as the vehicle signal made every car in the last platoon
   of a green look like a red-light runner. The vehicle phase comes from the
@@ -125,7 +127,7 @@ decimated to 1280 px and goes through YOLO26s at 960 px and the same tracker
 (with a 1.5 s memory instead of 2 s). For each pair of road users on the carriageway it predicts
 constant-velocity motion for 3 s in metres and scores how soon and how deeply
 their footprints would overlap, weighted by closing speed; hard braking raises
-the score. A pair has to look dangerous in three updates in a row; pairs on
+the score. A pair has to look dangerous for 0.6 s without a break; pairs on
 opposite sides of the median, and a moving car next to a parked one, are
 ignored. The risk is the worst pair, smoothed with an exponential average. It
 keeps its own work under 0.4x real time and both parts under 2.8x the clip
