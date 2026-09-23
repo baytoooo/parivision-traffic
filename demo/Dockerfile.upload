@@ -1,0 +1,29 @@
+# The same image as demo/Dockerfile, for a Space filled through its web upload page, which takes
+# files under 10 MB: the app arrives as an archive in 9 MB parts (demo/build_space.sh --archive),
+# and the detector weights are fetched during the build from the Ultralytics release that
+# weights/download.sh uses, checked against the sha256 of the file in weights/.
+FROM python:3.11-slim
+
+RUN useradd -m -u 1000 user
+USER user
+RUN mkdir -p /home/user/app
+ENV HOME=/home/user \
+    PATH=/home/user/.local/bin:$PATH \
+    YOLO_OFFLINE=1 \
+    YOLO_CONFIG_DIR=/tmp/ultralytics \
+    DEMO_WORKDIR=/tmp/parivision-demo \
+    OMP_NUM_THREADS=2
+WORKDIR /home/user/app
+
+COPY --chown=user space.tar.gz.part-* /tmp/
+RUN cat /tmp/space.tar.gz.part-* | tar -xzf - -C /home/user/app
+RUN python -c "import hashlib, urllib.request; \
+url = 'https://github.com/ultralytics/assets/releases/download/v8.4.0/yolo26s.pt'; \
+data = urllib.request.urlopen(url).read(); \
+assert hashlib.sha256(data).hexdigest() == '646f8bc3fe0a656803d95c294f7852321748cb29d13466a1af8862e2db384a1b', 'yolo26s.pt checksum'; \
+open('weights/yolo26s.pt', 'wb').write(data)"
+RUN pip install --no-cache-dir --user torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cpu \
+ && pip install --no-cache-dir --user -r demo/requirements.txt
+
+EXPOSE 7860
+CMD ["uvicorn", "app:app", "--app-dir", "demo", "--host", "0.0.0.0", "--port", "7860"]

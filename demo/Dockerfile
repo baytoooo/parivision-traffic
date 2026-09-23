@@ -3,6 +3,8 @@ FROM python:3.11-slim
 
 RUN useradd -m -u 1000 user
 USER user
+# created as the user, so the app can be unpacked into it (WORKDIR alone would make it root's)
+RUN mkdir -p /home/user/app
 ENV HOME=/home/user \
     PATH=/home/user/.local/bin:$PATH \
     YOLO_OFFLINE=1 \

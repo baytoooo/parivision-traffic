@@ -1,0 +1,479 @@
+{
+ "ref_size": [
+  1920,
+  1080
+ ],
+ "rules": {
+  "rider_speed": 110.0,
+  "rider_overlap": 0.3,
+  "rider_rel_speed": 1.2,
+  "jay_margin_cw": 0.35,
+  "jay_margin_kerb": 0.25,
+  "jay_min_dur": 1.0,
+  "jay_gap": 0.6,
+  "jay_min_height": 0.65,
+  "fty_near_px": 160.0,
+  "fty_cw_dilate": 10.0,
+  "fty_min_speed": 20.0,
+  "fty_kerb": 0.4,
+  "fty_walk": 0.25,
+  "fty_pad_start": 0.3,
+  "fty_pad_end": 0.1,
+  "fty_moto_speed": Infinity,
+  "red_settle": 1.0,
+  "red_before_green": 1.5,
+  "red_max_len": 60.0,
+  "stop_speed": 12.0,
+  "stop_line_margin": 8.0,
+  "stop_line_min": 1.0,
+  "stopped_min": 10.0,
+  "stopped_ne_corner_x": 1720.0,
+  "cong_green_n": 8,
+  "cong_red_n": 5,
+  "cong_min": 6.0,
+  "cong_gap": 4.0,
+  "cong_after_green": 8.0,
+  "cong_speed": 15.0,
+  "ww_min_speed": 40.0,
+  "ww_angle": 120.0,
+  "ww_min_dur": 1.5,
+  "ut_dir_tol": 30.0,
+  "ut_nose_px": 130.0,
+  "ut_turn_deg": 30.0,
+  "ut_min_dur": 2.0
+ },
+ "direction_zones": {
+  "sb": {
+   "polygon": [
+    [
+     55,
+     40
+    ],
+    [
+     125,
+     40
+    ],
+    [
+     120,
+     118
+    ],
+    [
+     990,
+     452
+    ],
+    [
+     930,
+     457
+    ],
+    [
+     285,
+     527
+    ],
+    [
+     170,
+     380
+    ],
+    [
+     90,
+     200
+    ]
+   ],
+   "heading": 33.0
+  },
+  "nb": {
+   "polygon": [
+    [
+     130,
+     112
+    ],
+    [
+     450,
+     95
+    ],
+    [
+     700,
+     185
+    ],
+    [
+     900,
+     240
+    ],
+    [
+     1100,
+     265
+    ],
+    [
+     1240,
+     295
+    ],
+    [
+     1480,
+     362
+    ],
+    [
+     1640,
+     440
+    ],
+    [
+     1820,
+     458
+    ],
+    [
+     1188,
+     500
+    ],
+    [
+     1000,
+     432
+    ]
+   ],
+   "heading": 205.0
+  }
+ },
+ "crosswalks": {
+  "north_sb": [
+   [
+    333,
+    607
+   ],
+   [
+    750,
+    560
+   ],
+   [
+    1150,
+    530
+   ],
+   [
+    1162,
+    557
+   ],
+   [
+    750,
+    604
+   ],
+   [
+    390,
+    650
+   ]
+  ],
+  "north_nb": [
+   [
+    1195,
+    503
+   ],
+   [
+    1880,
+    475
+   ],
+   [
+    1905,
+    498
+   ],
+   [
+    1300,
+    543
+   ],
+   [
+    1215,
+    548
+   ]
+  ],
+  "west": [
+   [
+    158,
+    738
+   ],
+   [
+    342,
+    711
+   ],
+   [
+    425,
+    769
+   ],
+   [
+    508,
+    807
+   ],
+   [
+    600,
+    852
+   ],
+   [
+    692,
+    886
+   ],
+   [
+    767,
+    957
+   ],
+   [
+    858,
+    1032
+   ],
+   [
+    900,
+    1080
+   ],
+   [
+    604,
+    1080
+   ],
+   [
+    567,
+    1015
+   ],
+   [
+    517,
+    940
+   ],
+   [
+    400,
+    882
+   ],
+   [
+    250,
+    798
+   ]
+  ]
+ },
+ "stop_line_sb": [
+  [
+   285,
+   527
+  ],
+  [
+   930,
+   457
+  ]
+ ],
+ "median_nose": [
+  1235,
+  555
+ ],
+ "person_height_px": [
+  25.07,
+  -0.00444,
+  0.11707
+ ],
+ "signal_lamps": {
+  "red": [
+   1157,
+   371
+  ],
+  "yellow": [
+   1157,
+   388
+  ],
+  "green": [
+   1156,
+   406
+  ]
+ },
+ "signal_min_contrast": [
+  20.0,
+  20.0,
+  6.0
+ ],
+ "events": {
+  "enabled": [
+   "jaywalking",
+   "failure_to_yield",
+   "red_light",
+   "stop_line",
+   "stopped_vehicle",
+   "wrong_way",
+   "congestion"
+  ],
+  "shown": [
+   "jaywalking",
+   "failure_to_yield",
+   "red_light",
+   "stop_line",
+   "stopped_vehicle",
+   "wrong_way",
+   "congestion",
+   "illegal_u_turn"
+  ],
+  "gap": {
+   "jaywalking": 0.5,
+   "failure_to_yield": 0.0,
+   "red_light": 0.0,
+   "stop_line": 0.5,
+   "stopped_vehicle": 1.0,
+   "wrong_way": 1.0,
+   "congestion": 8.0,
+   "illegal_u_turn": 0.0
+  },
+  "min_len": {
+   "jaywalking": 1.0,
+   "failure_to_yield": 0.3,
+   "red_light": 0.5,
+   "stop_line": 1.0,
+   "stopped_vehicle": 10.0,
+   "wrong_way": 1.5,
+   "congestion": 6.0,
+   "illegal_u_turn": 2.0
+  }
+ },
+ "detector": {
+  "keep_classes": [
+   0,
+   1,
+   2,
+   3,
+   5,
+   7,
+   14,
+   15,
+   16,
+   17,
+   18,
+   19
+  ],
+  "conf": 0.1,
+  "model": "yolo26n",
+  "input": [
+   544,
+   960
+  ]
+ },
+ "tracking": {
+  "ANIMALS": [
+   14,
+   15,
+   16,
+   17,
+   18,
+   19
+  ],
+  "BICYCLE": 1,
+  "GROUPS": {
+   "vehicle": [
+    2,
+    5,
+    7,
+    3
+   ],
+   "person": [
+    0
+   ],
+   "bicycle": [
+    1
+   ],
+   "animal": [
+    14,
+    15,
+    16,
+    17,
+    18,
+    19
+   ]
+  },
+  "PERSON": 0,
+  "VEHICLES": [
+   2,
+   5,
+   7,
+   3
+  ],
+  "bytetrack": {
+   "track_high_thresh": 0.3,
+   "track_low_thresh": 0.1,
+   "new_track_thresh": 0.4,
+   "match_thresh": 0.8,
+   "fuse_score": true
+  },
+  "buffer_sec": 2.0
+ },
+ "trajectories": {
+  "BUS": 5,
+  "CAR": 2,
+  "MOTORCYCLE": 3,
+  "PERSON": 0,
+  "TRUCK": 7
+ },
+ "risk": {
+  "CLOSING_FULL": 10.0,
+  "CLOSING_MIN": 4.0,
+  "EMA": 0.35,
+  "HISTORY": 8,
+  "HORIZON": 3.0,
+  "MAX_STRIDE_FACTOR": 10,
+  "MIN_SPEED": 1.0,
+  "OWN_TIME_SHARE": 0.4,
+  "PERSIST": 3,
+  "PERSON": 0,
+  "RADIUS_M": {
+   "0": 0.35,
+   "1": 0.6,
+   "3": 0.7,
+   "2": 1.3,
+   "5": 2.0,
+   "7": 1.8
+  },
+  "STEP": 0.1,
+  "TARGET_HZ": 10.0,
+  "TOTAL_LIMIT": 2.8,
+  "TTC_HALF": 0.9,
+  "WORK_WIDTH": 1280
+ },
+ "raster": {
+  "width": 1920,
+  "height": 1080,
+  "layers": [
+   {
+    "name": "masks",
+    "dtype": "uint16",
+    "offset": 0,
+    "bytes": 4147200
+   },
+   {
+    "name": "zones",
+    "dtype": "uint8",
+    "offset": 4147200,
+    "bytes": 2073600
+   },
+   {
+    "name": "road_dist",
+    "dtype": "uint16",
+    "offset": 6220800,
+    "bytes": 4147200
+   },
+   {
+    "name": "walk_dist",
+    "dtype": "uint16",
+    "offset": 10368000,
+    "bytes": 4147200
+   },
+   {
+    "name": "cw_dist",
+    "dtype": "uint16",
+    "offset": 14515200,
+    "bytes": 4147200
+   }
+  ],
+  "dist_scale": 16,
+  "mask_bits": [
+   "road",
+   "walk",
+   "crosswalk",
+   "cw_north_sb",
+   "cw_north_sb_zone",
+   "cw_north_nb",
+   "cw_north_nb_zone",
+   "cw_west",
+   "cw_west_zone"
+  ],
+  "zone_bits": [
+   "sb",
+   "nb",
+   "stop",
+   "bus",
+   "flow_approach",
+   "flow_box",
+   "junction_box"
+  ]
+ }
+}

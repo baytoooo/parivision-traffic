@@ -16,3 +16,5 @@ site/.qa-snap/
 site/.vercel/
 labels/dev_labels_partial.json
 demo/samples/
+
+site/tests/fixtures/

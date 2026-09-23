@@ -1,0 +1,990 @@
+[
+ {
+  "clip": "C3896",
+  "kind": "fp",
+  "label": "failure_to_yield",
+  "start": 0,
+  "end": 3.2,
+  "actors": "vehicle box centre near proxy (878,230) at 1.6 s; person box centre near proxy (783,223) at 1.6 s; person box centre near proxy (931,228) at 1.6 s; person box centre near proxy (923,227) at 1.6 s",
+  "signal": "0.0-13.0 s red",
+  "id": "C3896_fp_0",
+  "verdict": {
+   "real_event": true,
+   "label": "failure_to_yield",
+   "start": 0,
+   "end": 2.9,
+   "category": "label_missed_it",
+   "cause": "The car is already on the zebra in the first frame and looks like it is just parking in a driveway, so the labellers probably skipped it. Its entry onto the crossing happens before the clip starts.",
+   "reason": "The signal is red for the avenue from 0 to 13 s, so the north crossing is in its walk phase, and many people are crossing it. The vehicle in question is a white sedan at proxy (878,230). It is making a continuous right turn (heading NW, then N, then E by 3.2 s) across the east end of the north_nb zebra. It ends up parked on the paved driveway or sidewalk just north of the crossing, with its door open by 6 to 7.6 s, which fits a car that came off the east arm. I drew the north_nb polygon on the crops. At 0.0 s the rear half of the car is inside the polygon. The car keeps creeping forward and rotating (moving, not stopped), and its rear bumper only clears the zebra's top edge at about 2.9 to 3.0 s: still 3 to 4 px inside at 2.5 and 2.7 s, at the edge at 2.9 s, clear at 3.0 s. Pedestrians during that time: (1) The man in the white shirt, proxy (832,236) at 0 s and (783,223) at 1.6 s, walks west along the north edge of the NB stripes, less than a body width outside the polygon. At 0.0 s he is about 0.7 to 1.2 m off the car's front-left corner, in the next lane. From his walking speed (about 32 proxy px/s), he was right in front of the car roughly 0.5 s before the clip starts, so the car turned onto the zebra right behind him. (2) Two pedestrians, a student in a dark vest holding papers and a woman in jeans, at proxy (923-931,227). They stand inside the east end of the polygon, about 0.5 to 1 m from the car's right side, from 0.0 to about 2.4 s. They step off only once the car's rear is nearly clear (2.5 to 3.0 s), walk behind the rear bumper, and then cross the NB carriageway westwards (seen on the zebra at 3.6 to 4.4 s). So a turning vehicle drove across the zebra with pedestrians on it, next to it and in the next lane, during their walk phase. That is the definition, and it is visible in the frames. Caveats: the front entering the zebra and the actual cut-off of the man both happen before 0.0 s, so the start is clamped to the first frame. The car moves at a crawl, and nobody visibly jumps back. End = rear leaves the zebra at about 2.9 s. The model's 0.0 to 3.2 s segment overlaps this with IoU of about 0.9."
+  }
+ },
+ {
+  "clip": "C3896",
+  "kind": "fp",
+  "label": "stopped_vehicle",
+  "start": 0,
+  "end": 298.2,
+  "actors": "vehicle box centre near proxy (310,82) at 0.0 s; vehicle box centre near proxy (307,76) at 148.6 s; vehicle box centre near proxy (308,81) at 148.8 s; vehicle box centre near proxy (306,83) at 210.2 s; vehicle box centre near proxy (818,525) at 18.4 s; vehicle box centre near proxy (755,335) at 62.5 s",
+  "signal": "0.0-27.0 s red; 27.2-62.9 s green; 63.1-65.9 s yellow; 66.1-101.9 s red; 102.1-137.9 s green; 138.1-140.9 s yellow; 141.1-177.0 s red; 177.2-213.0 s green; 213.2-216.0 s yellow; 216.2-252.1 s red; 252.3-288.1 s green; 288.3-291.1 s yellow; 291.3-308.1 s red",
+  "id": "C3896_fp_1",
+  "verdict": {
+   "category": "label_missed_it",
+   "real_event": true,
+   "label": "stopped_vehicle",
+   "start": 0,
+   "end": 295,
+   "cause": "The dev labels have no segment for a white SUV standing in the NB kerb-side lane at the far bus stop (proxy about 283-330 x 67-95). It stands there for the whole clip while people load its boot. The model's two extra actors, (818,525) at 18.4 s and (755,335) at 62.5 s, are unrelated cars at the frame edge and in the junction box, and they do not change the segment.",
+   "reason": "The event is real, and one car explains the whole predicted segment: a white SUV (coupe-style crossover) on the NB carriageway at the far kerb, at the downstream end of the bus stop, with box centre near proxy (305-310, 76-83). I checked it on proxy crops at 5 s steps over 0-297 s, 0.1-0.5 s steps at both ends, and 4K crops from kit/samples/C3896.MP4 at 0, 100, 150, 250, 299.9 and 318 s. Sheets are out/sheets/adj/C3896_fp_1_*.jpg.\n\nWhere it stands: on the asphalt of the NB carriageway, next to the lane-dash row, just road-side of where the pink bus-stop strip starts. It is not on a pavement or in an off-road bay. The empty frame at 318 s shows the spot is plain carriageway joined to the through lanes. Articulated buses pull up at the kerb band behind and beside it (0 s, 80-100 s). From about 70 s a door is open. From about 75 to 205 s the boot is open, and a man and a woman stand on the road at its rear loading bags (visible at 100 s and 150 s in 4K). Doors are shut again from about 215 s.\n\nMotion, from sub-pixel template tracking: at 0.0-1.2 s it is rolling to its final spot at about 1.5 px/s (about 0.15 m/s), and it settles completely by 5.7 s. From then to 289.0 s it stays within about 1 px, apart from moments when passing traffic hides it. Between 289.0 and 290.4 it shuffles about 4.5 px (about 0.5 m) forward and stands again. From about 294.6-295.0 it starts a steady creep: 1.2 px/s, then 2.5 px/s at 296-297 s, 5 px/s at 297-298 s and 8-13 px/s by 299-300 s. It then pulls away up the NB carriageway. I take 295.0 as \"moves off\". The model's 298.2 is when it is already clearly driving.\n\nStart is 0.0. The car is at walking pace or slower at the first frame and effectively stopped by about 1.2 s, so starting at 1.2 changes nothing.\n\nAgainst the definition: it is still on the carriageway for about 295 s. It is not a signal queue (NB, far from the junction, no queue). It is not a bus. It is not a parked car off the carriageway. It is stopped in a lane while people load it, which is close to the guide's \"dropping off passengers in a lane\".\n\nThe dev set's own convention agrees. C3902 is labelled stopped_vehicle 0.0-317.7, and the only whole-clip candidate there is a white sedan standing at the same NB kerb by the bus stop all clip (checked on C3902 crops at 35 s steps and on its median background).\n\nNote for merging: this segment contains the existing C3896 stopped_vehicle label 198.4-214.6. It ends before 299.4-327.5, so that label stays separate."
+  }
+ },
+ {
+  "clip": "C3896",
+  "kind": "fp",
+  "label": "jaywalking",
+  "start": 132.63,
+  "end": 135.03,
+  "actors": "person box centre near proxy (95,51) at 133.8 s",
+  "signal": "122.7-137.9 s green; 138.1-140.9 s yellow; 141.1-144.9 s red",
+  "id": "C3896_fp_2",
+  "verdict": {
+   "real_event": true,
+   "label": "jaywalking",
+   "start": 131.2,
+   "end": 145,
+   "category": "label_missed_it",
+   "cause": "The dev labels have no jaywalking segment here. The nearest one is 119.8-127.9 at the west crossing in the lower left, which is a different person. This man is small and far away at the top left, and a roadside tree hides him before he steps out, so the labellers most likely missed him. The model's segment is real but only covers a piece of the crossing: 132.6-135.0 against the true 131.2-145.0, a temporal IoU of about 0.17.",
+   "reason": "One man in a white shirt crosses the NB carriageway of the avenue in the middle of the block, far up the avenue and nowhere near the north crossing.\n\n- **Before stepping off:** from 130.0 to 130.4 he stands half hidden by the roadside tree and lamp pole at about proxy (52,42), level with the raised concrete median. A dark NB car passes him at 130.8-131.0.\n- **Stepping off, about 131.2:** on the gridded 7x crops his feet are at about (61,57), right on the NB-side edge of the white median strip. By 131.4-131.6 he is on the asphalt next to it, and at 131.8 his feet are at (68,57), about 2 px inside the first lane.\n- **Crossing:** he keeps going through the NB lanes, drifting diagonally toward the far kerb. His feet are at (80,58) at 132.6, (88,59) at 133.4 (about half a lane from the median), (99,50) at 134.2, (142,52) at 138.0, (183,50) at 141.0 and (213,61) at 144.0. He walks across the dashed lane lines while NB traffic is moving, since NB runs with the SB green phase (122.7-137.9). Cars pass him at 131.0, at 133-134 (a white car and a van) and at 143.4 (a white sedan just beside him).\n- **Reaching the far kerb:** at 144.4-144.8 his feet move from the grey asphalt into the dark band just below the grass verge. At 145.0 his feet are at about (222,57), at the kerb line. By 145.2 he stands on the sunlit grass strip with the white-trunk trees at (223,55), and he stays there until at least 149.\n\nThere are no zebra stripes anywhere on his path. The only crossings are north_nb and north_sb, both far below near the median nose. This is \"crossing the avenue away from the north crossing\" in docs/labeling.md.\n\n**Start** is 131.2, when his feet leave the median edge. What he did before 130 is hidden by the tree. **End** is 145.0, back on the far NB kerb. If the dark band under the grass is paved sidewalk rather than shaded road, the end could be about 0.5 s earlier. Times were checked on 0.1-0.2 s sheets from 128.6 to 149."
+  }
+ },
+ {
+  "clip": "C3896",
+  "kind": "fp",
+  "label": "jaywalking",
+  "start": 137.24,
+  "end": 140.94,
+  "actors": "person box centre near proxy (159,54) at 139.1 s",
+  "signal": "127.3-137.9 s green; 138.1-140.9 s yellow; 141.1-150.8 s red",
+  "id": "C3896_fp_3",
+  "verdict": {
+   "real_event": true,
+   "label": "jaywalking",
+   "start": 131,
+   "end": 145.2,
+   "category": "label_missed_it",
+   "cause": "The dev labels have no segment covering 131-145, so the labellers missed it. The model's detection is real but only covers part of the event. The person track breaks while a green NB bus passes in front of the man (134.4-137.2, gap in track 2001002) and again at 140.9-141.8, where it switches to track 2001051. So the model only fired on the middle piece, 137.2-140.9. That piece has a temporal IoU of about 0.26 with the true event, which is below the 0.3 threshold.",
+   "reason": "A man in a light top and dark trousers walks down the northbound carriageway far up the avenue in the top-left of the frame. This is about 400 reference px from the north crossing, and no zebra is anywhere near. He first appears from behind the tree and lamp pole at about 130.9-131.0 s, near proxy (60,54). His feet are already on the asphalt just on the NB side of the median's white kerb, and he may have entered the road while hidden behind the tree. For about 1.5 s he walks right beside the median edge (proxy (71,58) at 132.1 and (80,61) at 132.6). He then keeps a near-constant image height while the lanes slope down to the right, so he cuts diagonally across the NB lanes towards the far kerb. Positions: (101,62) at 134.4, (122,60) at 137.2, (160,64) at 139.2, (179,63) at 140.7, (203,63) at 142.8. Plotted on the median background, his foot points sit between and across the dashed lane lines, in the middle of the carriageway. NB cars pass close by on both sides of him in the same stretch: white sedans at 140.2-141.2, a white car just below him at 141.2, and another white car and a dark SUV in the kerb lane at 143.0-144.6. From 143.0 to 145.0 his feet are in the shaded gutter just below the sunlit grass verge. At about 145.1-145.2 he steps up onto the verge (feet on the grass strip from 145.2), then walks to the white-painted tree near proxy (232,55) and stands there until at least 158 s. This is a pedestrian walking in live traffic lanes and crossing the avenue away from the north crossing, which is jaywalking under the definition. Start: 131.0, the first frame where he is visibly on the carriageway; the actual step off the median is hidden by the tree and cannot be seen. End: 145.2, back on the far kerb or verge. The dev label 119.8-127.9 is a different person: no person track is near the top-left then, and this man only appears at 130.4-131.0. The signal phase does not matter for this class."
+  }
+ },
+ {
+  "clip": "C3896",
+  "kind": "fp",
+  "label": "jaywalking",
+  "start": 180.48,
+  "end": 183.28,
+  "actors": "person box centre near proxy (422,462) at 181.9 s",
+  "signal": "170.6-177.0 s red; 177.2-193.2 s green",
+  "id": "C3896_fp_4",
+  "verdict": {
+   "real_event": false,
+   "label": "jaywalking",
+   "start": 0,
+   "end": 0,
+   "category": "false_detection",
+   "cause": "The model's actor is a man in a white T-shirt walking just off the right edge of the west zebra, beside a companion who was on the stripes. For most of 180.5-183.3 s another man walks in front of him and hides his feet, so his detection box is cut short. The box's foot point therefore sits about 20 px higher than his real feet, near the island curb. On this diagonal edge that puts the point 25-35 proxy px outside the west-crossing polygon, although his real feet were only about 0-15 px past the painted stripe ends.",
+   "reason": "Two men in white stand at the left tip of the right-hand pink island, next to the right edge of the west zebra (feet near proxy (370,453), 178-180 s). When the walk phase starts they walk down the crossing together. Man A (long-sleeved shirt, grey trousers) walks on the stripes about 20-30 px inside the right edge. His feet are at (398,521) at 181.0 s and (419-430,537) at 182.0 s, and he leaves the bottom of the frame on the zebra. Man B (white T-shirt, the model's actor at (422,462), 181.9 s) walks right behind him and slightly to his right. I compared both men with the painted stripe ends on a median background (C3896_fp_4_7.jpg): the ends run roughly x = 360 + 1.05*(y-450) in proxy px. Where Man B's shoes are visible, he is 5-12 px (10-25 ref px) right of the stripe ends: shoe at (441,519) at 182.2 s, feet near (465,540) at 183.0 s. Where he is hidden, his box top plus a normal body height puts him 0-10 px outside. His shoulders are about 20-25 proxy px wide, so all along he stays within about one body width of the stripes. He is walking with the crowd along the edge of the crossing, not cutting across the junction box or standing in a lane. The definition only counts walking beside a crossing when the person is more than about a body width outside the stripes. The three women on the zebra stay on the stripes the whole time, and nobody else steps onto the carriageway in this area between 176.5 and 187.3 s. Sheets: out/sheets/adj/C3896_fp_4_2.jpg through C3896_fp_4_8.jpg."
+  }
+ },
+ {
+  "clip": "C3896",
+  "kind": "fp",
+  "label": "failure_to_yield",
+  "start": 220.02,
+  "end": 221.52,
+  "actors": "vehicle box centre near proxy (750,243) at 220.7 s; person box centre near proxy (786,218) at 220.7 s",
+  "signal": "210.2-213.0 s green; 213.2-216.0 s yellow; 216.2-231.4 s red",
+  "id": "C3896_fp_5",
+  "verdict": {
+   "real_event": false,
+   "label": "failure_to_yield",
+   "start": 219.5,
+   "end": 221.4,
+   "category": "false_detection",
+   "cause": "The pedestrian was walking on the asphalt 4 to 8 proxy px (about 1 to 2 m) north of the NB zebra's far edge, and the model counted him as on the zebra. The tall SUV's roof overlaps him in the image because of perspective, so it looks as if the car passed right in front of his feet. At ground level its wheels straddle the NB lane 2/3 divider, about 4 to 5 m to one side of him.",
+   "reason": "Actors. The vehicle is a dark SUV. It comes up on the south side of the north_nb crossing east of the median nose, mostly hidden behind the U-turning bus, then turns north and drives WNW up the NB carriageway. The person is man A (white shirt, dark trousers). From at least 217.4 s he stands in the road between the kerb end of the grass strip and the zebra. He sets off west at about 220.3 to 220.5 s and walks across the NB carriageway parallel to the crossing. I checked 216.0 to 225.5 s on 0.1 to 0.5 s sheets, drawing the north_nb polygon (it matches the painted stripes) and the NB lane dividers (u = y - 0.33(x - 632) in proxy px: median edge 258, L1 238, L2 218, L3 196) on 5x crops (out/sheets/adj/C3896_fp_5_4, _6, _7, _8).\n\nThe SUV's crossing is real. Its footprint is hidden under the bus roof until about 219.4 s. It turns onto the stripes at about 219.4 to 219.6 s, and its rear bumper clears the north edge at about 221.3 to 221.4 s (box bottom at 497 ref px at 221.3, 492 at 221.4, against an edge of about 491). The model's 220.0 start is late. At ground level its rear wheels straddle L2: at 220.6 to 220.8 s the left rear is at u of about 224 and the right rear at about 210 to 212, so it is in lanes 2 and 3.\n\nThe pedestrian condition fails. Man A's feet (detector box bottoms) stay outside the polygon for the whole pass. They are 11 to 17 ref px north of the top edge from 219.4 to 220.7 s, 8 to 11 px from 220.8 to 221.7 s, and still about 4 proxy px north of it at 224 s. The zebra is about 17 proxy px deep here, so that gap is roughly 1 to 2 m of plain asphalt, which is several body widths. He never steps onto the stripes. This matches the earlier rulings, which treated someone walking 6 to 9 px north of the stripe tops as off the zebra. His lane position is u of about 181 to 191, which is lane 4, 4 to 5 m to the side of the SUV's right wheels. He shows no evasive action: he stood still, then walked steadily behind and to the right of the car.\n\nNobody else was on the zebra in the SUV's lane or the next one. The corner group, including the person stepping onto the east end of the stripes at about (1806 to 1845, 500) ref, sits at u of about 150 to 167, the kerb strip next to the parked black SUV. That is more than 2 lanes (about 8 m) from the SUV and they barely move. The grey-shirt man (B) stands at the kerb about 20 ref px north of the stripes.\n\nThe start and end values give the SUV's crossing time for reference only. It is not a failure_to_yield. If anything is here, it is man A walking in the road beside the crossing (possible jaywalking, roughly 217 to 225+ s), which is a different event and does not fit this segment."
+  }
+ },
+ {
+  "clip": "C3896",
+  "kind": "fn",
+  "label": "jaywalking",
+  "start": 94.5,
+  "end": 98.2,
+  "actors": "",
+  "signal": "84.7-101.9 s red; 102.1-108.1 s green",
+  "id": "C3896_fn_7",
+  "verdict": {
+   "real_event": true,
+   "label": "jaywalking",
+   "start": 94.5,
+   "end": 98.2,
+   "category": "missed_by_model",
+   "cause": "He drifts off the zebra slowly, so his distance from it grows gradually. The rule's zebra margin is jay_margin_cw = 0.35 x person height, about 32 ref px (roughly 3 m on the ground here), which is much larger than the guide's \"about a body width\". His gap only passes that margin from about 97.0 to 98.0 s. By then he is within the 0.25 x height kerb margin of the west kerb, so the strict run is shorter than jay_min_dur (1.0 s) and gets dropped. The sedan hiding his legs from 91.7 to 92.9 s also cuts his track just as he leaves the stripes. I inferred this from the thresholds and the detection gaps; I did not run the rule.",
+   "reason": "The event is real. A man in a white shirt and dark trousers crosses the SB carriageway from the median-nose side toward the west corner while the SB signal is red (84.7-101.9 s). From about 89.5 to 91.6 s he walks along the north tips of the north_sb stripes. His YOLO foot points are 0 to 3 ref px from the polygon's top edge, so that part counts as on or at the edge of the zebra. From 91.7 to 92.9 s he goes round the rear of the black sedan standing on the zebra, with his legs hidden. After the sedan he never goes back to the stripes. He walks in a straight line toward the pedestrian-signal pole at the west corner, at a shallower angle than the zebra. Detection foot points put him this far north of the zebra's top edge: 4 to 7 ref px at 93.5-94.0 s, 11 at 94.5, 14 at 95.0, 23 at 96.0, 32 at 97.0 and 39 to 40 at 98.0. At 98.0 s he is about 46 px below the SB stop line, so roughly halfway between the zebra and the stop line. In the zoomed overlay sheets (C3896_fn_7_5 and _7) there is bare asphalt between his feet and the stripe tips in every frame from 94.5 s. He passes in front of the queue stopped at the red light. The zebra is about 45 ref px deep (3 to 4 m), so a gap of 11 px or more is over a body width. That fits \"walking in the road next to a crossing (more than about a body width outside the stripes)\". Start: the stripe tips are not a clean boundary. At 93.3-94.2 s he is only about half a body width past his earlier edge-walking line, so the earliest defensible start is about 94.2. I keep 94.5 as the first frame where he is clearly more than a body width off. End: the kerb at y about 567 is at about x = 318 ref px (the verifier's kerb line in bg_corner, just inside the bollards). His box centre goes 328, 322, 313, 303 at 98.0 to 98.3 s. In the 0.1 s crop (C3896_fn_7_8) his trailing foot reaches the bollard line at 98.2 s, and at 98.4 s he is behind the pole on the sidewalk. So the end is 98.2 (98.3 at most). No other class fits. The two women behind him (97.6 s onward) stay on the stripes, so they are not part of this event."
+  }
+ },
+ {
+  "clip": "C3896",
+  "kind": "fn",
+  "label": "failure_to_yield",
+  "start": 98.2,
+  "end": 100.2,
+  "actors": "",
+  "signal": "88.3-101.9 s red; 102.1-110.1 s green",
+  "id": "C3896_fn_8",
+  "verdict": {
+   "real_event": false,
+   "label": "failure_to_yield",
+   "start": 98.4,
+   "end": 100,
+   "category": "label_wrong",
+   "cause": "Three pedestrians had just finished crossing north_nb and stepped onto the NE corner pavement about 0.6 s before the white box truck's front reached the zebra. In the image the tall cab and box overlap them and hide their feet between 97.9 and 98.8 s, which makes the truck look as if it is at the pedestrians. On the ground the truck crossed the zebra behind them, farther west.",
+   "reason": "I checked 4K frames from kit/samples/C3896.MP4 at 0.1-0.3 s steps, with the north_nb polygon drawn on in reference coordinates. I also used the median background to see where the kerb is. Pedestrians: a woman in a white top, a woman in a blue headscarf and a man in a white shirt walked east from the median along the north edge of the NB stripes (95.5 s: feet around (1586,470) and (1622,487)). They reached the corner pavement, which starts at about x 1640 and y < 476, between 96.6 and 97.8 s. At 97.6-97.8 s their feet are at (1674-1684,460), (1710,468) and (1719-1726,477). The white-shirt man, last of the three, is on the kerb line at the top of the stripes, which is at y about 479-481 there. After that they walk along the pavement, 10-25 px north of the stripes: at 99.2-99.4 s they are at (1734-1760,448-453) and (1788-1794,467-468), clearly on paving above the kerb. Truck: the white box truck enters from the east arm and turns right into NB without slowing. Its front bumper reaches the south edge of the zebra at about 98.4 s, near x 1620. The front leaves the north edge at about 99.3 s, near x 1480, and the rear bumper clears the stripes at about 100.0 s, near x 1590. At 97.8 s, before the pedestrians were off the stripes, its front was about 30 px south of the zebra (front wheel near (1755,558)), roughly one zebra width away. The only time the truck is on the stripes is 98.4-100.0 s. For that whole time nobody is on north_nb or stepping onto it. The three walkers are on the pavement east of the truck's path (x 1706-1795) and walking away without hesitating. Two men who stood chatting on the kerb at the zebra's NE end, at (1846-1870, 471-479), from before 93.6 s until after 100 s never step onto it, and neither does a man in black passing behind them at x about 1880-1890. Nobody on the NB half near the median. There was no evasive action, so near_miss does not apply either. The verifier's own coordinates (feet at y 472-476 ref) are also north of the stripes. Start/end above are only the truck's time on the zebra, for reference. No event of any class belongs here."
+  }
+ },
+ {
+  "clip": "C3896",
+  "kind": "fn",
+  "label": "congestion",
+  "start": 126.5,
+  "end": 149.5,
+  "actors": "",
+  "signal": "116.5-137.9 s green; 138.1-140.9 s yellow; 141.1-159.4 s red",
+  "id": "C3896_fn_9",
+  "verdict": {
+   "real_event": true,
+   "label": "congestion",
+   "start": 126.4,
+   "end": 149.5,
+   "category": "missed_by_model",
+   "cause": "The rule only counts a vehicle as standing below about 15 px/s (stop_speed 12 + 3). On green (126-138) most of the jam is crawling, not stopped: the dump truck moves about 16 proxy px/s (about 32 ref px/s) and the box cars and van creep at 20-30 proxy px/s. Only the two stop-line cars (Spark, black SUV) plus a few others count as fully stopped, so the rule probably never reaches cong_green_n = 6 on green. Because the jam then never 'starts on green', the standing box on red (141-146) cannot carry it on. This is inferred from src/parivision/rules.py congestion() and the frame speeds. I did not rerun the pipeline to confirm it.",
+   "reason": "Sheets are out/sheets/adj/C3896_fn_9_1..8.jpg. The south exit backs up and the SB junction box fills and jams on green, which is the congestion pattern described in scene.md. From 112 to 119 s the box flows freely. From about 120 s the dump truck, then the green articulated bus, and about 10 cars plus a white box van fill the box and slow down.\n\nStop-line lanes (crop 100,150,420,300 at 0.2 s): the white box van in lane 3 is stationary by 125.4. The white Spark in lane 1 decelerates and stops at about 126.4, about 30 px short of the stop line, behind a grey sedan stuck on the north_sb zebra. The black SUV in lane 2 also stops at about 126.4. The Spark and the SUV do not move again through 138-141, although the signal is green until 137.9. The grey sedan on the zebra and the lane 3-4 cars only creep. In the box, the dump truck crawls from about proxy x 555 to 735 between 130 and 141 (about 16 px/s), the bus stands at the right edge, and the cars at the lower right creep. So on green every SB lane is either standing or crawling. This is not a red-light queue.\n\nFrom 141.1 (red) the box stays gridlocked. The truck cab, the bus, the white van just past north_sb, the white Cobalt and the lower-right cars all stand still from 142 to 146.\n\nBreakup (box crop at 0.5 s): the truck's rear wheels begin to move at about 146.0-146.5 and the bus leaves the crop by about 147.5. The white van starts at about 148.5-149.5 and the Cobalt at about 148.5-149. By 149.5-150 every remaining box vehicle is rolling at normal speed. The truck exits at about 151-152, and after 152 the box is empty apart from moving traffic.\n\nStart: the SB queue stops at about 126.4. This matches the dev label's 126.5 and the verifier's flow drop at 125.5-126.5. End: the last stuck vehicles (van, Cobalt) move off at about 149.5. The dev label 126.5-149.5 is essentially correct."
+  }
+ },
+ {
+  "clip": "C3896",
+  "kind": "fn",
+  "label": "failure_to_yield",
+  "start": 155.2,
+  "end": 157.7,
+  "actors": "",
+  "signal": "145.3-167.6 s red",
+  "id": "C3896_fn_11",
+  "verdict": {
+   "real_event": true,
+   "label": "failure_to_yield",
+   "start": 155.2,
+   "end": 157.7,
+   "category": "boundary_only",
+   "cause": "The model did fire on this SUV. Current rules give evidence 155.76-157.76 for track 1000893, with 2001083 (the man in black) among the victims. The FTY segment in pred_3 is 155.76-163.46, which gives IoU of about 0.23 against 155.2-157.7. Two things caused that. (1) Chaining: the bus 1001118 crossing the east end of north_nb produced overlapping evidence at 157.06-158.96. Its only victim was 2000940, who was in lane 1, two or more lanes and about 6 m from the bus. He got counted because the rule measures foot-to-foot distance from the bottom-centre of the long diagonal bus box, not lateral distance. In the pred_3 run the later crossings (159.76-163.46) were chained on as well. Running the rules now gives 155.76-158.96. (2) Late start: the footprint points sit at the bottom of the SUV's box (its rear), so the vehicle's \"on zebra\" run starts about 0.9 s after the front bumper actually enters. The 0.3 s pad leaves the start about 0.56 s late.",
+   "reason": "The car is a large black SUV (track 1000893). It had been standing still since at least 150 s, facing up-left, with its nose just south of the north_nb zebra. It is probably turning right from the east arm into NB. The SB/NB signal was red (145.3-167.6), so pedestrians were walking on the north crossing. A large group crossed westward toward the median nose. The man in black (cap and jeans, track 2001083) walked across directly in front of the SUV's nose at about 153.0-154.2. The SUV creeps from about 154.6 and accelerates from about 155.0. The zoomed frames with the polygon drawn (C3896_fn_11_4/6/7) show the front bumper at the zebra's south edge at 155.2-155.3. At that moment the man is on the zebra at ref (1457,520), about 100 ref px (roughly 2 m) west of the line the SUV's left flank sweeps. I extended the NB lane dashes into the zebra: dividers at the zebra top are about x=1321, 1437 and 1552, sloping about 0.34. On that basis the SUV crosses in lane 3, with its rear-left wheel at (1572,527), just right of the 1437 divider. The man is in lane 2, right next to the SUV's lane, from 155.2 until about 156.4, when he reaches the lane 1/2 divider at (1388,525), about 170-180 px from the SUV's side. The labeling.md definition counts a pedestrian on the zebra in the vehicle's path or the lane next to it. The exception needs someone on the far half and well beyond a lane divider; he is on the same half, about a third of a lane past the divider, so the exception does not apply. It is a mild case: he was walking away, and the driver had waited for him to pass its nose. I saw no evasive action, so near_miss does not fit. Boundaries: at 155.2 the front bumper is at the south edge, and the ground point is at most 0.1 s later. The rear bumper and its shadow touch the north edge through 157.6 and are clear at 157.8 (C3896_fn_11_8), so the end is 157.7. The bus crossing the east end at about 156.5-158.7 is not a second FTY. The only people on the zebra then were in lanes 1-2 near the median, and the people at the east end stayed on the kerb. So the segment should not be extended."
+  }
+ },
+ {
+  "clip": "C3896",
+  "kind": "fn",
+  "label": "failure_to_yield",
+  "start": 164.2,
+  "end": 165.5,
+  "actors": "",
+  "signal": "154.4-175.4 s red",
+  "id": "C3896_fn_12",
+  "verdict": {
+   "real_event": true,
+   "label": "failure_to_yield",
+   "start": 164.2,
+   "end": 165.5,
+   "category": "missed_by_model",
+   "cause": "The rule has three near misses that add up. First, the sedan's box-bottom footprint only registers on north_nb from 164.66 s, although the front really enters at about 164.2 s. Second, the 0.3 s look-back starts at 164.3645 s, while the only sample in range where pedestrian B passes every check is 164.3642 s, so it falls outside by 0.0003 s. Third, from 164.46 s B's road_dist (26 to 30 px) sits just under fty_kerb*h (27 to 31 px), so B is treated as waiting at the east kerb end. Pedestrian A is outside the dilated zebra mask. The result is no victims and no event.",
+   "reason": "I checked this with 4K frames from kit/samples/C3896.MP4, with north_nb and the NB lane dividers drawn on them (out/sheets/adj/C3896_fn_12_6, _7 and _9 to _11), plus the cached tracks. A black sedan (track 1001159) comes in from the right edge from the east arm and turns right up the NB carriageway at a steady ~215 px/s. It never slows. Its front crosses the south edge of north_nb at about 164.15 to 164.2 s. It crosses the zebra in NB lane 4, between the green divider (u about 1556 ref) and the next divider (about 1670). Its left wheels are at u 1543 to 1566, so its right side is at about 1600 to 1625. The rear clears the north edge at about 165.45 s: the bumper line is on the edge at 165.4 and about 4 ref px past it at 165.5. Pedestrian B (track 2000940, grey trousers) walks east on the top edge of the stripes the whole time. At 163.0 B is clearly on the stripes. At 164.0 to 164.2 B's feet are on the stripe tops, and track foot points put B 0 to 4 ref px from the polygon's north edge at 164.06 and from 164.66 to 165.27. At 164.3 to 164.6 the car's roof hides B's legs, which means B is right beside the car. B is in lane 5 (u 1717 at 164.06, rising to about 1790 at 165.27, which is the kerb). That is the lane next to the car's lane, about 3 to 4.5 m from its right side. B is not on the far half, and the definition explicitly counts the lane next to the vehicle, so this meets the definition. It is weaker than a path conflict because B had already crossed lane 4 at about 163.0 and is walking away from the car. This is consistent with the two neighbouring white-sedan claims (162.3 and 163.6) that were rejected: those cars were in lanes 2 and 3, so B was two lanes away from them. Pedestrian A (track 2001112, backpack) walks 1.5 to 2 m north of the stripes, off the zebra. The sedan passes about 1 to 2 m from A without any evasive action, so A does not count and near_miss does not fit. The dev label's 164.2 to 165.5 s matches the convention."
+  }
+ },
+ {
+  "clip": "C3896",
+  "kind": "fn",
+  "label": "stopped_vehicle",
+  "start": 198.4,
+  "end": 214.6,
+  "actors": "",
+  "signal": "188.6-213.0 s green; 213.2-216.0 s yellow; 216.2-224.4 s red",
+  "id": "C3896_fn_13",
+  "verdict": {
+   "real_event": false,
+   "label": "stopped_vehicle",
+   "start": 198.5,
+   "end": 214.2,
+   "category": "label_wrong",
+   "cause": "The '07 600' bus was a left-turner waiting in the NE part of the box, on green, for the steady NB stream coming out of the right edge in front of its nose. That is ordinary right-of-way waiting. It did not break down, drop off passengers or stop in the box for no reason, and the three identical C3902 cases were rejected for the same reason.",
+   "reason": "Evidence: sheets out/sheets/adj/C3896_fn_13_1..7.jpg, plus template tracking of the bus roof and nose at 0.1 s steps.\n\nWhat happens. The dark green and white '07 600' bus comes down SB and crosses the stop line on green (the phase went green at 188.6). It swings left past the median nose and pulls up in the NE part of the junction box, just south of north_nb. Its body is at about proxy (620-953, 235-420). Its long axis is almost horizontal, so it faces east rather than down-right like the straight-on SB cars, and its nose is within about 10 px of the right frame edge. Tracking shows it decelerating to a stop at 198.5. It then does not move at all until about 208.4, roughly 9.9-10 s. From 208.5 to 212 it creeps about 21 px (about 7 px/s, some 6% of its length) while the Durable Beton mixer passes beside it. It holds still again from about 212 to 214.0. It moves off at about 214.1-214.3, during the yellow (213.2-216.0), speeds up (roof offset +31 px at 215, +41 at 216, +59 at 217) and leaves through the right edge toward the east arm by about 221-222.\n\nWhy it waited. During the whole stop, straight SB traffic keeps flowing past on the bus's south side: the white SUV and grey cars at 198-201, a white sedan at 205-206, and the platoon at 213-215. So the south exit is not jammed and this is not congestion. Meanwhile a continuous NB stream comes out of the right edge right beside the bus's nose, just north of its front corner, and heads up-left into the NB carriageway. In order: white sedan 199.5-200.5, green/purple bus 201-203, grey car 202-203, white sedan 203.5-204.5, black cars 205.5-207.5, white cars 208-210, black SUV 210.5-211.5, white car 212, dark car 213.5, dark SUV 214.5-215.5, white SUV 216.5-217. The gaps are 1-2 s, too short for a 12 m bus. The bus goes only when the avenue phase ends and the stream thins. A grey BMW and a small grey Nexia queue behind it as further left-turners (215-220).\n\nVerdict. This is the same situation that was rejected three times in labels/dev_labels_rejected.json: C3902 52.6-77 (white SUV), 208.4-239.9 (black sedan) and 296.3-309.3 (bus). Each was a left-turner in the same NE part of the box, facing east and held by the NB stream on green. Those reviews called it a queue held by right of way, not a stopped vehicle. The C3902 reviewer thought this C3896 bus was different because it \"faces SB, down-right\" and sits \"fully in frame in the middle of the box\". The frames do not show that: it faces east with its nose at the frame edge and leaves east. It entered on green, so it is not red_light or stop_line. The SB and NB streams keep moving, so it is not congestion. There is no evasive action, so it is not near_miss. Even on a purely literal reading, the fully motionless stretch (198.5 to about 208.4) is only just 10 s before the creep. If the team does keep it, the boundaries are start 198.5 (stop) and end about 214.2 (moves off), close to the current 198.4-214.6."
+  }
+ },
+ {
+  "clip": "C3896",
+  "kind": "fn",
+  "label": "failure_to_yield",
+  "start": 239.1,
+  "end": 241.7,
+  "actors": "",
+  "signal": "229.2-251.7 s red",
+  "id": "C3896_fn_15",
+  "verdict": {
+   "real_event": true,
+   "label": "failure_to_yield",
+   "start": 239.1,
+   "end": 241.7,
+   "category": "missed_by_model",
+   "cause": "The pedestrian had just walked past the stopped car's bumper and was walking away from it, still on the stripes about 1.3 m to the right of its front-right corner, when the car moved off. The car then turned away from her, up-left, so her track never crossed the car's swept path. The model probably did not count someone in the adjacent lane who is walking away.",
+   "reason": "Checked in sheets C3896_fn_15_1 to _5 (crops of 0.2 s steps, 237.5 to 242.9 s). A grey or silver sedan with a roof rack stands in the junction box facing up-left towards the NB carriageway. Its nose rests on the lower edge of the north_nb stripes, at about proxy (830,255). A woman with long hair, a dark top and a backpack walks east along north_nb and passes just in front of its bumper at 237.6 to 238.6 s.\n\nThe car starts rolling at about 239.1 s. Frame difference on its rear rises from about 5 to 8.6 at 239.1 and to 17 at 239.2. Phase correlation on the rear patch shifts -0.33 px at 239.1 and -0.66 px at 239.2. At that moment her feet are at about (886,248), inside north_nb (the zebra spans y 239 to 254 at that x). She is about 25 proxy px (roughly 1.3 m) right of the car's front-right corner, between the car and the NE kerb: within the adjacent lane, not beyond a lane divider. She stays on the stripes while the car drives up-left across the crossing: (898,247) at 239.6, about (912,246) at 240.0, about (928,244) at 240.6. She reaches the NE kerb at about 240.8 s.\n\nThe rule counts a pedestrian on the zebra in the lane next to the vehicle. The far-half exclusion does not apply, because she is close to the car, not well beyond a lane divider. So this is a real failure_to_yield, though a mild one: she was walking away and the car turned away from her.\n\nStart is 239.1 s, when the car, nose already on the stripes, starts driving across. End: the car's rear bumper reaches the top edge of the zebra at about 241.7 and is clearly off it by 241.9, so 241.7 stands.\n\nThe white sedan behind it moves onto the crossing only after about 241.1 s, when she is already on the kerb, so it does not count. The dev label 239.1 to 241.7 is correct."
+  }
+ },
+ {
+  "clip": "C3896",
+  "kind": "fn",
+  "label": "failure_to_yield",
+  "start": 286.5,
+  "end": 288.1,
+  "actors": "",
+  "signal": "276.7-288.1 s green; 288.3-291.1 s yellow; 291.3-298.1 s red",
+  "id": "C3896_fn_16",
+  "verdict": {
+   "real_event": true,
+   "label": "failure_to_yield",
+   "start": 286.5,
+   "end": 288.1,
+   "category": "missed_by_model",
+   "cause": "The pedestrian had slowed almost to a stop on the zebra as the car came, creeping about 4-8 proxy px/s. The walking gate in rules.failure_to_yield (fty_walk = 0.25 body heights/s, commented \"someone standing still beside the car's path is not being cut off\") therefore dropped her from on_cw, so the car had no victim. The labelling definition does not require the pedestrian to be walking.",
+   "reason": "A woman in a red top and white trousers leaves the corner sidewalk at about 277-280 s and walks down the west zebra, hand at her head, probably on the phone. She slows from about 285.7 s. By about 286.5 s she has almost stopped, at roughly proxy (215-230, 444-452). That spot is on the painted stripes near the lower-left edge of the zebra polygon, about 25-30 px right of the tip of the lower-left pink island, so she is on the zebra and not on the island.\n\nThe white Chevrolet Spark had been in the junction box near the upper island at 276-282 s. It swings round the right-hand island and crosses the lower part of the same zebra, right to left, toward the west arm, without braking. That lower section is the next part of her path. On the 0.1 s polygon overlays:\n- At 286.4 s its front-left bumper touches the right edge of the stripes.\n- By 286.5 s the front is on the zebra.\n- At 288.0 s the rear is at the left edge.\n- By 288.1-288.2 s the rear is clear.\n\nIts far side passes about 35 proxy px (about 2-3 m, roughly 3 stripe pitches) below her feet, so she is in the lane beside its path. The rest of her crossing runs through that lane. She stands there until about 326 s and then walks down through it (329-335 s), which confirms she was mid-crossing, not on the far half.\n\nThe grey SUV that crosses the upper end of the zebra at about 288.2-290.2 s passes behind her, through the part she has already crossed, and she is not heading into its lane. It does not count, so the segment is not extended. There is no hard braking, swerve or jump-back, so this is not a near_miss. The dev boundaries of 286.5-288.1 match the front-in and rear-out frames."
+  }
+ },
+ {
+  "clip": "C3897",
+  "kind": "fp",
+  "label": "congestion",
+  "start": 49.5,
+  "end": 57,
+  "actors": "n/a",
+  "signal": "39.6-55.7 s green; 55.9-58.7 s yellow; 58.9-66.9 s red",
+  "id": "C3897_fp_17",
+  "verdict": {
+   "real_event": false,
+   "label": "congestion",
+   "start": 0,
+   "end": 0,
+   "category": "false_detection",
+   "cause": "The junction was busy and several vehicles stood still but were not queued: the stuck median-lane queue (red car and grey car at the SB stop line, already labelled stopped_vehicle 28-78.9), two white sedans waiting to turn inside the box, parked cars at the left edge, and a 3 s slowdown at the back of the platoon near the south exit. The model read these as a standstill, but every through lane kept moving.",
+   "reason": "This happens during SB green (39.6-55.7 s) and the first second of yellow. Traffic is dense but it flows the whole time, so it does not meet \"all lanes of one direction at a standstill or crawling\".\n\nSB approach (sheet _6, 46-57 s): cars keep coming down the left carriageway and crossing the stop line every second. In the tracks, SB cars move at about 100-400 ref px/s through 50-55 s. The green articulated bus reaches the gantry at about 49 s, crosses the stop line and north crossing at about 51-52 s, and leaves bottom-right at a steady pace, about 100 proxy px/s from 53 to 58 s. A second, grey bus follows and crosses the stop line at about 57.5-59 s.\n\nJunction box (sheets _4, _5): the white SUV with a black roof, a white hatchback, a dark SUV and a grey sedan all drive through the box at 50-55 s, at 130-270 ref px/s in the tracks. The only slowdown is at the back of the platoon at the south exit. A white SUV and a white sedan at bottom right, proxy about (820,470) and (880,420), crawl or stand from about 49.5 to 53.5 s, then drive off at 54-56 s. Other exit lanes move during that time.\n\nThe stationary vehicles are not congestion:\n- The median-lane queue (red car and grey car at ref about (775,428)-(1180,597)) has stood since before 46 s and is already covered by the stopped_vehicle and illegal_u_turn labels.\n- A white sedan at the median nose, ref about (1493,626), and a white sedan on the right side of the box, ref about (1776,778), stand from about 48 to 57 s. Both are waiting to turn, facing across the box.\n- Parked cars at x < 170 are off the carriageway.\n\nAfter 56 s, SB cars slow and stop at the stop line for yellow and red. That is a signal queue, while the box keeps moving: the black car turns right into the west arm at 57.5-61 s and the grey bus goes through.\n\nThere is no gridlock and no green-phase standstill across the SB lanes, so no congestion event. Sheets: out/sheets/adj/C3897_fp_17_1.jpg to _6.jpg."
+  }
+ },
+ {
+  "clip": "C3897",
+  "kind": "fp",
+  "label": "failure_to_yield",
+  "start": 55.36,
+  "end": 57.86,
+  "actors": "vehicle box centre near proxy (240,286) at 56.7 s; person box centre near proxy (195,302) at 56.7 s",
+  "signal": "45.4-55.7 s green; 55.9-58.7 s yellow; 58.9-67.7 s red",
+  "id": "C3897_fp_18",
+  "verdict": {
+   "real_event": false,
+   "label": "failure_to_yield",
+   "start": 55.4,
+   "end": 57.9,
+   "category": "false_detection",
+   "cause": "A group of about six pedestrians stood still at the kerb end of north_sb, waiting for their own phase and chatting in a circle. The model treated them as being on the zebra when the right-turning black sedan swept past them.",
+   "reason": "The vehicle actor at proxy (240,286) is a black sedan in the leftmost SB lane turning right. Its front enters the north_sb zebra at the left (corner) end at about 55.4-55.8 s, which is the end of green going into yellow. Its rear clears the zebra at about 58.2-58.6 s. It then heads down over the top of the west crossing into the west arm and leaves the frame at the bottom-left around 61.4 s. The person actor at proxy (195,302) is the man in navy at the right edge of a group of 6-7 people. That group stands at the corner kerb where north_sb begins, and they are already there at 50 s. In close crops (130,250,310,350 at 0.4 s steps, 54.6-58.6 s), his feet are at about proxy (197,330). That is the bottom-left corner of the zebra polygon, right beside the kerb. He is not out on the stripes in the car's lane. None of the group moves toward the car's path while it passes. They stay facing each other, and at 57.4-57.8 s they only shuffle in place. Their crossing phase was red: SB traffic had green or yellow, and SB red only starts at 58.9 s. The sheet for 58.9-66.9 s shows the same group still waiting at 61.9 s and only starting to walk across north_sb at about 62.9-63.9 s. So they were waiting to cross, not crossing and not stepping onto the zebra. This is the same 'stepping off the kerb while waiting' situation the guide excludes. Nobody reacted, and there was no conflict. One other pedestrian was nearby: a man in a white shirt who walked down the west crossing between 53.4 and 60 s. When the sedan crosses the top of the west crossing (about 58.9-61 s), he is already about 200 reference px further along, standing by the tip of the right pink island. He is beyond the sedan's lane and does not move toward it, so that crossing is not a failure_to_yield either. It is also outside the predicted segment. The dev labels have no FTY here. The next one is 64-65.9 s, and it is a different event. The label set is correct to omit this segment."
+  }
+ },
+ {
+  "clip": "C3897",
+  "kind": "fp",
+  "label": "stop_line",
+  "start": 58.76,
+  "end": 70.77,
+  "actors": "vehicle box centre near proxy (523,256) at 63.7 s; vehicle box centre near proxy (537,262) at 65.1 s; vehicle box centre near proxy (464,229) at 64.8 s",
+  "signal": "48.8-55.7 s green; 55.9-58.7 s yellow; 58.9-80.7 s red",
+  "id": "C3897_fp_19",
+  "verdict": {
+   "real_event": false,
+   "label": "stop_line",
+   "start": 0,
+   "end": 0,
+   "category": "false_detection",
+   "cause": "The model saw left-lane SB cars standing past the stop line when the light turned red at 58.9 s and called it a stop_line event. In fact they had crossed on green about 40 s earlier and were stuck behind a grey sedan waiting to U-turn at the median nose. Once it went, they drove on through the junction during the red.",
+   "reason": "Sheets are in out/sheets/adj/C3897_fp_19_1.jpg to _10.jpg, with the stop line and north_sb drawn on _3 to _10. They cover 38 to 74.8 s at steps of 0.4 to 2 s.\n\nThe three actors all stand in the SB lane next to the median:\n1. A grey sedan waits at the median nose, past the crossing. It is at proxy about (585-610, 275-283) from about 40 s to 63.4 s. It moves at about 63.5 s, U-turns into the NB side and stops at about (769,265) for pedestrians on the NB crossing. The dev labels already have illegal_u_turn 34-85.3 and stopped_vehicle 28-78.9.\n2. A red SUV is the model's (523,256) at 63.7 and (537,262) at 65.1. It crosses the stop line during green, between 38.5 and 39.5 s. It stops by 40.0 s behind the grey sedan with its front on the right end of north_sb, at about (510-522, 249-255). It stays there, apart from a few pixels of creep, until it moves off at about 64.3 s. It drives over the crossing and through the box, then leaves the right edge at about (948,368) by 68.5 s. The dev label failure_to_yield 64-65.9 already covers this, since pedestrians were on north_sb.\n3. A white SUV is the model's (464,229) at 64.8. It comes up behind the red SUV at 41-44 s, also in green. It stops with its front bumper about 12-15 proxy px past the right end of the stop line, next to the yellow median edge line, at about (480,240). It moves off at about 65.4 s and goes the same way as the red SUV, gone at the right edge by about 70.5 s.\n\nWhy this is not a stop_line event:\n- labeling.md needs a vehicle that stops past the line while the signal is red, without going on into the junction. None of these cars stopped during red: they stopped at 40-44 s, in the 20-55.7 s green. All of them then went on into the junction at 63.5-65.4 s.\n- This is a queue stuck behind a turner from green into red, not an overshoot at a red light. The rejected C3905 107.6-114.6 stop_line case was dismissed for the same reason.\n\nThe rest of the red phase shows no stop_line either. The other SB lanes' red-light queue (black SUV, dark sedan, white sedans) stops about 30-40 proxy px behind the line for the whole of 59.8-74.8 s. The only other car past the line is the bus at 58.8-62.8, and it never stops. No SB vehicle comes to a stop past the line after 58.9 s, so there is nothing to relabel as stop_line."
+  }
+ },
+ {
+  "clip": "C3897",
+  "kind": "fp",
+  "label": "failure_to_yield",
+  "start": 79.98,
+  "end": 85.89,
+  "actors": "vehicle box centre near proxy (732,246) at 84.9 s; person box centre near proxy (817,216) at 84.9 s; vehicle box centre near proxy (891,228) at 82.1 s; person box centre near proxy (798,222) at 82.1 s",
+  "signal": "70.1-94.5 s red; 94.7-95.7 s green",
+  "id": "C3897_fp_20",
+  "verdict": {
+   "real_event": false,
+   "label": "failure_to_yield",
+   "start": 0,
+   "end": 0,
+   "category": "false_detection",
+   "cause": "The model treated people walking on the asphalt just north of the NB zebra as if they were on it. It also counted cars that were yielding as cars crossing. Two cars were standing on the zebra and one was stopped north of it, and all three waited. The first two drove off only after the group had passed in front of them, and they went NW behind the group.",
+   "reason": "I checked 71.6 to 89.9 s on 0.2 to 1.0 s crops at 1.8 to 3.4x, with the north_nb polygon drawn in proxy px (out/sheets/adj/C3897_fp_20_1.jpg to _10.jpg).\n\nThe actors:\n(a) The grey sedan (the model's vehicle at (732,246), 84.9) stood on the NB zebra in lane 3, at about x 730-790. It was there from about 68 s and crept about 10 px forward at 75-76.\n(b) A white sedan turned right from the east arm at 72.4 and stopped on the zebra in lane 4, at about x 807-910, by 74.2.\n(c) A dark SUV (the model's vehicle at (891,228), 82.1) turned right from the east arm behind bus 01 028. It crossed the zebra's far east end at about x 900-950 from about 78.9 to 81.2, then stopped north of the zebra at about (860-920, 205-240) from about 81.6.\n(d) A group of about 8 pedestrians (the model's persons) left the median nose at 76 and walked east on the zebra, in lanes 1-2, until about 79. At that point they reached the standing grey sedan, went around its front, and left the stripes. From about 80 they walked ENE on plain asphalt north of the stripes, heading for the NE corner. Their feet were 4-8 px north of the top edge at 80-82 and 10-25 px north at 84-85: (798,237) at 82.1 and about (817,231) at 84.9.\n\nWhy none of this counts:\n- The SUV was on the zebra from 78.9 to 81.2. The whole group was then at x 610-765, in lanes 1-3, 150-300 px (about 6-12 m) to the west, with the stationary grey and white sedans between them and the SUV. So nobody was in its path or the lane next to it. The group then left the stripes at about x 760 and never came near the SUV's crossing point. When they later walked across its path north of the zebra, the SUV stood and waited for them, from 81.6 until after 87. That is yielding.\n- The grey sedan drove off NB at about 84.2 and cleared the zebra at about 85.6-86.0. The white sedan did the same at about 85.0 and cleared it at about 86.5-86.8. Both had been stationary on the zebra while the people walked round their fronts. Both left only after the group had passed their fronts, and both went WNW behind the group, which was walking ENE. At that time nobody was on the NB stripes; the median end of the zebra was empty from 84 to 87. The nearest walkers were 10-20 px north of the stripes and moving away. Nobody braked, swerved, stopped or jumped back, so this is not a near_miss either.\n- Bus 01 028 turned over the east end from about 87 s. That is outside the segment, and by then the group was 16+ px north of the stripes and stepping onto the NE sidewalk.\n\nThis is the same pattern as the rejected C3897 6.4-7.6 claim, where pedestrians were just north of the NB stripes and a car passed behind them. The only violation here is the pedestrians' diagonal walk off the zebra, which is jaywalking, and the dev labels already have a jaywalking segment at 76.2-90.6."
+  }
+ },
+ {
+  "clip": "C3897",
+  "kind": "fp",
+  "label": "stop_line",
+  "start": 133.63,
+  "end": 142.14,
+  "actors": "vehicle box centre near proxy (394,265) at 137.8 s",
+  "signal": "123.7-130.5 s green; 130.7-133.5 s yellow; 133.7-152.0 s red",
+  "id": "C3897_fp_21",
+  "verdict": {
+   "real_event": false,
+   "label": "stop_line",
+   "start": 133.7,
+   "end": 137.4,
+   "category": "false_detection",
+   "cause": "A white SUV was held past the stop line by traffic backed up in the junction box. It stopped on yellow, was still standing there when the light went red, and then drove on into the junction on red. The model counted that standstill during red as stop_line. It did not check when the stop began, and it did not check that the car went on into the junction afterwards.",
+   "reason": "The actor is the white compact SUV in the middle SB lane, at proxy (394,265) at 137.8 s. I drew the stop line and the north_sb polygon on 0.2 to 1 s crops (out/sheets/adj/C3897_fp_21_3.jpg to _7.jpg). The SUV crossed the stop line on green: at 129.6 s it was already about 29 proxy px past the line, with its rear wheels past it too. It crept forward until about 130.8 to 131.0 s and stopped at about 131.0 s, during yellow (130.7 to 133.5). It stopped because the silver sedan ahead-right of it had been standing on the zebra since before 129.6 s, behind the cars filling the junction box. When it stopped, its whole body was between the stop line and the zebra, with its front bumper on the zebra's top edge. It stood there through red onset (133.7) until about 137.3 s. It moved off at 137.4 to 137.6 s, still on red. It crossed the zebra from 138 to 139.5 s, drove straight across the box towards the bottom-right exit and was out of view by about 142.5 s. That fails stop_line on two counts. It did not stop while the light was red; it stopped on yellow. And it did go on into the junction, which the definition excludes. The adjudicated C3896 W2 case is the same situation: a car stopped past the line on green or yellow, stood into the red, then went through when the box cleared. That case was ruled not stop_line. red_light does not fit either, because its front crossed the line on green. No other SB vehicle was past the line on red in 133.6 to 146.1 s. The silver sedan on the zebra also stopped before the red and moved into the box at about 136.3 s. The black sedan, silver hatchback and box truck queued behind it stayed behind the line. If this were kept anyway, the boundaries would be 133.7 to 137.4."
+  }
+ },
+ {
+  "clip": "C3897",
+  "kind": "fp",
+  "label": "jaywalking",
+  "start": 168.47,
+  "end": 170.07,
+  "actors": "person box centre near proxy (183,130) at 169.3 s",
+  "signal": "158.6-169.6 s red; 169.8-180.0 s green",
+  "id": "C3897_fp_22",
+  "verdict": {
+   "real_event": false,
+   "label": "jaywalking",
+   "start": 0,
+   "end": 0,
+   "category": "false_detection",
+   "cause": "The model counted a delivery rider on a scooter as a pedestrian. He was riding southbound on the SB carriageway, and his person box was not dropped because no two-wheeler box contained it.",
+   "reason": "I checked contact sheets from 164.5 to 174.1 s: a full frame every 1.0 s, a crop of proxy (60,60)-(360,260) every 0.8 s, and a tight crop of proxy (110,70)-(290,170) every 0.4 s from 166.0 to 171.6 s. The model's actor at proxy (183,130) at 169.3 s is a rider in an orange shirt and a dark helmet. He sits on a scooter or motorcycle with a yellow delivery box, and the wheels and handlebars are visible in the 168.0-169.6 s tiles. He enters at the top-left of the SB carriageway around 167.2-167.6 s. He rides down the left SB lanes at vehicle speed, in the correct SB direction, toward the gantry. From about 170.0 to 171.6 s he filters between the queued cars toward the stop line. Nobody gets off, and nobody walks in the road at that spot. docs/scene.md says cyclists and delivery riders are vehicles, not pedestrians, so this cannot be jaywalking. Wrong way does not apply either, because he rides with traffic. I saw no pedestrian on the SB carriageway away from the zebras in this window. The people in view are on the corner sidewalk and on the pink islands and west crossing. No event of this class happens here, so the dev labels are right to leave it out."
+  }
+ },
+ {
+  "clip": "C3897",
+  "kind": "fp",
+  "label": "jaywalking",
+  "start": 171.27,
+  "end": 174.17,
+  "actors": "person box centre near proxy (700,475) at 172.7 s",
+  "signal": "161.4-169.6 s red; 169.8-184.0 s green",
+  "id": "C3897_fp_23",
+  "verdict": {
+   "real_event": false,
+   "label": "jaywalking",
+   "start": 0,
+   "end": 0,
+   "category": "false_detection",
+   "cause": "A helmeted delivery rider seated on a moped, with a purple delivery box, was counted as a pedestrian. The motorcycle box was apparently missed or not associated with the rider while their feet were down, so the person box at about (700,475) was treated as someone on foot in the junction box.",
+   "reason": "The actor near proxy (700,475) at 172.7 s is a rider, not a pedestrian. The crops (sheets _2, _3 and _4) show a person in a white shirt and a helmet, seated on a moped with a purple delivery box on the back. The moped comes up from the bottom edge behind the parked white van at about 170.9 s. Between 172.5 and 173.3 s the rider slows and puts one foot down while a white Chevrolet Spark crosses in front, then rides off up and to the right past the van's nose (about 173.5 to 175.7 s). The rider stays on the moped the whole time and never dismounts or walks. docs/scene.md says delivery riders are vehicles, not pedestrians, so this cannot be jaywalking. The slow-down to let the Spark pass is a gentle yield with no hard braking or swerve, so it is not a near_miss either. The only people on foot in this window are the four pedestrians on the west crossing (sheet _5). From 171.3 to 174.3 s they walk on the zebra stripes during the avenue-green walk phase, which is legal. No pedestrian leaves the kerb onto the carriageway outside the markings anywhere in 167.3 to 178.2 s. Sheets are in /Users/bayto/Desktop/claude/traffic-events/out/sheets/adj/C3897_fp_23_1.jpg to C3897_fp_23_5.jpg."
+  }
+ },
+ {
+  "clip": "C3897",
+  "kind": "fp",
+  "label": "jaywalking",
+  "start": 278.68,
+  "end": 283.48,
+  "actors": "person box centre near proxy (243,66) at 281.1 s",
+  "signal": "268.9-280.9 s green; 281.1-283.9 s yellow; 284.1-293.3 s red",
+  "id": "C3897_fp_24",
+  "verdict": {
+   "category": "false_detection",
+   "real_event": false,
+   "label": "jaywalking",
+   "start": 0,
+   "end": 0,
+   "cause": "The model counted a delivery rider on a moped as a pedestrian. He wears a white shirt and a red helmet, carries a purple and white delivery box, and is riding up the NB carriageway with traffic. His bike or moped box was not paired with the person box, so he was treated as someone on foot in the lane.",
+   "reason": "I checked the 4K source (kit/samples/C3897.MP4), cropped to proxy x 170-350, y 30-120, from 278.7 to 283.5 s. I also made proxy crop sheets at 0.5 and 0.8 s steps from 274.7 to 287.5 s. The model's actor at proxy (243,66) at 281.1 s is a delivery rider on a green scooter or moped. He has a red helmet, a white shirt and a purple and white delivery box on the back. At 278.7 s he is in the NB carriageway near the bus-stop kerb at about proxy (330,105). He rides steadily up and to the left, away from the camera, keeping pace with the NB cars. He passes (243,66) at 281.1 s and reaches the top-left edge of the crop at about proxy (190,50) by 283.5 s. He never gets off or walks. Both wheels are visible under him in every 4K frame. scene.md says cyclists and delivery riders are vehicles, not pedestrians, and he is riding in the right direction, so this is not wrong_way either. I saw no other pedestrian on the carriageway outside a zebra in this window. The pedestrians on the NB far sidewalk stay on the sidewalk. The woman near the west arm is walking on the west crossing stripes toward the corner sidewalk. The dev labels are correct to leave this out."
+  }
+ },
+ {
+  "clip": "C3897",
+  "kind": "fp",
+  "label": "failure_to_yield",
+  "start": 289.59,
+  "end": 290.89,
+  "actors": "vehicle box centre near proxy (821,235) at 290.3 s; person box centre near proxy (901,234) at 290.3 s; person box centre near proxy (886,224) at 290.3 s",
+  "signal": "279.7-280.9 s green; 281.1-283.9 s yellow; 284.1-300.7 s red",
+  "id": "C3897_fp_25",
+  "verdict": {
+   "real_event": true,
+   "label": "failure_to_yield",
+   "start": 289.2,
+   "end": 290.7,
+   "category": "label_missed_it",
+   "cause": "Dev labels missed a right-turner from the east arm that crossed the east end of north_nb at steady speed, passing in front of a group standing on the zebra's NE end waiting to cross west.",
+   "reason": "The event is real and fits failure_to_yield. The dev labels do not have it, but the model's boundaries are about 0.4 s late at the start and 0.2 s late at the end.\n\nVehicle: a black Cobalt-type sedan comes in from the right edge (east arm) at about 288.5 s. It turns right, crosses the east part of north_nb diagonally (WNW, then NW) and drives up the NB lane next to the east kerb. Its front-left wheel runs at a steady 7.5 to 8 proxy px per 0.1 s: (917,283) at 288.5, (871,266) at 289.1, (848,258) at 289.4, (833,253) at 289.6. The rear-left wheel is at (840,253) at 290.0, (818,248) at 290.3 and (803,243) at 290.5. The car never slowed or stopped. The avenue was red (284.1 to 300.7 s), so the north crossing was in its pedestrian phase, and a right-turner from the cross street had to yield.\n\nPedestrians: a group stood in the road at the NE end of north_nb, between a white car that stops and moves around at the corner and the kerb block at x of about 930. Two women had been there since about 262 s, and more people joined them from 282 to 288. Their feet were inside the polygon, on the stripe ends: the man in black at about (884,242.5), the woman in jeans at about (907,243), the woman in a white top and dark skirt at about (918,247.5), and the woman in a patterned dress at about (915,246). The top edge there is at y 238 to 240. The white-top woman edged west into the crossing while the car passed: x 918 at 288.8, 913 at 289.3, 911 at 289.6, 907 at 289.9, 902 at 290.0 and 897 at 290.3. From 290.3 to 290.5 the whole group walked west along the zebra, through the spot the car had just crossed, and on across the NB carriageway (x of about 730 by 296 s).\n\nGeometry: the car's path over the zebra ran through x of about 800 to 880. That is lane 4 (east of the L3 dash, which meets the top edge at x of about 778), the same kerb-side lane the group stood at the end of. At about 290.0 the car's rear-right corner, at ground level around (877,252), was roughly 1.5 to 2 m from the white-top woman and the man in black. So the pedestrians were on the zebra, in the car's lane next to its path, and heading into it, while it drove across without yielding. This is the same pattern as the confirmed C3897 64.0 to 65.9 event (a group at the same NE end) and the confirmed C3897 91.6 to 95.0 event (a standing group about to enter the lane). Nobody braked, swerved or jumped back, so it is not a near_miss.\n\nBoundaries (wheel ground contact plus overhang, against the north_nb polygon, which matches the stripes on clear frames at 290.9 to 291.6): the leading front-right corner reaches the bottom edge at about 289.15 to 289.2, and the front-left wheel is on it at about 289.45. The rear-left wheel crosses the top edge at about 290.45. The rear bumper's lower edge is still 2 to 4 px inside at 290.5, at the edge at 290.6 to 290.7, and 6 px clear at 290.8. So the segment is 289.2 to 290.7, against the model's 289.6 to 290.9 (IoU about 0.65).\n\nThe sheets are in /Users/bayto/Desktop/claude/traffic-events/out/sheets/adj/: C3897_fp_25_1 to C3897_fp_25_11, plus _bg and _empty."
+  }
+ },
+ {
+  "clip": "C3897",
+  "kind": "fp",
+  "label": "failure_to_yield",
+  "start": 305.41,
+  "end": 317.52,
+  "actors": "vehicle box centre near proxy (844,238) at 309.0 s; person box centre near proxy (872,215) at 308.9 s; vehicle box centre near proxy (735,242) at 306.3 s; person box centre near proxy (781,225) at 306.3 s; vehicle box centre near proxy (722,246) at 307.9 s; person box centre near proxy (833,225) at 307.9 s",
+  "signal": "295.5-317.5 s red; 317.7-317.7 s yellow",
+  "id": "C3897_fp_26",
+  "verdict": {
+   "real_event": true,
+   "label": "failure_to_yield",
+   "start": 305.2,
+   "end": 309.8,
+   "category": "label_missed_it",
+   "cause": "The labels are missing turning vehicles from the right edge that cross the north_nb zebra while pedestrians walk along its north (far) edge during SB red. The model is also wrong about the extent: it joined two separate real episodes (305.2-309.8 and 313.2-317.8) across a gap of about 3.4 s in which no vehicle crossed the zebra near a pedestrian.",
+   "reason": "SB red from 295.5 s means the north crossing has its pedestrian phase. Vehicles coming in from the right edge turn up the NB carriageway and drive diagonally over north_nb.\n\nEpisode A matches every actor the model used. A girl in a white shirt and dark trousers walks east from the median nose toward the far kerb. At 304.4-306.8 her feet are on the upper tips of the stripes; the 6x zooms show this clearly.\n(1) A white sedan's front reaches the zebra's lower edge at about 305.2 s. It crosses up-left right into her path: at 305.4-305.6 its front is beside her feet, about 1 m away. She keeps walking behind it and does not change pace. Its rear clears the zebra's upper edge at about 306.9. This is the model's vehicle at (735,242) at 306.3 with the person at (781,225).\n(2) A dark Lacetti-type sedan (model's vehicle at (722,246) at 307.9) enters the zebra at about 307.1. At 307.4-307.6 its rear half passes directly beside her on the zebra, one lane from her. It is clear by about 308.2.\n(3) A dark K5-type sedan had stood from before 301.4 with its front on the east end of the zebra. It moves off at about 307.8, when she is right at its front bumper walking across its nose. She passes along its north side. At 309.4-309.7 she steps back onto the stripes right behind its rear. Its rear leaves the zebra at about 309.8. This is the model's vehicle at (844,238) at 309.0 with the person at (872,215).\nThe gap between (1) leaving and (2) entering is only about 0.2 s, so I read A as one merged segment, 305.2-309.8. If (2) is ruled out, A splits into 305.2-306.9 and 307.8-309.8.\n\nThere is no clear evasive action, so near_miss does not fit.\n\nEpisode B is a second real failure_to_yield, not covered by the actors above. A young man in a white T-shirt walks east along the same north edge of the stripes from about 310.2. From 309.8 to 313.2 the only vehicle to cross the zebra is a grey SUV at its far east end (about 310.0-311.6), two or three lanes from him, so it does not count.\nA dark SUV enters the zebra at about 313.2 and crosses directly in front of him at 313.6-313.8, within about 1 m. His forward progress stalls for about 0.2 s. It clears at about 314.8.\nA white Damas van, then a white sedan with boards on its roof (about 315.5-316.8, passing right in front of him), then a white Caddy van and a white pickup (the pickup's front is at him at 317.5) keep crossing next to him until the clip ends at 317.8. His feet stay at or within about a body width of the stripe tips, so B runs about 313.2-317.8 and should be labelled as its own segment.\n\nThe model's single 305.4-317.5 segment has an IoU of only about 0.37 with A, so it should be split into these two segments."
+  }
+ },
+ {
+  "clip": "C3897",
+  "kind": "fn",
+  "label": "jaywalking",
+  "start": 22.7,
+  "end": 24.8,
+  "actors": "",
+  "signal": "12.8-19.8 s red; 20.0-34.6 s green",
+  "id": "C3897_fn_27",
+  "verdict": {
+   "real_event": false,
+   "label": "jaywalking",
+   "start": 23.7,
+   "end": 24.8,
+   "category": "label_wrong",
+   "cause": "Labeller measured the man's torso against the stripe ends on the frame's bottom row. His feet are 60 to 70 px lower, below the frame, where the zebra edge keeps running down and to the right. He only moves more than a body width out after his feet have left the frame, and he is heading for the SW corner landing just below the frame.",
+   "reason": "Actor: the man in the dark brown t-shirt and black trousers, walking south down the right edge of the west zebra during the walk phase (avenue green from 20.0 s). I used 4x to 5x zooms with the scene.py west polygon and a pixel ruler drawn on (out/sheets/adj/C3897_fn_27_5.jpg, _6, _8, _10). The polygon's right edge sits on the painted stripe ends.\n\nWhile his feet can be seen, they are on the stripes or on the stripe ends. At 22.0 his feet are at (416,522) and (436,532), and the edge on that row is about x 444. At 22.4 they are at (432,534) and (442,538) against an edge of about 448. At 22.6 one foot is at (438,530), about 3 px inside, and the other leg runs past the frame bottom at about x 448, which is on the edge. From about 22.7 his feet are below y=540. After that only his torso and head show, drifting ESE (head (457,481) at 22.8, (479,492) at 23.2, (499,505) at 23.6, (524,515) at 24.0, (539,523) at 24.3). His head leaves the bottom edge at about (561,537) at 24.7 and is gone by 24.9.\n\nHe is about 70 px tall. I estimated his feet as head centre plus about 64 px and extended the stripe edge below the frame at a slope of about 0.9. That puts his feet 0 to 12 px outside at 22.8 to 23.4 and about 18 px outside at 23.6, where his shoulders are about 18 px wide. Only from about 23.7 to 24.8 is he roughly 26 to 50 px out, which is 1 to 2 body widths. Those numbers rest on estimated feet, an extrapolated edge, and a kerb we cannot see.\n\nFrom 26 to 30 s about ten other pedestrians come up from the bottom edge on the same line (head x about 470 to 535) and walk NW onto the zebra. That makes this look like the ordinary path to and from the SW corner landing just below the frame, so he may be on the kerb before he leaves the frame. The team already rejected the same move for this corner at C3897 25.5-28.6, 28.6-31.4 and 254-257.4.\n\nNo frame shows him on the carriageway more than a body width outside the stripes. At the labelled start of 22.7 his feet are on the stripe ends. No other pedestrian is on the carriageway during 22.7-24.8, and no vehicle comes near him, so no other class fits.\n\nIf a reviewer overrules this, the only segment the evidence could support is about 23.7 to 24.8. That is what the start and end fields hold, not 22.7 to 24.8."
+  }
+ },
+ {
+  "clip": "C3897",
+  "kind": "fn",
+  "label": "failure_to_yield",
+  "start": 64,
+  "end": 65.9,
+  "actors": "",
+  "signal": "54.1-55.7 s green; 55.9-58.7 s yellow; 58.9-75.9 s red",
+  "id": "C3897_fn_29",
+  "verdict": {
+   "real_event": true,
+   "label": "failure_to_yield",
+   "start": 64,
+   "end": 65.9,
+   "category": "missed_by_model",
+   "cause": "The lead pedestrian's feet were exactly on the top edge of the north_nb polygon (proxy y about 240 to 242, where the stripes end), and the car passed about 25 to 30 proxy px from her. So a strict point-in-polygon test for the pedestrian, a strict same-lane test, or both probably rejected the conflict. The group had also only just started walking (63.8 s) when the car's front entered the zebra, so their tracks probably still looked like people standing and waiting.",
+   "reason": "The signal was red for SB from 58.9 s, so the cross-street phase was running and pedestrians on the north crossing had right of way. A white modern sedan (Elantra-like, lit rear light bar) came through the junction box heading east below the median nose. It was at proxy about (760,290) at 62.0 s and about (800,290) at 63.5 s. It then turned left (north) into the NB carriageway and crossed north_nb at a steady speed without slowing. A group of about 5 pedestrians had waited at the NE end of the NB crossing on its top edge (proxy x 876 to 950, feet at y about 237 to 240). The woman in black leading them started walking west at 63.6 to 63.8 s. Her feet stayed on the upper ends of the stripes (y about 240 to 242), at x 870 at 64.0 s, about 858 at 64.6 s, about 852 at 64.8 s, about 848 at 65.2 s and about 838 at 65.8 s. That puts her on the zebra, within a body width of the stripes and moving along it. She was walking straight towards the car's lane. Entry: the car's silhouette top reaches the zebra's bottom edge (y about 260 at x 800) at 63.9 s and is 2 to 3 px inside at 64.0 s, which gives start 64.0. Closest pass: at 64.6 to 64.8 s the car's right side was at x about 825 to 830 while the woman was at x about 852 to 862. That is a gap of about 25 to 30 proxy px, about 1 m and well under a lane width (the NB carriageway is about 335 proxy px wide for about 4 lanes at this depth). So she was in the lane next to the car, heading into its path. Exit: the rear bumper is still about 2 px inside the top edge at 65.8 s, level with it at 65.9 s and clearly out (y about 244 against an edge at about 248) at 66.0 s, which gives end 65.9. The grey Chevrolet Cobalt-type sedan behind it stopped at the zebra's bottom edge from about 67 to 73.5 s and let the same group cross. That confirms the pedestrians had right of way and that the white sedan did not yield. The dev label's class and its 64.0 to 65.9 s boundaries both hold."
+  }
+ },
+ {
+  "clip": "C3897",
+  "kind": "fn",
+  "label": "failure_to_yield",
+  "start": 91.6,
+  "end": 95,
+  "actors": "",
+  "signal": "81.7-94.5 s red; 94.7-104.9 s green",
+  "id": "C3897_fn_30",
+  "verdict": {
+   "real_event": true,
+   "label": "failure_to_yield",
+   "start": 91.5,
+   "end": 95,
+   "category": "missed_by_model",
+   "cause": "The model probably skipped this because the pedestrians were standing still, on a red walk signal, at the gap between the two lower pink islands, next to the car's lane rather than inside it. The definition in labeling.md makes no exception for either of those.",
+   "reason": "What happens: a man in a white shirt has stood on the west zebra stripes in the gap between the two lower pink islands since about 58 s. From about 89-90 s, five more people who came down the zebra from the corner join him, feet at about proxy (240-345, 445-450), facing south towards the lane below. A white sedan comes up from under the bottom edge heading up-left, probably towards the west arm. It first shows at 91.4-91.5 at about proxy x 410-490 on the bottom edge, where the zebra's right edge is about x 443, so its front is already at or over the stripes. By 92.0 its front at x about 400 is clearly on the zebra. It then drives west across the lower part of the zebra, one lane in front of the group. From 93.4 to 94.6 its roof passes just below their feet. It does not stop. The rear bumper is at the SW edge of the stripes at 94.9 and off them at 95.0-95.1. Then the woman in the light-blue shirt steps forward (95.4-95.6) and the group crosses.\n\nThis meets the labeling.md definition. A vehicle drove across a zebra while pedestrians were on that zebra, right next to its path and about to walk into its lane. The far-half exception does not apply: they were at the edge of the lane, not beyond a lane divider, and headed into it.\n\nBorderline point: I checked the pedestrian head on the left corner pole. It shows red until about 94.6 s and walk from about 94.7-94.8 s. So the group was waiting on red while the car used the end of its own phase. They were not in its lane and nobody had to take evasive action, so it is not a near_miss. Under normal right-of-way rules this would not be a failure to yield. The dev definition has no signal exception, though, and the 'pedestrians still on it' example suggests signal state does not excuse the vehicle. So I count it as real, but a labeller who weighed the signal could fairly have left it out.\n\nBoundaries: start 91.5, the first frame where the car is visibly over the stripes (the zebra carries on below the frame, so the true entry may be a little earlier). End 95.0, when the rear leaves the stripes. The dev label of 91.6-95.0 is effectively correct. Sheets: out/sheets/adj/C3897_fn_30_1..9.jpg."
+  }
+ },
+ {
+  "clip": "C3897",
+  "kind": "fn",
+  "label": "jaywalking",
+  "start": 102.3,
+  "end": 105.1,
+  "actors": "",
+  "signal": "92.5-94.5 s red; 94.7-114.9 s green",
+  "id": "C3897_fn_31",
+  "verdict": {
+   "real_event": false,
+   "label": "jaywalking",
+   "start": 102.3,
+   "end": 105.1,
+   "category": "label_wrong",
+   "cause": "A pedestrian joining the west crossing from below the frame, just to the right of the stripe ends, was counted as walking beside the crossing. The verifier measured his torso at the frame bottom against the stripe edge at that same image row. His feet were really about 75 px lower, off-frame, where the stripe edge sits much further right.",
+   "reason": "The only candidate is a man in a white T-shirt with a black crossbody bag. A second man in a white shirt with a black backpack follows him. The man in the T-shirt comes in over the bottom edge at about 102.4 s: YOLO sees his head at proxy x about 539, y about 534. He walks up and to the left and joins the west crossing at its bottom end. From 102.4 to about 104.8 s only his head and torso are in the frame. His feet are below the bottom edge.\n\nHis full height here is about 78 proxy px (box y 444 to 522 at 106.2 to 106.3 s, when he is fully visible). So his feet were about 75 to 78 px below his head top, at y of about 560 to 610, off-frame.\n\nOn the background frame the painted stripe ends form a straight line from (372, 455) to (441, 529), a slope of about 0.93 px of x per px of y. The scene.py polygon matches it. Extending that line down to his feet gives these horizontal gaps outside the stripes:\n- 102.4 to 103.0 s: about 20 to 27 px\n- 103.3 s: about 18 px\n- 103.6 to 104.0 s: about 12 px\n- 104.3 to 104.8 s: about 5 to 7 px\n- about 105.0 to 105.1 s: at the edge or on the stripes (his lower leg reaches the edge at about (442, 532) at 105.1 s)\n\nA body width here is about 21 to 24 px, so at most he was about one body width out for the first half-second or so, and less than that after. Near-vertical lines in this view lean toward the image centre, which puts his feet a few px left of his head and shrinks these gaps further.\n\nThe rule needs a walker clearly more than about a body width outside the stripes. That is not met, and it cannot be seen in any case: his feet only come into view at about 105 s, already at the stripe edge. Where he stepped off the kerb, or whether he crossed the south arm, is off-frame and cannot be judged.\n\nThe verifier's feet at x 485 to 498, y 535 to 540 for 103.3 to 103.9 s are really his chest and hips at the frame bottom. His box top was at y 501 to 510 then. That is why they got 37 to 50 px.\n\nThe man with the backpack stays on the stripe line by the same extension. The group of four walking down the crossing (98 to 104 s) stays on the stripes. No other pedestrian is on the carriageway outside a crossing in 98.3 to 109.1 s. The only other off-crossing person detection, at 106.7 to 108.9 s, is moving far too fast for a pedestrian, about 120 px/s up the NB carriageway, so it is a rider.\n\nNo jaywalking event can be seen here, so drop the dev label. The start and end fields repeat the disputed dev segment, not a corrected one."
+  }
+ },
+ {
+  "clip": "C3897",
+  "kind": "fn",
+  "label": "jaywalking",
+  "start": 114,
+  "end": 119.9,
+  "actors": "",
+  "signal": "104.1-129.7 s green",
+  "id": "C3897_fn_32",
+  "verdict": {
+   "real_event": true,
+   "label": "jaywalking",
+   "start": 114.1,
+   "end": 119.9,
+   "category": "missed_by_model",
+   "cause": "It is a small corner cut. At its widest the man is only about 21-24 proxy px (1.5-1.8 body widths, under 1 m) from the painted stripes and the kerb. The model's off-crossing margin is 0.35 x box height. His track box (tid 2000722) is 57-63 px tall, which puts that margin at about 20 proxy px. The box-bottom foot point also sits about 4 px nearer the zebra than his real feet. So the strict jaywalking condition was never met for the required 1 s, and no segment was emitted.",
+   "reason": "I looked at sheets out/sheets/adj/C3897_fn_32_1..11.jpg, with gridded 6-8x crops of proxy (130-260, 270-410), and plotted his feet on cache/align/C3897_bg_ref.jpg. The man in the white T-shirt with the black crossbody strap walks NW up the west zebra beside a man with a backpack. Up to 114.0 s his feet are on the NE edge of the stripes, about 3-4 px past the bar ends (less than a body width), so he still counts as on the crossing. From about 114.1 s he turns north off the zebra onto the asphalt of the SB right-turn corner, between the top of the west zebra, the west end of the north_sb zebra and the corner kerb. My foot positions (proxy px) and distances to the stripe-end line: 114.5 s (232,381), 8 px; 115.0 s (224,376), 9 px; 115.5 s (216,369), 12 px; 116.0 s (210,363), 15 px. At 117.0 s (198,350) he is about 21-24 px from the west zebra, about 26 px from the north zebra and about 32 px from the kerb. At 118.0 s (190,342): about 18 px from the SW corner of the north zebra and 22-26 px from the kerb. At 118.5 s (184,339): about 16 px. At 119.0 s (182,334): about 12 px. At 119.4 s (179,327): about 9-10 px. A body width here is about 13-15 px. So from about 115.4 to 118.8 s he walks 1.2-1.8 body widths outside any zebra, on carriageway that right-turners use. That meets 'walking in the road next to a crossing (more than about a body width outside the stripes)'. From 119.5 to 119.9 s his feet are hidden behind his companion, but his path puts him at the corner kerb face, about (168-170, 322-325) just SW of the north_sb zebra's west end, at about 119.8-119.9 s. The track loses him at 119.6 s. Neither of the other two men counts. The companion with the backpack stays on the top stripes and then within about 5-10 px of the kerb. The man in the black T-shirt behind them (118.5-122 s) walks up the zebra's NE edge and then along the kerb, never more than a body width out. So the event belongs to the white-shirt man alone. It is real but marginal, and the dev label of 114.0-119.9 s matches it to within 0.1 s."
+  }
+ },
+ {
+  "clip": "C3897",
+  "kind": "fn",
+  "label": "failure_to_yield",
+  "start": 136.9,
+  "end": 139.1,
+  "actors": "",
+  "signal": "126.9-130.5 s green; 130.7-133.5 s yellow; 133.7-148.9 s red",
+  "id": "C3897_fn_34",
+  "verdict": {
+   "real_event": true,
+   "label": "failure_to_yield",
+   "start": 136.9,
+   "end": 139.1,
+   "category": "missed_by_model",
+   "cause": "The SUV (track 1000927) had been standing with its front on north_sb since about 131 s, so its on-zebra run is about 131 to 139 s. Median speed over that run is about 0.4 px/s, well below fty_min_speed (20 px/s), so the rule drops the whole crossing. Even in the moving part, the lead walker (track ~2001016) is about 270 ref px from the SUV's foot point at 138.5, beyond fty_near_px (160).",
+   "reason": "What the frames show (sheets out/sheets/adj/C3897_fn_34_1..8.jpg, with the north_sb polygon and the SB lane lines, fitted from the C3897 background, drawn on):\n\nThe vehicle is a white compact SUV in the middle SB lane (lane 2 of 5, between the 2nd and 3rd lane lines). It stands still with its front bumper and front wheels over the top stripes of north_sb from about 131 s, through the yellow and into red. The SB signal is red from 133.7 s, so this is the pedestrian phase. From about 135.9 to 136.4 s a group of five pedestrians steps onto the left (kerb) end of north_sb and walks east along the stripes. The lead walker wears a white top, black jacket and dark trousers.\n\nThe SUV starts rolling at 136.7 to 136.9 s. Subpixel template tracking gives shifts of 0.27 px at 136.7, 0.43 at 136.8, 0.82 at 136.9, 1.2 at 137.0 and 2.8 at 137.2. It then drives down across the zebra, bearing left towards the median nose, from lane 2 into lane 3.\n\nThe lead walker is on the stripes throughout (feet around proxy y 303 to 310, inside the polygon). He is in the kerb lane until about 138.1 s (proxy x 283). He crosses the first lane line into lane 1, the lane next to the SUV's lane, at about 138.3 s (x 297 at 138.4, 308 at 138.7, 320 at 139.0), still walking towards the SUV's lane. During 138.3 to 139.0 the SUV's rear half is still on the zebra in lane 2: near-side rear wheel at proxy (415, 300) at 138.7, with lane 2 spanning 372 to 461 at that y. The lateral gap is about 90 to 100 proxy px, about 3.4 m, so one lane. A vehicle driving across the zebra with a pedestrian on it in the adjacent lane and heading into its lane meets the definition. The exception for a pedestrian on the far half does not apply. No other class fits better. It is not red_light (the SUV crossed the stop line in the green-phase queue) and not stop_line (it went on into the junction).\n\nBoundaries: the front was already on the zebra while the SUV stood with no one crossing. So the crossing starts when it begins to drive through, 136.9 (136.8 is also defensible). End: the near-side rear bumper's ground point crosses the zebra's bottom edge at about 138.9. Because the car has turned strongly left, its far-side rear corner sits mostly to the right in the image, where the edge is higher, and it clears at about 139.0 to 139.1. The body stops hiding stripes in the image only at about 139.4 to 139.5, and that delay is height parallax, not the footprint. The dev label 136.9 to 139.1 stands.\n\nThis is a weak case. The SUV had been waiting on the zebra and pulled away from the pedestrians, never closer than about 3.4 m. It still matches the class definition as written."
+  }
+ },
+ {
+  "clip": "C3897",
+  "kind": "fn",
+  "label": "failure_to_yield",
+  "start": 177.1,
+  "end": 179,
+  "actors": "",
+  "signal": "167.2-169.6 s red; 169.8-189.0 s green",
+  "id": "C3897_fn_37",
+  "verdict": {
+   "real_event": true,
+   "label": "failure_to_yield",
+   "start": 177.1,
+   "end": 179.1,
+   "category": "missed_by_model",
+   "cause": "The SUV only clips the kerb end of the west zebra, right at its upper vertex (proxy ~171,355), and the pedestrian is next to its front corner rather than squarely in front of it. A zebra-overlap or path-intersection test is probably too strict at the polygon corner. The man is also partly hidden by the SUV's front at 177.2-177.7, which may have broken his track.",
+   "reason": "Sheets used: out/sheets/adj/C3897_fn_37_1.jpg to _4.jpg, with the west polygon from scene.py (ref/2) drawn on _3 and _4. A man in a navy shirt steps off the corner sidewalk onto the upper (kerb) end of the west zebra at about 176.3 s and walks down the stripes, staying inside the polygon the whole time. A black SUV comes from the SB kerb lane on green (the signal is green from 169.8 s, and the west-crossing walk phase runs with it) and turns right into the west arm without slowing. Its front bumper reaches the polygon's upper vertex at 177.1 s; at 177.0 s it is still just outside. From 177.2 to 177.7 s the man is on the stripes directly beside and just in front of the SUV's front corner, well under a car width away. The SUV then drives across the kerb end of the zebra, with stripes visible under and behind it at 178.6-178.9 s. Its rear crosses the polygon's left edge at about 179.1 s and is clear at 179.2 s. Throughout, the man is on the zebra next to the vehicle's path. Neither reacts: the man does not jump back and the SUV does not brake or swerve, so this is not a near_miss. Nothing touches, so it is not an accident. This matches failure_to_yield. Start is when the front enters the zebra (177.1 s). End is when the rear leaves it (179.1 s, where the dev label has 179.0 s; the difference does not matter)."
+  }
+ },
+ {
+  "clip": "C3897",
+  "kind": "fn",
+  "label": "failure_to_yield",
+  "start": 191.8,
+  "end": 194.2,
+  "actors": "",
+  "signal": "182.0-204.0 s green",
+  "id": "C3897_fn_38",
+  "verdict": {
+   "real_event": true,
+   "label": "failure_to_yield",
+   "start": 191.8,
+   "end": 194.2,
+   "category": "missed_by_model",
+   "cause": "The rider did not cut across the zebra. He rode lengthwise down it, on its right-hand stripes, with the bike straddling the polygon's upper-right edge for most of the run. He is also a small two-wheeler (person plus motorcycle), so the vehicle footprint and the crossing test probably never fired together (inferred, not checked in the pipeline). out/pred_3.json has no failure_to_yield near 180-205 s for C3897.",
+   "reason": "I checked this on contact sheets out/sheets/adj/C3897_fn_38_1..8.jpg, with the west crosswalk polygon from src/parivision/scene.py drawn at proxy scale on 6-8. The vehicle signal is green, which is also the walk phase for the west crossing.\n\nWho and where: a delivery rider (black jacket, green helmet, purple box, on a motor scooter) comes down the kerb-side SB lane. He crosses the SB stop line and the west end of the north crossing at 190.4-191.2, with nobody on that crossing; the two people there are standing on the corner sidewalk. He then rides into the gap between the corner and the centre pink island. At 191.8 his front wheel is on the polygon's upper-right edge, over the faded stripe ends at proxy about (236,392). By 191.9 it is inside. He does not cross the zebra. He rides down along its right-hand stripes towards the bottom edge.\n\nPedestrians: four are walking up the same zebra towards him on the walk phase. At 192.4-192.6 he rides between the two men in white shirts, and the right-hand man is within about half a metre of the bike. At 193.0-193.3 he passes a third man in a white shirt. At 193.5-193.8 he is next to the man with the shoulder bag.\n\nExit: the bike's lower part goes off the bottom of the frame at about 193.8-193.9, still on the edge line. The box and rear are on the line at 194.0-194.1 and fully to the right of it at 194.2. The rider is out of frame by about 194.5.\n\nClass: a vehicle on the zebra while pedestrians are on it directly in its path is failure_to_yield. Delivery riders count as vehicles per scene.md. It is not near_miss, because nobody takes evasive action: the rider holds a steady line and the pedestrians keep walking. It is not wrong_way either. The dev label of 191.8-194.2 matches the frames, so the boundaries stand. The start could be 191.8 or 191.9 depending on whether the faded stripe-end paint counts as part of the zebra."
+  }
+ },
+ {
+  "clip": "C3897",
+  "kind": "fn",
+  "label": "jaywalking",
+  "start": 253,
+  "end": 256.7,
+  "actors": "",
+  "signal": "243.0-244.8 s red; 245.0-266.7 s green",
+  "id": "C3897_fn_39",
+  "verdict": {
+   "real_event": true,
+   "label": "jaywalking",
+   "start": 253.2,
+   "end": 256.7,
+   "category": "missed_by_model",
+   "cause": "The man is track 2001918. From 253.4 to 255.3 his box is cut off at the bottom of the frame, so his foot point sits at ref y=1080. That row is outside the 1080-row walk_check mask, and ctx.sample returns 0 there, so every one of those samples is road=False even though he is about 100 ref px right of the zebra. The strict run only starts at 255.4, when his foot is at (980,1073) and cw=79. It is lost again from 255.9 to 256.1 once cw falls under 0.35 x height as he angles back toward the stripes. That leaves about 0.6 s of strict samples, under jay_min_dur of 1.0 s, so no evidence is produced. In short, the pedestrian comes in at the bottom edge of the frame and the foot point clamped to the edge counts as off the road.",
+   "reason": "The event is real. A man in a navy T-shirt with a grey shoulder bag walks north on plain asphalt to the right (east) of the west zebra. He goes around the group walking south on the stripes and then cuts back onto them.\n\nTimeline from sheets C3897_fn_39_2 to _6:\n- 253.0 to 253.2: the top of his head appears at the bottom edge at about ref (1034,1064). This is already clearly right of the stripe line. The rest of him is below the frame and he keeps walking straight up.\n- 254.8 to 255.2: his feet are visible at about ref (995,1076). The polygon or stripe edge at that height is at about x 896, so he is about 100 ref px out. His torso is about 40 to 48 ref px wide, so that is more than 2 body widths off the crossing.\n- 255.4 to 256.0: the track foot is at cw 79 down to 41 px, still more than a body width out.\n- 256.2 to 256.4: he angles up-left. He is about 1 body width out, then his leading foot reaches the stripe ends.\n- 256.6 to 256.7: both feet are at the stripe ends (track cw=0 at 256.7).\n- 256.8 to 257.2: he is on the stripes.\n\nThis is walking in the road next to a crossing, more than a body width outside the stripes, so it fits the jaywalking definition. No other class fits better. Nobody else in the window is off the zebra by a body width:\n- The two women in white and black walking south stay at the edge of the stripes.\n- The light-blue shirt man and the second navy man are on the stripes.\n- The teal scooter is a vehicle.\n\nEnd: 256.7, when he is back on the zebra. This matches the label.\n\nStart: he never visibly steps off the kerb or zebra. He comes into view already on the asphalt, so the start is his first appearance. I put it at 253.2, where his head is unambiguous at the bottom edge. A few hair pixels may show at 253.0, so the label's 253.0 is equally defensible.\n\nHis feet are only visible from about 254.8. Extrapolating the stripe edge (dx/dy about 1.08) below the frame puts him about 1 body width out at 253.4, and the gap grows as he walks straight up. So the early part rests on an estimate, but the core from 254.8 to 256.2 is plainly visible. The labelled segment 253.0 to 256.7 is essentially correct."
+  }
+ },
+ {
+  "clip": "C3897",
+  "kind": "fn",
+  "label": "jaywalking",
+  "start": 262,
+  "end": 268.8,
+  "actors": "",
+  "signal": "252.1-278.7 s green",
+  "id": "C3897_fn_40",
+  "verdict": {
+   "real_event": true,
+   "label": "jaywalking",
+   "start": 262,
+   "end": 268.8,
+   "category": "missed_by_model",
+   "cause": "The pedestrian is track 2002018. The west-arm asphalt below the bottom-left pink island (ref x < 600, y about 990 to 1080) is missing from the walk_check mask, even though right-turning cars drive through it (for example tracks 1000646 and 1001594). Because of that, road=False at almost every foot point. The only exception is 266.6 to 267.0, where the kerb distance is just 1 to 5 px against the 39 px margin. On top of that, before 263.6 his box is cut off by the bottom edge of the frame, so the 'whole' check fails.",
+   "reason": "I checked this on sheets out/sheets/adj/C3897_fn_40_1..7.jpg, zoomed crops with the scene.py west-crossing polygon drawn in. On clean frames the polygon lines up with the painted stripe ends.\n\nWhat happens: a man in a white short-sleeve T-shirt and khaki trousers comes up from the bottom edge just behind a man in a long-sleeve white shirt with a shoulder bag. The top of his head first shows at 261.7, at proxy (329,537). He does not follow the zebra. He heads west-north-west onto the west-arm asphalt: foot points at ref (576,1080) at 262.8, (429,1080) at 264.4, and (287,1058) at 265.8. From about 264.9, when his feet come into view, they are 100 or more proxy px left of the stripes, which is many body widths. He passes under the bottom-left pink island, roughly 25 to 60 proxy px below its kerb, and never steps onto it. At 267.6 his feet are at proxy (65,493), below the island tip at about (58,468). He leaves the frame at the left edge while still in the road. At 268.7 only his trailing leg is visible, at 268.8 there is a sliver of heel at x 0 to 2, and at 268.9 he is gone. Cars use this strip when turning right into the west arm, so it is carriageway. No vehicle comes near him, so near_miss and failure_to_yield do not apply. The green signal does not matter for this class.\n\nStart: his feet are below the frame until about 264.5, so the moment he steps off the stripes cannot be seen and has to be estimated. His height there is about 70 proxy px, and the zebra's left edge slopes at about 0.57. On that basis, at 261.7 to 261.9 his feet are around 9 to 11 px outside the edge (about half a body width). At 262.0 they are about 15 px out (about one body width), and by 262.3 to 262.5 about 27 to 34 px out (1.5 to 2 body widths). His heading moves him away from the edge at roughly 30 px/s. The straight-line fit puts his crossing of the stripe edge at about 261.5, but he is still hidden then. So 262.0 is the right start: the first frame where he is clearly identifiable and about one body width outside the stripes, and moving further out. End: 268.8, when he leaves the frame while still on the carriageway.\n\nOne more thing: the long-sleeve man walks about 1.5 to 2 body widths left of the zebra edge from about 263 to 266.5 and is back on the stripes by about 267.5 to 268. That falls entirely inside 262.0 to 268.8, so even if he counted, the merged segment would not change. The dev label 262.0 to 268.8 is correct."
+  }
+ },
+ {
+  "clip": "C3897",
+  "kind": "fn",
+  "label": "failure_to_yield",
+  "start": 305.3,
+  "end": 307.1,
+  "actors": "",
+  "signal": "295.5-316.9 s red",
+  "id": "C3897_fn_41",
+  "verdict": {
+   "real_event": true,
+   "label": "failure_to_yield",
+   "start": 305.2,
+   "end": 307,
+   "category": "missed_by_model",
+   "cause": "Likely a zone-edge problem: the pedestrian walks right on the top (north) edge of the north_nb polygon, with her feet at proxy y 242-249 against an edge at y 243-246. A strict inside-polygon test may put her just outside the zebra. The white sedan's body also hid her legs from 305.6 to 306.0, which probably broke the person detection or track exactly when the conflict happened. Also, the car passes behind her (through the spot she had just left), not in front of her, so a rule that needs the vehicle box to overlap the pedestrian's position would not fire.",
+   "reason": "Checked on zoomed crops with the north_nb polygon drawn in (out/sheets/adj/C3897_fn_41_1..8.jpg). The avenue signal is red (295.5-316.9 s), so the cross street has green and people on the north crossing are on their walk phase. A pedestrian in a white top and navy trousers, carrying a dark bag or jacket, walks east across the NB carriageway from the median-nose side. Her feet stay on the zebra's top stripe ends the whole way: about (676,253) at 303.1 s, (714,249) at 304.3 s, (748,245) at 305.4 s, (780,242) at 306.2 s, (790,243) at 306.6 s and (815,241) at 307.4 s. That is well within a body width of the stripes, so she is on the crossing.\n\nA white Nexia-type sedan (W2) comes in from the right edge at about 302.3 s. It is turning right from the east arm into the NB carriageway, heading NW, and it never slows. Its front reaches the zebra's south edge at about 305.2 s. At 305.3 the front-left bumper is at about (752,262) on the edge at y 263.6, and the far front corner is probably already over it. At that moment the pedestrian's feet are at about (750,245), on the north edge of the same lane, right in the car's line of travel. The car drives diagonally over the zebra through the spot she has just walked over, and hides her legs from 305.6 to 306.0. At 306.2 its rear-right corner is roughly 1 to 1.5 m south of her feet. The rear bumper leaves the zebra's north edge at about 306.9-307.0 (the bumper bottom at (716,244) is past the edge at y 246 at 307.0). Neither of them takes visible evasive action, so this is not a near_miss. It is a vehicle crossing a zebra with a pedestrian on it in its own lane, which is failure_to_yield.\n\nThe dev boundaries (305.3-307.1) agree with mine to within 0.1 s. The verifier's note is right that the event is real. Its complaint that the start is 1.3 s early applies to an older 304.0 start, not to 305.3.\n\nSide notes, not needed for this item:\n(1) The black sedan standing on the right end of the zebra (x 860-950) from before 301.3 to about 307.8 does not move off until she has cleared the zebra, so it does not count within this window.\n(2) A second dark sedan (K2), also from the right edge, is a possible separate event that is not in the dev labels. Its front enters the zebra at about 307.2 and its rear leaves at about 308.4. It crosses while the same pedestrian is still on the top edge at x 808-836, roughly 2 m from its rear-right corner, until she steps north off the zebra at about 308.0. That is a weaker but plausible second failure_to_yield right next to this one, and it is worth a separate look."
+  }
+ },
+ {
+  "clip": "C3897",
+  "kind": "fn",
+  "label": "failure_to_yield",
+  "start": 310.7,
+  "end": 312.4,
+  "actors": "",
+  "signal": "300.7-317.5 s red; 317.7-317.7 s yellow",
+  "id": "C3897_fn_42",
+  "verdict": {
+   "category": "label_wrong",
+   "real_event": false,
+   "label": "failure_to_yield",
+   "start": 310.6,
+   "end": 312.4,
+   "cause": "The labeller counted a pedestrian at the median end of the NB zebra as being in the path of a right-turner crossing the far east end. He was in lanes 1 and 2, the SUV was in lane 4, and lane 3 stayed empty between them for the whole crossing.",
+   "reason": "Checked on 3-4x crops at 0.1-0.5 s steps from 306.6 to 316.4 with the north_nb polygon and the NB lane lines drawn over them. L1, L2 and L3 were confirmed from dash blobs on cache/align/C3897_bg_ref.jpg (y 238, 218 and 196 at x 632, slope 0.33). They meet the zebra's top edge at about x 665, 720 and 780. Track data (2002301, 1002348, 2002311) was cross-checked. Sheets: out/sheets/adj/C3897_fn_42_1..13.jpg.\n\nThe vehicle is the grey SUV (1002348), a right-turner from the east arm into NB while the avenue is red. From 309.5 to 310.4 it creeps south of the zebra. During that time the dark-trousered man (2002311) walks east along the zebra's top edge, from (890,243) at 309.4 to (924,239) at 310.4, and is at the stripe end or kerb at x about 928-933 by 310.5-310.6. So the SUV let him clear. Its front bumper reaches the bottom edge at about 310.6 (860,255) and it crosses heading WNW in lane 4, east of L3. At 311.2 its front-left wheel is at (832,250), about half a lane past L3. Its rear bumper leaves the top edge at about 312.3-312.4, near x 822-840.\n\nThe man in the white shirt (2002301) walks east on the top edge of the zebra, with his feet on the stripe ends. He is at x 658 at 310.6, still in lane 1. He crosses L1 at about 311.2 and is at x 716 at 312.4, still in lane 2, a few px short of L2. He crosses L2 into lane 3 only at about 312.7, after the SUV had cleared. He enters lane 4 at about 313.9, when he also steps off the zebra to the north. While the SUV was on the zebra he was never in its lane or in the lane next to it. All of lane 3 and part of lane 2 separated them, about 1.5 to 2.5 lanes, several metres on the ground. He kept a steady pace of about 32 px/s and did not slow, stop or swerve. The SUV did not brake or swerve either.\n\nlabeling.md requires a pedestrian in the vehicle's path or the lane next to it. That is not met. The accepted precedents all had the pedestrian in the adjacent lane. His walking east does not change this, because he reached the SUV's neighbouring lane only after it had left. Nobody else was on the NB zebra during 310.6-312.4. No other class fits: there is no evasive action for near_miss, and the turn is legal on the cross-street phase.\n\nThe closer passes come later: the black SUV 1002343 on the zebra at about 313.0-314.6, and the white van 1002370. They belong to the separate 313.4-315.1 segment, not this one. If a reviewer keeps this segment anyway, the measured front-in to rear-out is 310.6 to 312.4."
+  }
+ },
+ {
+  "clip": "C3897",
+  "kind": "fn",
+  "label": "failure_to_yield",
+  "start": 313.4,
+  "end": 315.1,
+  "actors": "",
+  "signal": "303.5-317.5 s red; 317.7-317.7 s yellow",
+  "id": "C3897_fn_43",
+  "verdict": {
+   "real_event": true,
+   "label": "failure_to_yield",
+   "start": 313.4,
+   "end": 315.1,
+   "category": "missed_by_model",
+   "cause": "The pedestrian walks right on the north edge of the north_nb zebra, so his foot point was only 3-4 ref px inside the polygon. When the SUV came between him and the camera it hid his legs, and from about 313.7 to 314.6 his box bottom (the track foot, e.g. 1528,467 and 1539,454) jumped north of the polygon. That is exactly the time the SUV's box foot was inside the zebra (about 313.8 to 314.6), so pedestrian-on-zebra and vehicle-on-zebra never overlapped. The vehicle is also an unusual actor for this class here: a right-turner from the east arm, not a west-crossing right-turner.",
+   "reason": "The event is real, and I checked it on the 10 fps proxy and on the 4K original (kit/samples/C3897.MP4) with the north_nb polygon drawn on. The polygon matches the painted stripe ends.\n\n**Pedestrian.** A man in a white shirt walks east from the median nose across the NB carriageway along the north edge of the NB zebra (track 2002301). His feet are on the top ends of the stripes throughout:\n- about proxy y 249-253 while he is at x 653-719 (310.4-312.5)\n- proxy (741,246), (746,245) and (753,244) at 313.0, 313.4 and 313.6, where the top edge is at y about 245\n\nThat puts him on the crossing, well within a body width of the stripes, so this is not jaywalking.\n\n**Vehicle.** A black SUV (track 1002343) turns right from the east arm into the NB carriageway, heading WNW across the zebra, with the white van (1002370) alongside it on the south side.\n- In 4K its bumper bottom touches the south edge at about 313.2. Its ground point and front-left wheel reach the edge at about 313.4 to 313.5. At that moment the man is standing about 20 proxy px west of the SUV's front at the north edge, straight ahead of its path.\n- It keeps a steady speed of about 50 proxy px/s and neither brakes nor stops.\n- It passes within about a metre in front of him between 313.7 and 314.2. He slows and takes a small step north (feet at 243.5 at 313.6, 239.5 at 313.7), then carries on east just outside the stripes.\n- The front-left wheel reaches the north edge at about 314.5. The rear-left wheel and the ground point under the tail light reach it at about 314.9 to 315.0, so the rear is clear at about 315.0 to 315.1.\n\nThe dev segment 313.4-315.1 is therefore correct.\n\n**Ruled out:**\n- The grey SUV that crossed from 310.8 to 312.4 was 150+ proxy px east of him and clear about 3 s before he got there, so it does not count, and the start should not move earlier.\n- The white van enters the zebra at about 313.8 and leaves at about 316.5. It is borderline at most: the black SUV was between it and him, and by the time the van reached his side he was 5-8 px north of the stripes and walking away east. I would not extend the end for it.\n- The white sedan at 316.0 crossed after he had left the zebra."
+  }
+ },
+ {
+  "clip": "C3897",
+  "kind": "fn",
+  "label": "failure_to_yield",
+  "start": 316.7,
+  "end": 317.6,
+  "actors": "",
+  "signal": "306.7-317.5 s red; 317.7-317.7 s yellow",
+  "id": "C3897_fn_44",
+  "verdict": {
+   "real_event": true,
+   "label": "failure_to_yield",
+   "start": 316.7,
+   "end": 317.6,
+   "category": "missed_by_model",
+   "cause": "The model did see this pass but merged it with the earlier one into a single long segment. pred_all has 313.31-317.52 (pred_dev 313.61-317.42, pred_3 305.41-317.52). That segment covers the 313.4-315.1 event and this one, and it bridges the 315.1-316.7 gap, when no vehicle is on the west zebra. So no separate segment matches 316.7-317.6: the IoU with the merged segment is only about 0.19.",
+   "reason": "The overlay sheets (out/sheets/adj/C3897_fn_44_3.jpg to _6.jpg) have the west crossing polygon and the islands from scene.py drawn at proxy scale. A black SUV comes in from the right edge at about 316.4. It drives west along the carriageway south of the bottom-left pink triangle and the bottom-centre pink block, about 35-40 proxy px per 0.1 s, and never slows. It crosses the lower part of the west zebra. Entry: at 316.6 its front bumper is at x~469, well east of the zebra. At 316.7 the bottom of the front bumper touches the painted east edge at about (429, 514). Exit: at 317.5 the rear is at x~315 and still covers stripes, with the west edge at about 275-290 for y 504-525. At 317.6 the rear is at x~272 and a sliver of grey asphalt shows between it and the stripes. So the segment runs 316.7-317.6, which matches the dev label and the verifier's note. Pedestrians: a group of four is on the same zebra: a man in a dark green top with a bag, a woman in an orange top, a person in white and a man in maroon, with a man in black a little further up. They have been walking steadily down the zebra from between the islands toward the bottom edge since before 312.7. That means they are heading straight into the SUV's lane, at about 18 proxy px/s. While the SUV passes (317.0-317.6), the green-top man's feet are at about (272-281, 470-482) and the orange woman's at about (306, 470). That is level with or just south of the islands' southern tips, so they are on the carriageway part of the zebra. The SUV's near-side wheels are at y~535, which puts its far side only about 1 m ahead of them. They are not on a far half beyond a lane divider: they are in or next to the SUV's path and walking into it, so the labeling.md definition is met. There is no visible evasive action, since the pedestrians keep their slow pace and the SUV neither brakes nor swerves, so this is not a near_miss. Caveat: SB is red here (306.7-317.5), so cross traffic has green and the west-crossing walk head is presumably red; the pedestrians are probably crossing against their signal. The labeling.md definition has no signal exemption, and the neighbouring dev-set failure_to_yield events at 305-315 s follow the same pattern, so it stays a failure_to_yield."
+  }
+ },
+ {
+  "clip": "C3905",
+  "kind": "fp",
+  "label": "failure_to_yield",
+  "start": 13.41,
+  "end": 17.32,
+  "actors": "vehicle box centre near proxy (750,251) at 15.4 s; person box centre near proxy (706,227) at 15.4 s; vehicle box centre near proxy (660,251) at 15.0 s; person box centre near proxy (698,227) at 15.0 s",
+  "signal": "3.6-27.2 s red",
+  "id": "C3905_fp_45",
+  "verdict": {
+   "real_event": true,
+   "label": "failure_to_yield",
+   "start": 14.5,
+   "end": 15.6,
+   "category": "boundary_only",
+   "cause": "Two vehicles got chained into one segment. The real event is the white Lacetti crossing north_nb (14.5 to 15.6). The model starts 1.1 s early and then adds the white Matiz pulling away from the crossing (about 15.3 to 17.3), which is not a failure to yield. The Matiz had waited about 14 s, and by the time it moved the pedestrian had reached its right front corner and was 1 to 2 m north of the painted stripes.",
+   "reason": "The real event is already in the dev labels as failure_to_yield 14.5-15.6. It overlaps the model's 13.4-17.3 by IoU 0.28, which is why that label did not match.\n\nI checked 4K frames from kit/samples/C3905.MP4 at 0.1 to 0.2 s steps with the north_nb polygon projected through cache/align/C3905.npz. Its top edge runs from proxy (602,253) to (949,232), and the painted stripe ends sit on or just below that line. I also drew the NB lane lines u = y - 0.33(x-600): 246 is the median edge, 227 divides lanes 1 and 2, and 206 divides lanes 2 and 3. Sheets are in out/sheets/adj/C3905_fp_45_1..10.jpg.\n\nThe pedestrian (teal top, white trousers, track 2000153) leaves the median nose at about 12.2 s and walks east along the zebra's north edge during the avenue red. Feet are on the stripe ends at 13.0-13.4 s near (654-665,251), then drift a little north: about (679,247) at 14.2 and (700,244) at 15.0.\n\nThe white Lacetti (track 1000174) comes from the east arm and turns into NB lane 1, the lane next to the median, passing just north of the nose kerb. At 13.4 s its box is at (781-863,272-325), still well south-east of the zebra. Its front ground point reaches the zebra's south edge at about 14.5 s near (662-684,270). Its rear clears the north edge at about 15.6 s near (597-612,248-253).\n\nWhile it crosses, the pedestrian is in lane 2 (u about 221 falling to 210), right next to the car's lane. She is on or within about a body width of the stripe ends and walking away from the car. From 14.6 to 14.9 s the car's roof hides her legs. She is not on the far half. That meets the definition: a pedestrian on the zebra in the lane next to the vehicle's path. There is no braking, swerve or jump back, so it is not a near_miss.\n\nThe later part of the model's segment does not qualify. The white Matiz (track 1000005) had been standing on north_nb in lane 2 at (736-789,233-277) since about 1.5 s, and its brake lamp was lit at 12.4 s. It hardly moves before about 15.3 s. When it does pull away, the pedestrian is already at the lane 2/3 divider, about 1.7 m ahead of its bumper at its right front corner, and still moving east out of its path. Her feet are then about 6 to 9 px, roughly 1 to 2 m, north of the stripe ends: (702-715,241-244) at 15.5 s and (738,237) at 16.6 s. The Matiz passes her with about 1 to 2.4 m of sideways gap. So nobody was on the zebra in its path, and its crossing (rear off at about 17.2 s) is not a failure to yield. The courier walking the Yandex e-bike was about a lane further east (u about 183) and was never in its path. The woman in black at the west tip had stepped onto the median nose by about 14.2 s, before the Lacetti reached her side.\n\nThe correct segment stays 14.5-15.6. The dev label is right and the prediction's boundaries are too wide."
+  }
+ },
+ {
+  "clip": "C3905",
+  "kind": "fp",
+  "label": "failure_to_yield",
+  "start": 36.74,
+  "end": 40.54,
+  "actors": "vehicle box centre near proxy (319,277) at 37.3 s; person box centre near proxy (262,292) at 37.3 s; vehicle box centre near proxy (412,476) at 39.5 s; person box centre near proxy (393,522) at 39.5 s; person box centre near proxy (356,520) at 39.5 s; person box centre near proxy (368,516) at 39.5 s",
+  "signal": "26.8-31.4 s red; 31.6-34.4 s yellow; 34.6-50.5 s green",
+  "id": "C3905_fp_46",
+  "verdict": {
+   "real_event": true,
+   "label": "failure_to_yield",
+   "start": 37,
+   "end": 38.1,
+   "category": "boundary_only",
+   "cause": "The model joined two things into one segment. The first is a real failure_to_yield, the white Kia-type SUV crossing north_sb at 37.0-38.1 s, which the dev labels already have as 37.0-38.0. The second is not an event: a white Cobalt crossing the lower west zebra at about 38.8-40.5 s, behind three pedestrians who had already crossed its lane while it waited for them. Joining them pushed the end from about 38.1 s to 40.5 s, so the temporal IoU with the 37.0-38.0 label is only about 0.26.",
+   "reason": "I checked 32.7-44.5 s on the proxy, at 0.1-0.4 s steps, with 2.4-4x crops and a proxy-pixel grid. Sheets are out/sheets/adj/C3905_fp_46_1..12.jpg.\n\n(1) North crossing, SB half. Actors: the vehicle at (319,277) and the person at (262,292) at 37.3 s. This part is real. A man in a light-blue shirt walks west along the painted north_sb stripes after the SB green starts (34.6 s). His feet are at about (274,312) at 37.0 s and (230,315) at 38.0 s. He reaches the left kerb at about (160,330) at 39.6-39.8 s. The white Kia-type SUV in SB lane 2 pulls away from the stop line and never stops. At 36.6-36.8 s the man walks right in front of its nose. Its front bumper is on the upper paint edge (about y 289-292 near x 315-330) at 37.0-37.1 s. He is then on the stripes about 1-1.5 m ahead-left of its front-left corner, in the next lane. The visible rear corner clears the lower paint edge (about y 315 near x 345-350) at 38.0-38.1 s. The rear-left corner is hidden behind the black car next to it. Nobody braked or swerved. This matches the dev label 37.0-38.0. The black car two lanes to the right crosses while the man is well to its left, so it does not count. The white Nexia in lane 1 crept onto the zebra at about 39.8-40.0 s, only as the man stepped onto the kerb, so it yielded.\n\n(2) Lower west zebra. Actors: the vehicle at (412,476) and the persons at (356-393, 516-522) at 39.5 s. This part is not a failure_to_yield. A white Cobalt comes in from the east. It slows to a crawl from about 35.7 to 38.8 s, with its headlight moving from about x 451 to x 420, at the east edge of the zebra. It waits there while the group of three (white shirt, blue shirt, white cap) walks down the zebra through its lane. The walk phase is on, since it runs with the avenue green. The Cobalt's front touches the stripe ends (about x 397-400, y 490-495) at about 38.8 s. Its rear clears the west edge (about x 300, y 530) at about 40.5-40.6 s. By 38.8 s the group's feet are at or below the frame's bottom edge, at about y 545-550 (heads at y 481-486, people about 62 px tall). The car's near-side wheels are at y 512 at x 409 and y 524 at x 316, which is the kerb-side lane south of the islands. So as the Cobalt passed them, the pedestrians were about 25-50 px, roughly 1.5-3 m (stripes about 8.5 px each here), south of its near side, walking away out of the frame. They were not in its path, and there is no lane south of it for them to be in. The man pushing a bicycle stood still in the gap between the islands, feet at about (322,461), from about 36.7 to 40.2 s. That gap works as a refuge, not a lane. The empty island-side lane lay between him and the car, and he stepped off only after it passed. Nobody took evasive action. This matches earlier rejections of cars passing this zebra behind pedestrians who had already cleared their lane.\n\nSo the window does contain a real failure_to_yield, but its correct boundaries are 37.0-38.1. The model's 38.1-40.5 s tail is a non-event."
+  }
+ },
+ {
+  "clip": "C3905",
+  "kind": "fp",
+  "label": "failure_to_yield",
+  "start": 68.77,
+  "end": 69.47,
+  "actors": "vehicle box centre near proxy (823,233) at 69.2 s; person box centre near proxy (920,226) at 69.2 s",
+  "signal": "58.9-72.3 s green; 72.5-75.3 s yellow; 75.5-79.3 s red",
+  "id": "C3905_fp_47",
+  "verdict": {
+   "real_event": false,
+   "label": "failure_to_yield",
+   "start": 68.8,
+   "end": 69.5,
+   "category": "false_detection",
+   "cause": "Two pedestrians standing still at the kerb end of the north_nb zebra were counted as being on the crossing. They were waiting for their walk phase while a northbound car had green and passed them in the kerb lane.",
+   "reason": "The vehicle is a white sedan driving northbound. At 68.3 to 69.5 s it goes up the rightmost NB lane and over the east end of the north_nb crossing, and at 69.2 s it is centred near proxy (810-825, 230). The person actor is one of two men, one in a black T-shirt and one in a blue jacket, standing near proxy (905-927, 200-245). They are at the kerb corner beside the pole and planter, at the very end of the zebra stripes. The zoomed sheets (C3905_fp_47_3/_4, 64.8 to 73.2 s) show both men standing in exactly the same place for the whole window. They do not step forward, step onto the stripes or react to the car. The sheet from 73.5 to 81.5 s (_5) shows them still waiting through the vehicle yellow and the start of the vehicle red at 75.5 s. They only walk onto the zebra at about 79.5 to 80.5 s. In the model's window the NB approach, which runs in the same phase as SB, was green (58.9 to 72.3 s). So the car had right of way, and no pedestrian was on the zebra or stepping onto it. Pedestrians waiting at the kerb do not meet the definition, so this is not a failure_to_yield, and no other class applies. There was no evasive action, so it is not a near_miss either. Outside this segment: at about 80.5 to 81.5 s a white car passes close to these same men while they are on the NB crossing. That may deserve its own check, but it is not this prediction."
+  }
+ },
+ {
+  "clip": "C3905",
+  "kind": "fp",
+  "label": "failure_to_yield",
+  "start": 77.78,
+  "end": 78.58,
+  "actors": "vehicle box centre near proxy (835,235) at 78.2 s; person box centre near proxy (916,226) at 78.2 s",
+  "signal": "67.9-72.3 s green; 72.5-75.3 s yellow; 75.5-88.5 s red",
+  "id": "C3905_fp_48",
+  "verdict": {
+   "real_event": false,
+   "label": "failure_to_yield",
+   "start": 0,
+   "end": 0,
+   "category": "false_detection",
+   "cause": "Two pedestrians standing still at the kerb, at the right-hand end of the north_nb zebra, were counted as being on the zebra. The mapped north_nb polygon runs to proxy x of about 950-960, so it takes in the kerb corner where people wait, and the person box centre (916,226) falls inside it. A pair of dark cars turned into the NB carriageway about 1.5-2 m to their left while they waited.",
+   "reason": "I checked proxy crops at 0.2-0.4 s steps from 76.2 to 90 s, drew the north_nb polygon mapped through the C3905 homography, and pulled full-resolution 4K crops of the zebra's kerb end at 5.0, 40.0, 77.5 and 78.2 s. Frames at 5 and 40 s show where the stripes stop and the sidewalk paving starts.\n\nWhat happens at 77.0-79.0 s: SB is red, and cross-street traffic is turning into the NB carriageway, driving right to left across the north_nb zebra. A white sedan crosses at about 77.0-77.4 s. Then two dark cars cross together at about 77.6-78.6 s: a black sedan and a dark-grey sedan behind it. The black sedan is the model's vehicle at (835,235) at 78.2 s.\n\nThe model's person at (916,226) is a man in a blue jacket and white T-shirt, talking on his phone. Next to him is a man in a black T-shirt and black shorts. Both stand still on the kerb line at the far right end of the zebra, feet at the edge of the last stripe, the same place a man waits on the sidewalk at 40 s. Neither moves toward the road at any point from 77.0 to 79.4 s. Their feet stay in the same place in every frame, and nobody else is on any part of the NB zebra during this window.\n\nlabeling.md needs a pedestrian on the zebra or stepping onto it, in the vehicle's path or the next lane. People waiting at the kerb do not count, so this is not failure_to_yield. It is not a near_miss either: nobody brakes, swerves or jumps back.\n\nThe men only step onto the zebra at about 80.5-81 s. The white car that then drives through the people crossing is already in the dev labels as failure_to_yield 80.4-83.5, which does not overlap this prediction. The 77.8-78.6 prediction should be rejected. It would also help to pull the right end of the north_nb polygon back to the kerb line, or to require the person to be moving onto the zebra."
+  }
+ },
+ {
+  "clip": "C3905",
+  "kind": "fp",
+  "label": "failure_to_yield",
+  "start": 98.4,
+  "end": 103,
+  "actors": "vehicle box centre near proxy (744,239) at 99.6 s; person box centre near proxy (827,231) at 99.6 s; person box centre near proxy (814,227) at 99.6 s; vehicle box centre near proxy (803,239) at 102.1 s; person box centre near proxy (892,224) at 102.1 s; person box centre near proxy (881,221) at 102.1 s",
+  "signal": "88.5-111.3 s red; 111.5-112.9 s yellow",
+  "id": "C3905_fp_49",
+  "verdict": {
+   "real_event": false,
+   "label": "failure_to_yield",
+   "start": 98.4,
+   "end": 102.9,
+   "category": "false_detection",
+   "cause": "The vehicle bodies overlap the walking pair in the image because of their height and the camera perspective. On the ground, the truck and then the black sedan each waited at the south edge while the pair crossed in front of them. Each one drove over north_nb only when the pair was about 1.5 to 3 m past its right side and walking away east.",
+   "reason": "I checked 84 to 107 s with 3.2x to 6x crops at 0.2 to 0.4 s steps, with north_nb warped in through the C3905 homography. The polygon matches the painted stripes in a median background of the clip. I also drew the NB lane lines at u = y - 0.33(x-600): 227, 206 and 184, with the planter kerb at about 147. The dashes are visible in the background. The yolo26m detection cache matches the frames. The sheets are out/sheets/adj/C3905_fp_49_*.jpg.\n\nThe actors are the white-cap man and the dark-shirt man, walking east along north_nb from the median nose. The first vehicle is the small covered truck, a U-turner that came round the nose at 85 to 88 s. It stood from about 88.4 to 98.2 with its rear at y about 282. Its front was about 1 m short of the south edge (edge at about 262 at x 770), so it waited behind the stripes. Between 97.4 and 98.2 the pair walked across in front of it; their heads show above its roof.\n\nThe truck starts rolling at about 98.4. Its front reaches the south edge at about 98.7, and it turns WNW in lanes 1 and 2 (right side at u about 207 to 214). Its rear clears the north edge at about 100.6. During that time the pair was at u 181 to 189 (98.6 to 99.0) and then 173 (99.8). That is more than a lane east of the truck, walking away. The people near the nose (x 590 to 660) were walking west, back to the median. Nobody was on the stripes in lanes 1 to 3.\n\nThe black sedan is an east-arm right-turner in the kerb lane, with its left wheels at u 180 to 183. It waited with its nose at the south edge from about 97.5. From 99.0 to 100.4 it crept only about 0.6 m (box front x 839 to 827) while the pair crossed in front of it (u 186 to 173). It pulls away at about 100.6. By then the pair was at u 154 to 161, about 1.5 to 3 m east of its right side, still walking east. Its rear clears the north edge at about 102.9. From 101.4 to 102.4 the pair was at u 146 to 153 on the east end, and the gap kept growing. Nobody stopped, flinched or jumped back.\n\nThe white hatchback crossed in lane 3 from about 100.7 to 102.5, two lanes from the pair, with the sedan in between. After 103 s the next right-turner only creeps. The pair leaves the east end at about 104 to 105.\n\nEach vehicle yielded and then went behind pedestrians who had cleared its path and were heading away. That matches the guide's exclusion for someone beyond a lane divider and not heading into the vehicle's lane. Earlier rejections of the same pattern on this crossing were C3896 95.7-97.6, C3902 106-111.6, C3902 22.1-24.2 and C3905 26.0-26.9. No other class fits: there was no evasive action, and the turns are the normal cross-street phase. The start and end given here are only the vehicle movement window, not a real event."
+  }
+ },
+ {
+  "clip": "C3905",
+  "kind": "fp",
+  "label": "failure_to_yield",
+  "start": 118.62,
+  "end": 121.42,
+  "actors": "vehicle box centre near proxy (290,255) at 120.0 s; person box centre near proxy (163,302) at 120.0 s",
+  "signal": "108.7-111.3 s red; 111.5-114.3 s yellow; 114.5-127.5 s green",
+  "id": "C3905_fp_50",
+  "verdict": {
+   "real_event": false,
+   "label": "failure_to_yield",
+   "start": 119,
+   "end": 122.5,
+   "category": "false_detection",
+   "cause": "The pedestrian was walking off the kerb end of the zebra in the next lane, about one lane width from the bus and heading away from it, and the model counted him as in the bus's path. The person box it used at 120.0 s is him already stepping onto the corner kerb.",
+   "reason": "Checked 106-125.4 s with crops at 2-3x and 0.2-0.5 s steps (out/sheets/adj/C3905_fp_50_1..6.jpg). I also mapped the ref zebra and the SB lane lines through the C3905 homography (C3905_fp_50_lanes.jpg) and read the YOLO boxes.\n\nThe vehicle is the green route-18 bus heading SB on green (the green starts at 114.5). It is in lane 2 from the west kerb: its right-side wheels and its front-right corner sit 13-23 proxy px east of the lane 1/2 line where that line is extended. Its front reaches the north_sb zebra at about 119.0. At 118.6 the front is still about 15 px short of it. The rear clears at about 122.4-122.6. It goes straight on at a steady speed, with no braking or swerve.\n\nThe only pedestrian on that zebra is a man in a light shirt. From about 114.6 he jaywalks west from the median side, weaving between the queued cars and the white van, north of the zebra. His feet reach the zebra's top edge at about 116.6-117.0, near ref x 610-660. That is lane 2, but the bus front is still about 65 ref px (5-6 m) back near the stop line at that moment. So he clears the bus's lane before the bus gets to the crossing.\n\nHe then walks west along the zebra through lane 1. His feet are at clip (415,642), ref about (414,619), at 119.0 and at ref about (377,623) at 119.4. He steps onto the corner kerb by the bollards at about 119.7-119.8, and at 120.2 he is at ref (313,628), off the zebra.\n\nSo when the bus front enters the zebra, he is on the kerb side of lane 1, about a lane width (~90 proxy px along the zebra) past the lane 1/2 divider and about 4 m from the bus's right side. He is walking away from the bus and is 0.7 s from the kerb. labeling.md excludes exactly this: a pedestrian well beyond a lane divider who is not heading into the vehicle's lane. The model's person at (163,302) at 120.0 is him already at or on the kerb.\n\nNo other pedestrian is on the north_sb zebra from 118.6 to 122.6. One person stands on the raised median by the nose pole, off the crossing. The white van that stood on the zebra through the red pulled away at about 117-118 in lane 3, with the man already west of it and walking away, so it does not qualify either.\n\nStart and end here are only the bus's zebra occupancy, for reference: there is no event.\n\nSide note: his jaywalking north of the zebra lasts until about 116.8-117.0, slightly past the end of the dev label jaywalking 91.3-116.0."
+  }
+ },
+ {
+  "clip": "C3905",
+  "kind": "fn",
+  "label": "failure_to_yield",
+  "start": 14.5,
+  "end": 15.6,
+  "actors": "",
+  "signal": "4.6-25.4 s red",
+  "id": "C3905_fn_51",
+  "verdict": {
+   "real_event": true,
+   "label": "failure_to_yield",
+   "start": 14.5,
+   "end": 15.6,
+   "category": "boundary_only",
+   "cause": "The model did detect this event but made the segment far too long: failure_to_yield 12.51-17.22 in pred_dev/pred_c3905 (13.41-17.32 in pred_all). That gives IoU 0.23 (0.28 for pred_all) against 14.5-15.6, which is below the 0.3 threshold. The segment most likely runs into the white Matiz. The Matiz had been standing on the NB zebra with brake lights on since before 5 s. It rolled off the zebra from about 15.2 to 17.1 s, and its rear cleared the top edge at about 17.0-17.1 s, which fits the predicted end of 17.2. By then the pedestrian was 5 to 9 px north of the paint, about 1 to 2 m off the zebra, so the Matiz does not meet the definition. The early start is also not supported by anything on the crossing.",
+   "reason": "The frames show a real event. A white Matiz stood still on the north_nb zebra facing north, with brake lights on, from before 5 s until about 15.2 s, while pedestrians crossed ahead of it. A delivery rider with a yellow box also stood on the zebra. The avenue phase was red, so the cross street had green and pedestrians could use the north crossing. A white Lacetti came in from the east arm at about 13 s and turned right onto the NB carriageway. It swung left around the stopped Matiz and drove north-west over the zebra toward the lane next to the median.\n\nA pedestrian in a teal top and white trousers stepped off the median nose and walked east along the zebra's north edge. I mapped the polygon through cache/align/C3905.npz: the top edge runs from (602,253.4) to (949,231.9) and the paint ends sit 2 to 3 px south of that line. Her feet were at about (665,249) at 13.6 s, (667-678,248) at 14.0 s and (677-690,245-247) at 14.4-14.5 s. That puts her 1 to 5 px past the stripe ends, within about a body width, so she was on the crossing when the car arrived.\n\nThe Lacetti's front wheel was at (674,277) at 14.4 s, still south of the bottom edge (about 271), and at (666,272) at 14.5 s, with the bumper now over the paint. Front entry is therefore 14.5 s. At 14.6 s the car body spanned x 651-743 directly south of her at x 687, with its right side in her lane. From 14.6 to 14.9 s its roof hides her legs. Its rear-right corner cleared the top edge between 15.5 and 15.6 s. Allowing for bumper height, the ground contact point clears at 15.6 s, so the end is 15.6 s.\n\nThe car passed about 1.5 to 2.5 m behind her. She was in the near half of the crossing, in the lane next to the car's path, and inside the area the car swept on entry, so the far-half exception does not apply. She kept walking at a steady pace, and I saw no braking, swerving or jumping back, so near_miss does not fit. The class is failure_to_yield, and 14.5-15.6 s is already correct to within 0.1 s. After about 15.2 s she drifted north-east away from the zebra, and that later stretch is not part of this event."
+  }
+ },
+ {
+  "clip": "C3905",
+  "kind": "fn",
+  "label": "failure_to_yield",
+  "start": 25.8,
+  "end": 26.9,
+  "actors": "",
+  "signal": "15.8-31.4 s red; 31.6-34.4 s yellow; 34.6-36.8 s green",
+  "id": "C3905_fn_52",
+  "verdict": {
+   "real_event": false,
+   "label": "failure_to_yield",
+   "start": 25.8,
+   "end": 26.9,
+   "category": "label_wrong",
+   "cause": "The pedestrian was in lane 1 by the median and walking away from the car. The white sedan crossed the zebra in lane 3, with lane 2 empty between them, so it was counted as a pedestrian in the car's path when he was not.",
+   "reason": "Background: I built a median background of C3905 and measured the NB lane dashes and the north_nb stripes on it (sheets out/sheets/adj/C3905_fn_52_bg2.jpg, _5.jpg, _6.jpg). The lane dividers run at slope ~0.33. In proxy terms, u = y - 0.33(x-600): lane 1/2 at u\u2248227, lane 2/3 at u\u2248206, lane 3/4 at u\u2248184, and the median edge at u\u2248246. The zebra runs from about y 252 to 268 at x 650 and from 243 to 258 at x 760.\n\nThe car: a white Sonata-like sedan comes in from the east arm and turns into NB. Its front reaches the south edge of the zebra at about (774,257) at 25.8 s, and its rear bumper clears the north edge at about 26.9 s, so the claimed times do match the crossing. While it is on the zebra, its visible left (median-side) wheels ride exactly on the lane 2/3 divider: front-left wheel (760,258) at 26.0, (738,253) at 26.2 and (714,244) at 26.4; rear-left wheel (742,253) at 26.6. All of these are at u\u2248206-208, so the car's body is in lane 3. After the zebra it continues up lane 2 (front at about (641,231) at 27.0, u\u2248217). It never enters lane 1.\n\nThe pedestrian: a man in a light blue shirt, on the phone, walks west along the zebra. He crosses the lane 1/2 divider between 24.6 and 25.0 s. During the car's crossing his feet are at (662,258) at 25.8, (657,258) at 26.0, (645,260) at 26.4 and (630,261) at 26.8, so u goes from 240 to 251. That puts him in lane 1, reaching the median gap and nose, and moving away from the car the whole time. All of lane 2 separated them, about 80-90 proxy px across the row, or 1.5 lanes from the car's side. So he was neither in the car's path nor in the lane next to it. He was well beyond a lane divider and not heading into the car's lane, which is exactly the exclusion in labeling.md.\n\nThe item note says the car swings into his lane and passes about 30 px NNE of him. That is wrong. The car was already off the zebra at that point, and it was in lane 2, not lane 1. Nobody braked, swerved or jumped back, so this is not a near_miss, and no other class fits. The avenue signal was red, which was the cross-street phase for this turner.\n\nA separate event is real: the white BMW-like SUV right behind it. Its front-left wheel is on the lane 1/2 divider at 27.4 s, then inside lane 1 on the zebra at about (653,254) at 27.6 s, passing just in front of the same man. The existing separate label 27.1-28.1 covers this. It does not overlap 25.8-26.9 and should not be merged with it. Drop 25.8-26.9 as not a failure_to_yield."
+  }
+ },
+ {
+  "clip": "C3905",
+  "kind": "fn",
+  "label": "failure_to_yield",
+  "start": 27.1,
+  "end": 28.1,
+  "actors": "",
+  "signal": "17.2-31.4 s red; 31.6-34.4 s yellow; 34.6-38.0 s green",
+  "id": "C3905_fn_53",
+  "verdict": {
+   "real_event": true,
+   "label": "failure_to_yield",
+   "start": 27.2,
+   "end": 28.1,
+   "category": "missed_by_model",
+   "cause": "The pedestrian is at the median end of north_nb, so the rule's kerb test drops him. Track 2000207 has road_dist of 11.5 to 16 ref px against the >0.4*h (about 36 px) that fty_kerb needs, because the median tip and nose kerbs are within about 0.5 m of him. His walking speed (33 to 48 px/s at h about 89) and the in-zone test both pass, and the SUV (track 1000275) is within fty_near_px, so the kerb test alone suppressed the event.",
+   "reason": "I checked this on 0.1 s crops from the 4K source (kit/samples/C3905.MP4). The sheets are out/sheets/adj/C3905_fn_53_1..7.jpg. The SB signal is red, so the north crossing has its walk phase.\n\nThe pedestrian is a man in a light blue shirt, talking on a phone. He walks east to west along north_nb from about 20.8 s. By about 26.3 s he has passed west of the SUV's later swept path. From 27.0 to 27.7 s his feet are on the westernmost yellow and white stripes, just east of the sign pole, at proxy (617-637, 262-264). At 27.8 to 28.1 s he steps into the at-grade gap between the median tip and the nose, at about (600-617, 264), still walking slowly west.\n\nThe vehicle is a white BMW X5-type SUV. It turns right from the east arm into NB at a steady speed of about 15 to 18 proxy px per 0.1 s. It does not brake or swerve. I located its front-bumper ground point from the left front wheel contact plus about 1 m of overhang. That point is about 7 px short of the stripes' south edge at 27.1 s, at the edge at about (703,268) at 27.2 s, and on the stripes at 27.3 s. The rear bumper's ground point is still on the stripes at 28.0 s, about 3 px inside the north edge. It reaches the edge at 28.1 s and is clear by 28.2 s.\n\nI placed the lanes using the NB dashes. The lane 1/2 dash is at about (636-658, 240-247), and the median edge line runs through the median tip at about (594,253). The SUV's left wheels ran 0.7 to 1.2 m inside lane 1 (the median-side lane), so it straddled the lane 1/2 divider. The pedestrian was at the outer (median) edge of that same lane 1. The sideways gap from the SUV's left side to his feet was about 60 to 70 proxy px along the zebra, roughly 2.5 to 3 m. The verifier's figure of 45 px (about 2 m) is a raw x difference, so the true gap is a bit larger than the note says. Even so, he was on the zebra in a lane the SUV partly occupied, with no lane divider between them.\n\nThat meets the definition: on the zebra, in the vehicle's path or the lane next to it. The exception does not apply, because it needs him to be well beyond a lane divider. It is not the earlier rejected sedan case at 25.7-26.9 s. That sedan was in lane 3, 5 to 7 m away.\n\nNobody took visible evasive action, so this is not a near_miss. Start is 27.2 s, not 27.1 s, because the front was still about 7 px short of the stripes at 27.1. End stays at 28.1 s."
+  }
+ },
+ {
+  "clip": "C3905",
+  "kind": "fn",
+  "label": "failure_to_yield",
+  "start": 28.7,
+  "end": 29.3,
+  "actors": "",
+  "signal": "18.8-31.4 s red; 31.6-34.4 s yellow; 34.6-39.2 s green",
+  "id": "C3905_fn_54",
+  "verdict": {
+   "real_event": false,
+   "label": "failure_to_yield",
+   "start": 28.7,
+   "end": 29.3,
+   "category": "label_wrong",
+   "cause": "The labeller counted a cross-street car with the green that drove past pedestrians who were standing still at the island line on their red. They were waiting there, not in the car's lane and not stepping into it.",
+   "reason": "The car crossing is real. The failure to yield is not. Sheets are in out/sheets/adj/C3905_fn_54_1..7.jpg; sheet 3 is a 2x crop at 0.1 s steps.\n\n1) The car. A white Cobalt comes in from the right edge and drives west along the bottom of the frame, in the lane south of the lower pink islands. Its front bumper reaches the east edge of the lower west zebra at 28.7 s, at about proxy (415-430, 505-515). Its rear clears the west edge between 29.3 and 29.4 s. The crossing times in the label are right, and the car does not slow down.\n\n2) The pedestrians. Three men and a man holding a bicycle walked down the upper zebra from the corner between about 10 and 19 s. From about 20 s they stand still in the gap between the tip of the lower-left island and the lower-right island, with their feet at about proxy (240-315, 468-475). That is level with the island kerbs. In the 0.1 s frames from 28.4 to 29.7 s, none of them moves. Their feet are about 30-35 proxy px (roughly 3 m, a lane width) north of the car's north side, which is at about y 500-505. The car's near wheels are at about y 520. So they are at the island line, not in the car's lane and not in a lane beside it.\n\n3) No vehicle uses that gap. I checked 0-127 s: every westbound car (18 s, 29 s, 39-40 s, 100-103 s, 104-109 s) goes south of the islands. The gap works as a refuge, not a traffic lane.\n\n4) The signal. The avenue is red from 0 to 31.4 s, so the walk signal for the west crossing, which runs with the avenue green, is red too, and the cross street has the green. The group only crosses the southern lanes after the avenue turns green, from about 34.6 s (see 35.5-40 s).\n\n5) The man at the island tip. A man in a dark shirt, talking on his phone, stands at the left tip of the lower-right island, at the east edge of the zebra, at about (365-382, 468). He stays put while the car passes in front of him. At 29.1 s the car's rear is still east of him, at about x 410. He first steps down the zebra at about 29.2 s, when the rear is already past his x (about x 355). He waited for the car and walked in behind it, not into its path.\n\nNobody was in the car's path or stepping into it, and nobody braked, swerved or jumped back, so near_miss does not fit either. The pedestrians are on the zebra, so this is not jaywalking at this moment. The labeling.md rule excludes a pedestrian who is beyond a divider and not heading into the vehicle's lane, and that is what we have here. This agrees with the earlier rejection in labels/dev_labels_rejected.json (C3905 failure_to_yield 28.7-29.4) and disagrees with the verifier note in this item. The label should be removed."
+  }
+ },
+ {
+  "clip": "C3905",
+  "kind": "fn",
+  "label": "red_light",
+  "start": 33.6,
+  "end": 39.6,
+  "actors": "",
+  "signal": "23.6-31.4 s red; 31.6-34.4 s yellow; 34.6-49.4 s green",
+  "id": "C3905_fn_55",
+  "verdict": {
+   "real_event": true,
+   "label": "red_light",
+   "start": 33.7,
+   "end": 39.6,
+   "category": "missed_by_model",
+   "cause": "The signal module calls the red-plus-amber 'get ready' phase (31.6-34.4 s) 'yellow', even though the red lamp stays lit, so the red_light rule never fires. The crossing comes only about 0.8 s before green, so it is a small early start, not a clear run through the light.",
+   "reason": "What the frames show (sheets out/sheets/adj/C3905_fn_55_2..8.jpg):\n1. The rider: a delivery scooter ridden by someone in a yellow hi-vis vest. From 29.6 s it waits at the head of the SB queue between the white SUV and the black SUV, with its front wheel about 10-12 proxy px behind the painted stop line. The line is visible in the crop, running from about (220,262) up to (380,245).\n2. The crossing (0.1 s crop 250-350 x 210-275, sheet _5): the scooter creeps from about 33.0 s. At 33.6 s the front wheel touches the top edge of the line, at 33.7 s it is on the line, and at 33.8 s it is about 3 px past. By 34.2-34.4 s it is well past.\n3. The signal (median-nose head, sheets _4 and _6): red alone up to 31.4 s, then red and amber lit together from 31.6 s to 34.4 s, then green from 34.5 s. The signal json agrees: the red-lamp score is about 200 through 34.43 s and the amber score is about 255 from 31.6 s. So the front crossed about 0.8 s before green, with the red lamp still lit.\n4. Nothing else crossed before green. The black SUV in the next lane crept a few px during red+amber, but its front stayed behind the line until green.\n5. It keeps going and does not stop past the line, so stop_line does not fit. It crosses the box and exits the frame at the bottom right: partly visible at the edge at 39.5 s, gone at 39.6 s (sheet _8).\n\nWhy this counts as red: labeling.md requires the front to cross 'while the signal is red (not yellow)'. scene.md defines the afternoon cycle as 38 s green, 3 s yellow and 39 s red, 'the last 3 s of it with the yellow lamp lit as well'. That makes red+amber part of the red phase, and the '(not yellow)' clause covers the amber after green. Local rules also forbid moving on red+amber.\n\nCaveats:\n- The phase given to me and the json label this window 'yellow'. An earlier reviewer rejected the event as a borderline early start (dev_labels_rejected.json, C3905 red_light 33.7-39.6).\n- The SB gantry heads face away from the camera, so the 0.8 s margin depends on scene.md's claim that they run in phase with the median head. I found no contradiction: in C3902 the SB queue sat still through all four red+amber windows I checked.\n- The event is real under our convention but weak, and the organisers may not label a sub-second early start.\n\nBoundaries: start 33.7 s (the dev label's 33.6 is within one frame), end 39.6 s."
+  }
+ },
+ {
+  "clip": "C3905",
+  "kind": "fn",
+  "label": "failure_to_yield",
+  "start": 35.3,
+  "end": 36.3,
+  "actors": "",
+  "signal": "25.4-31.4 s red; 31.6-34.4 s yellow; 34.6-46.2 s green",
+  "id": "C3905_fn_56",
+  "verdict": {
+   "real_event": true,
+   "label": "failure_to_yield",
+   "start": 35.3,
+   "end": 36.3,
+   "category": "missed_by_model",
+   "cause": "Probably missed because the vehicle is a small two-wheeler: a delivery rider in a yellow vest, dark at dusk, who may be detected as a person plus a bike. He also passes about 1.5 m behind (east of) the pedestrian rather than head-on, so the model may not have counted the pedestrian as being in his path.",
+   "reason": "I checked this on brightened, zoomed crops at 0.1 s steps, with proxy-pixel ticks, covering 34.8-36.7 s and then 36.3-40.3 s. A pedestrian in a light blue shirt and jeans walks west along the upper (north) part of the painted north_sb zebra stripes the whole time. His feet are about (377,294) at 34.8 s, (336-357,297-302) at 35.3 s and about (310,305) at 36.0 s, so his feet are on the stripes, not on the asphalt above them. A delivery rider in a yellow vest on a small motorbike or e-bike leaves the SB stop line early, during the red+yellow phase. At 35.0 s he is right behind the pedestrian, at almost the same x (about 360-370). He then drives south-east across the zebra without slowing, and nobody takes evasive action. The front wheel is just short of the top edge of the stripes at 35.2 s (about y 281 against the edge at about 283), touches it at 35.3 s at about (390,284), and is clearly on the stripes at 35.4 s. When he enters, the pedestrian's feet are about 35-55 px (roughly 1.5 m) to the west. That puts the pedestrian in the rider's own lane or the next one, not on the far half beyond a lane divider, so the definition is met. The front wheel crosses the lower edge of the stripes at about 35.9-36.0 s. The rear wheel is still at the lower edge at 36.2 s and just clear of it at 36.3 s. So 35.3-36.3 s is correct. Nothing else overlaps this window. The white Kia SUV, which is the next vehicle to pass the same pedestrian on the zebra, enters about 37.0 s, and the dev set already labels it separately as 37-38 s. The black SUV further east reaches the zebra at about 36.5 s, after the rider has left, and the pedestrian is two lanes away from it. No other class fits better: there is no braking or swerve, so it is not a near_miss."
+  }
+ },
+ {
+  "clip": "C3905",
+  "kind": "fn",
+  "label": "failure_to_yield",
+  "start": 37,
+  "end": 38,
+  "actors": "",
+  "signal": "27.0-31.4 s red; 31.6-34.4 s yellow; 34.6-47.8 s green",
+  "id": "C3905_fn_57",
+  "verdict": {
+   "real_event": true,
+   "label": "failure_to_yield",
+   "start": 37,
+   "end": 38,
+   "category": "boundary_only",
+   "cause": "The model saw this crossing but made the segment too long. In pred_3.json, which adjudicate_items_3 was built from, it output one failure_to_yield of 36.74-40.54 s. That joins the SUV crossing to a later lane-1 white sedan at the west end (about 38.6-40.5 s, by which time the pedestrian is at the kerb). IoU with 37.0-38.0 is 1.0/3.8 = 0.26, below 0.3, so it was scored as a miss. pred_all.json splits it into 36.74-37.94, which would match (IoU about 0.75).",
+   "reason": "Checked on crops at 0.1-0.4 s steps from 33 to 41 s (out/sheets/adj/C3905_fn_57_1..8.jpg). I also drew the painted zebra edges into the frames, measured on a median of empty frames: upper y \u2248 300 - 0.144(x-280), lower y \u2248 323 - 0.139(x-280), in proxy pixels.\n\nWhat happens:\n- A man in a light-blue shirt walks west along the north_sb zebra from about x 440 at 33 s to about x 200 at 38.6 s. His feet stay on the stripes the whole time, for example (272,312) at 37.0 s, with the zebra spanning y 301-324 there.\n- The signal is green from 34.6 s. The white Kia Sonet-type SUV in SB lane 2 rolls from the stop line and never stops.\n- At 36.6-36.9 s the man walks right across the front of its bumper, from its front-right to its front-left.\n- At 37.0 s the SUV's front-left wheel is at about (289,297), 1 px short of the upper edge, and the bumper overhang is at the edge. At 36.9 s it was about 10 px short. So the front enters the zebra at 37.0 s.\n- At that moment the man is on the stripes about 15-20 px (roughly 1 m) left of the SUV's front-left corner. That is the lane next to it, not the far half.\n- The SUV keeps rolling over the stripes beside him.\n\nEnd: the car is heading almost straight right in the image, and the zebra's lower edge rises to the right. The rear-left wheel meets the lower edge at about 37.8-37.9 s. With about 11 px of rear overhang, the rear bumper clears the edge at about 37.9-38.1 s, so the end is 38.0 s.\n\nOther classes: no hard braking, no swerve and no jump back, so this is not near_miss. The signal is green, so it is not red_light.\n\nThe dev label 37.0-38.0 is correct as it stands."
+  }
+ },
+ {
+  "clip": "C3905",
+  "kind": "fn",
+  "label": "jaywalking",
+  "start": 66.3,
+  "end": 79.7,
+  "actors": "",
+  "signal": "56.5-72.3 s green; 72.5-75.3 s yellow; 75.5-89.7 s red",
+  "id": "C3905_fn_58",
+  "verdict": {
+   "real_event": true,
+   "label": "jaywalking",
+   "start": 72.3,
+   "end": 79.7,
+   "category": "missed_by_model",
+   "cause": "The west-arm walkers' foot points (tracks 2000848 and 2000880, reference y 945 to 996 below the bottom-left island) fall on ROAD but outside drivable.png and the junction box, so walk_check is 0 and the rule never tests them. The bus-stop man (track 2000762) stays 10 to 15 proxy px (20 to 30 ref px) below the NB kerb, inside the 30 px NB_KERB exclusion band, so walk_check is 0 for him too. The model's only nearby output (69.67-71.27) came from a different man near the zebra's east edge, and its IoU with either true segment is under 0.3.",
+   "reason": "The jaywalking is real, but under the per-class merge rule it is two segments, not one run from 66.3 to 79.7. I checked this on gridded crops at 4 to 7x, with 0.1 to 0.5 s steps.\n\n(1) 66.3-71.0: a man in a maroon shirt and jeans at the NB bus stop. At 66.2 his feet are on the sidewalk kerb at about proxy (614-619, 141). At 66.3-66.4 his front foot lands on the asphalt at (611, 145). He then walks up-left over the bus-bay entry and kerb lane, 10 to 12 px below the kerb, reaching about (577-587, 147) at 68.0. A white car passes in the next lane at 70.5-71.3. At 70.7-71.0 his feet reach the rounded nose of the raised separator island between the bus bay and the main lanes, at about (507-512, 139-141). The island's kerbstones are clear in C3902. From 71.1 to 76.4 his feet stay on that island strip: (494-503, 134) at 72.0, (467-476, 129) at 74.0, (446-451, 126) at 75.6. So the verifier who kept him on the asphalt until 79.0 was wrong. From 71.0 onward he is on an island and then getting into the white sedan in the bus bay.\n\n(2) 72.3-79.7, the west arm. The woman in dark navy with white shoes comes up the lower west zebra next to a family with two boys in white. At 72.2 her body straddles the zebra's west edge (about x 300 at the frame bottom). At 72.4 it is fully left of the edge. At 72.9 her feet are at (252-265, 535), 30 to 45 px off the stripes. The smaller boy is also more than a body width west of the stripes from about 72.3-72.4 and crosses the asphalt to the island's east tip by about 75.5. The woman walks west on the west-arm carriageway, 20 to 40 px below the bottom-left island's south kerb: (207-231, 519) at 74.0, (153-179, 506) at 75.0, (99-122, 498) at 76.0, (47-62, 490) at 77.0. She leaves the frame at the left at about 78.1. The man in the black printed T-shirt with a shoulder bag leaves the zebra's west edge at 75.3 and crosses the asphalt gap to the island tip. From 76.4 to 78.4 his feet are on the asphalt just below the island's kerbstones, with the kerb band visible above his feet. Past the tip he walks at y about 484, about 45 px below the corner's yellow kerb line. A sliver of his foot is at x 0-8 at 79.7, and he is gone at 79.8.\n\nBetween 71.0 and about 72.2 nobody is clearly more than a body width onto the carriageway. The black-print man walked up from the south-east from 69.8 to 71.3 about one body width outside the zebra's east edge, with his feet mostly below the frame. That is borderline, so I did not count it. Other things I checked: track 2000738 (63.8-70.3) is a driver inside a car. The pair at 79.9-83.1 walks on the north crossing's stripes. Nothing extends either segment.\n\nThe label should therefore be split into 66.3-71.0 and 72.3-79.7. I report the larger one here. The model detected neither."
+  }
+ }
+]
