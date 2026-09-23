@@ -1,6 +1,6 @@
 {
  "machine": "Apple M5 laptop on MPS, time guards off",
- "note": "The official harness on the four samples with PARIVISION_TIME_SHARE, PARIVISION_TOTAL_LIMIT and PARIVISION_RISK_SHARE lifted, so nothing is thinned. We have not timed a T4 yet: a Google Drive download quota blocked our Colab run.",
+ "note": "The official harness on the four samples on an Apple M5 laptop with PARIVISION_TIME_SHARE, PARIVISION_TOTAL_LIMIT and PARIVISION_RISK_SHARE lifted, so nothing is thinned. On a Colab T4 the detectors take 0.34x and 0.19x of real time; decoding 4K 10-bit on its 2 vCPUs is the bottleneck (see the README).",
  "clips": [
   {
    "clip": "C3896",

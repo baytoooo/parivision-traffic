@@ -7,6 +7,10 @@
 # Google Drive (all four by default), runs the official harness with the
 # official 3x budget and prints its per-clip log (part_a_sec, part_b_sec,
 # total_sec). Needs internet for the downloads only; the run itself is offline.
+# Clips already in samples/ are not downloaded again. When Drive refuses the
+# download ("Too many users have viewed or downloaded this file"), put the
+# clips in samples/ some other way first; in Colab, the Drive API after
+# google.colab.auth.authenticate_user() still works.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -21,9 +25,11 @@ nproc
 pip install -q -r requirements.txt gdown
 
 mkdir -p samples
-for id in "${IDS[@]}"; do
-  (cd samples && gdown --continue "$id")
-done
+if ! ls samples/*.MP4 >/dev/null 2>&1; then
+  for id in "${IDS[@]}"; do
+    (cd samples && gdown --continue "$id")
+  done
+fi
 ls -la samples
 
 YOLO_OFFLINE=1 python run_submission.py --videos samples --out predictions_t4.json --team PariVision

@@ -80,17 +80,20 @@ agent logs are not in the repository, so the labels cannot be regenerated.
   because nothing in view says they are prohibited. Six classes, among them
   accidents and near misses, have no rule, and Part B cannot be calibrated
   without accidents.
-* **Runtime is not verified on a T4.** On an Apple M5 laptop with the time
-  guards off the pipeline took 3.3x the clip length (Part A 2.0x, Part B
-  1.2x). The laptop is probably slower than a T4, but we could not check: a
-  Google Drive download quota blocked our Colab run. The default guards thin
-  frames to stay inside the 3x budget, but the harness's own decoding of each
-  4K frame is outside our control. `tools/t4_check.sh` times a T4 run.
+* **Decoding, not the model, sets the runtime.** On a Colab T4 our detectors
+  cost 0.34x (Part A) and 0.19x (Part B) of real time, but Colab's two vCPUs
+  decode these 4K 10-bit clips at only 9 to 12 frames per second, so the
+  harness alone needs about 3x the clip length to read them for Part B and
+  nothing fits the budget there. We could not test on a machine with more
+  cores and a T4 together. Part A now measures the decode speed and stops
+  early enough to leave the harness its share, so a slow machine gives a
+  shorter result instead of an empty one. `predictions_samples.json` comes
+  from an Apple M5 laptop with the time guards off (3.3x the clip length).
 
 ## What we would do next
 
-1. Time a T4 run and regenerate `predictions_samples.json` there with the
-   default settings.
+1. Regenerate `predictions_samples.json` on a T4 machine with enough CPU
+   cores to decode 4K at speed, with the default settings.
 2. Have a person check the dev labels, starting with failure_to_yield.
 3. Fine-tune the detector on this camera, for far and dusk pedestrians.
 4. An illegal-turn rule from the lane a vehicle holds at the stop line.

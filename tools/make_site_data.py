@@ -5,9 +5,7 @@ r"""Build the website's data files and media from the official sample run.
     python evaluate.py --pred predictions_samples.json --gt labels/dev_labels.json --json out/metrics.json --per-video
     python tools/eda.py --out out/site_data
     python tools/make_site_data.py --site site/public --machine "Apple M5 laptop on MPS, time guards off" \
-        --runtime-note "The official harness on the four samples with PARIVISION_TIME_SHARE, PARIVISION_TOTAL_LIMIT \
-and PARIVISION_RISK_SHARE lifted, so nothing is thinned. We have not timed a T4 yet: a Google Drive download \
-quota blocked our Colab run."
+        --runtime-note "<where and how predictions_samples.json was made; site/public/data/runtime.json has ours>"
 
 The first command is how we made predictions_samples.json on our laptop (Apple M5, MPS): the
 environment variables and --time-factor lift the time guards, so nothing is thinned.

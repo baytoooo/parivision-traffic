@@ -31,6 +31,17 @@ BATCH = 8
 REALIGN_EARLY = (2.0, 30.0)
 REALIGN_EVERY = 10.0
 TIME_SHARE = float(os.environ.get("PARIVISION_TIME_SHARE", 1.3))  # Part A's share of the 3x budget
+TOTAL_LIMIT = float(os.environ.get("PARIVISION_TOTAL_LIMIT", 2.8))  # Part A + Part B, x clip duration (harness: 3.0)
+# For Part B the harness decodes every 4K frame itself and converts it to a full-size BGR array,
+# outside our control, and a clip that goes over the budget scores nothing at all. Decoding these
+# 10-bit 4:2:2 files is CPU work: on a Colab T4 with 2 vCPUs our decoder manages about 12 frames
+# per second and the harness's loop about 9, so there the harness alone needs about 3x. So Part A
+# measures how fast this machine decodes and stops early enough to leave the harness its decode
+# time (HARNESS_DECODE times ours, measured on that Colab machine) plus B_RESERVE x the clip for
+# Part B's own work (the risk model caps that at 0.4x). On a machine that decodes the clip in
+# less than about its own length this never binds.
+HARNESS_DECODE = 1.3
+B_RESERVE = 0.4
 DETECTOR_CONF = 0.1    # ByteTrack's track_low_thresh: its second pass uses the weak boxes to keep tracks alive
 
 # Wall time Part A spent on the last clip. The harness runs Part B on the same clip
@@ -103,6 +114,7 @@ def analyse(video_path: str, time_share: float = TIME_SHARE, progress=None,
     det = detector()
     sample_fps = profile()[2]
     tracker = MultiTracker(fps=sample_fps)
+    decode: dict = {}  # frames decoded so far and the seconds it took (video.sample_frames)
     tracks: dict = {}
     alignment: Alignment | None = None
     boxes = None
@@ -128,7 +140,7 @@ def analyse(video_path: str, time_share: float = TIME_SHARE, progress=None,
 
     if progress is not None:
         progress("aligning the view", 0.0)
-    for _, t, img in sample_frames(video_path, sample_fps, WORK_WIDTH):
+    for _, t, img in sample_frames(video_path, sample_fps, WORK_WIDTH, stats=decode):
         if t > limit:
             break
         if t >= next_align:
@@ -151,6 +163,9 @@ def analyse(video_path: str, time_share: float = TIME_SHARE, progress=None,
         if len(pending) == BATCH:
             flush()
             now = time.perf_counter()
+            if decode.get("frames", 0) >= 5 * info.fps:  # the rate is steady after a few seconds of video
+                part_b_decode = HARNESS_DECODE * info.n_frames * decode["seconds"] / decode["frames"]
+                deadline = min(deadline, t_start + (TOTAL_LIMIT - B_RESERVE) * info.duration - part_b_decode)
             if now > deadline:
                 break
             # projected finish at the recent pace; thin out frames rather than stop early

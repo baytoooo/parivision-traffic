@@ -163,10 +163,10 @@ prints the full report.
 ## Runtime
 
 `predictions_samples.json` comes from the official harness on an Apple M5
-laptop (16 GB, PyTorch on MPS). We expect the laptop to be slower than a T4, so
-for that run we lifted the time guards (`PARIVISION_TIME_SHARE=12
-PARIVISION_TOTAL_LIMIT=30 PARIVISION_RISK_SHARE=10`, `--time-factor 40`) to get
-the output of the full pipeline, with no frames thinned out:
+laptop (16 GB, PyTorch on MPS). For that run we lifted the time guards
+(`PARIVISION_TIME_SHARE=12 PARIVISION_TOTAL_LIMIT=30
+PARIVISION_RISK_SHARE=10`, `--time-factor 40`) to get the output of the full
+pipeline, with no frames thinned out:
 
 | clip | length | Part A | Part B | total |
 |---|---:|---:|---:|---:|
@@ -175,16 +175,31 @@ the output of the full pipeline, with no frames thinned out:
 | C3902 | 318 s | 540 s | 317 s | 2.7x |
 | C3905 | 128 s | 200 s | 118 s | 2.5x |
 
-The default guards are there to keep the pipeline inside the harness budget:
-Part A thins its frames and stops at 1.3x the clip length, and Part B thins
-its own work to keep both parts under 2.8x. On short clips there are floors,
-set so that both parts still fit in 3x: Part A may take up to 60 s but never
-more than 1.8x the clip length, and Part B always gets at least 10 s (half the
-clip length on clips under 20 s). The harness decodes every 4K frame for
-Part B itself, and that time is outside our control. We have not timed a T4
-yet, because a Google Drive download quota blocked our Colab run.
-`tools/t4_check.sh` runs the harness with the official 3x budget on a Colab or
-Kaggle T4 and prints the same table.
+**On a T4.** We ran the harness on a Colab T4 (2 vCPUs, torch 2.6.0+cu124,
+installed from `requirements.txt`). The GPU work is small: YOLO26m at 1280 px
+takes 34 ms a frame in fp16, 0.34x real time at 10 fps, and Part B's YOLO26s
+at 960 px 19 ms, 0.19x. Decoding is what costs. These clips are 4K 10-bit
+4:2:2 H.264 at 140 Mbit/s, which only a CPU decodes, and Colab's two vCPUs
+manage about 12 frames per second in our decoder and about 9 in the harness's
+own `cv2.VideoCapture` loop. There the harness alone needs about 3x the clip
+length just to read the frames for Part B, so no pipeline fits the budget on
+that machine; on C3896 our Part A reached 170 s of 340 s before its 1.3x stop.
+A machine with more cores decodes proportionally faster (our M5 laptop reads
+these files at about 78 frames per second), and with the default settings
+the 60 s cut of C3896 took 1.4x its length on the laptop.
+
+**The guards.** Part A thins its frames and stops at 1.3x the clip length, and
+Part B thins its own work to keep both parts under 2.8x. Because a clip that
+goes over the budget scores nothing, Part A also measures how fast the machine
+decodes and stops early enough to leave the harness 1.3 times that decode time
+for Part B, plus 0.4x the clip for Part B's own work. On a machine that decodes
+a clip in less than about its own length this never binds; on a slow one it
+trades the end of the clip for a result that is not empty. On short clips
+there are floors, set so that both parts still fit in 3x: Part A may take up
+to 60 s but never more than 1.8x the clip length, and Part B always gets at
+least 10 s (half the clip length on clips under 20 s).
+`tools/t4_check.sh` runs the harness with the official 3x budget on a T4 and
+prints the same table.
 
 ## Determinism
 
@@ -193,15 +208,16 @@ off cuDNN autotuning. Detection, tracking and the rules have no random steps,
 so two runs on the same machine give the same `predictions.json`. The one
 exception is floating-point noise from GPU fp16 inference, which can move a
 box by a fraction of a pixel. Part A also has a wall-clock guard: if it falls
-behind it analyses only every 2nd, then every 3rd sampled frame (down to
-3.3 fps), and if it still passes 1.3x the clip length (on a clip shorter than
+behind it analyses only every 2nd, then every 3rd sampled frame (down to 3.3
+fps), and if it still passes 1.3x the clip length (on a clip shorter than
 about 46 s, 60 s or 1.8x the clip length, whichever is shorter) it stops and
 reports what it has. That changes the output on any machine that cannot keep
-up. The defaults are set for a T4, which we have not been able to time yet. On
-a slower machine `PARIVISION_TIME_SHARE` (Part A, 1.3), `PARIVISION_RISK_SHARE`
-(Part B's own work, 0.4) and `PARIVISION_TOTAL_LIMIT` (both parts, 2.8)
-override these limits. `PARIVISION_CACHE_DIR` makes Part A save its full
-analysis for the website; it is unset in the official run.
+up. The defaults are set for a T4 on a machine with enough cores to decode 4K
+at speed (see Runtime). On a slower machine `PARIVISION_TIME_SHARE` (Part A,
+1.3), `PARIVISION_RISK_SHARE` (Part B's own work, 0.4) and
+`PARIVISION_TOTAL_LIMIT` (both parts, 2.8) override these limits.
+`PARIVISION_CACHE_DIR` makes Part A save its full analysis for the website; it
+is unset in the official run.
 
 ## Tests
 

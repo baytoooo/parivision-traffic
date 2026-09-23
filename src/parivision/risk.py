@@ -22,7 +22,7 @@ import cv2
 import numpy as np
 
 from .detector import PERSON, Detector, pick_device
-from .pipeline import LAST_RUN, references
+from .pipeline import LAST_RUN, TOTAL_LIMIT, references
 from .registration import Alignment, align_best, warp_points
 from .scene import masks, metres_per_px
 from .tracking import MultiTracker
@@ -33,7 +33,6 @@ MAX_STRIDE_FACTOR = 10  # on a slow machine fall back to 1 Hz, and skip processi
 # defaults chosen for the official T4 run (not timed on a T4 yet, see tools/t4_check.sh); the environment
 # overrides are for slower machines such as our M5 laptop
 OWN_TIME_SHARE = float(os.environ.get("PARIVISION_RISK_SHARE", 0.4))  # our processing, x video time (decode on top)
-TOTAL_LIMIT = float(os.environ.get("PARIVISION_TOTAL_LIMIT", 2.8))    # Part A + Part B, x clip duration (harness: 3.0)
 HISTORY = 8            # samples used for the velocity estimate (0.8 s)
 HORIZON = 3.0          # s of constant-velocity look-ahead
 STEP = 0.1

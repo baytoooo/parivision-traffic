@@ -77,7 +77,7 @@ const pages = [
         <span class={`v${isNum(runtime) ? "" : " is-tbd"}`}>{isNum(runtime) ? runtime.toFixed(2) : fmtNum(runtime)}<small>min</small></span>
         <span class="k">Processing per minute of 4K video</span>
         <span class="s">{rt ? `Part A + Part B, ${rt.machine}` : "Part A + Part B"}</span>
-        <span class="s">The harness allows 3x. Default settings thin frames to aim under 2.8x; not timed on a T4 yet.</span>
+        <span class="s">The harness allows 3x. On a Colab T4 our two detectors take 0.53x; decoding the 4K files on the CPU is the slow part.</span>
       </div>
       <div class="stat">
         <span class="v">{emitted}<small>of {CLASSES.length}</small></span>
