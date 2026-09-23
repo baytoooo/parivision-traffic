@@ -78,6 +78,17 @@ def rasters() -> tuple[dict, bytes]:
     return meta, blob
 
 
+def finite(o):
+    """JSON has no Infinity: an infinite threshold (e.g. fty_moto_speed, off) becomes 1e308."""
+    if isinstance(o, float) and np.isinf(o):
+        return float(np.sign(o)) * 1e308
+    if isinstance(o, dict):
+        return {k: finite(v) for k, v in o.items()}
+    if isinstance(o, (list, tuple)):
+        return [finite(v) for v in o]
+    return o
+
+
 def constants() -> dict:
     return {
         "ref_size": list(S.REF_SIZE),
@@ -114,7 +125,8 @@ def main() -> None:
     const = constants()
     const["raster"] = meta
     const["detector"].update({"model": args.model, "input": [args.height, args.width]})
-    (OUT / "scene.json").write_text(json.dumps(const, indent=1, default=lambda o: o.tolist() if hasattr(o, "tolist") else str(o)))
+    (OUT / "scene.json").write_text(json.dumps(finite(const), indent=1, allow_nan=False,
+                                               default=lambda o: o.tolist() if hasattr(o, "tolist") else str(o)))
 
     for name in ("reference_day", "reference_dusk"):
         img = cv2.imread(str(ROOT / "src/parivision/assets" / f"{name}.jpg"), cv2.IMREAD_GRAYSCALE)

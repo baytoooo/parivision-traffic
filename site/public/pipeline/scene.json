@@ -19,7 +19,7 @@
   "fty_walk": 0.25,
   "fty_pad_start": 0.3,
   "fty_pad_end": 0.1,
-  "fty_moto_speed": Infinity,
+  "fty_moto_speed": 1e+308,
   "red_settle": 1.0,
   "red_before_green": 1.5,
   "red_max_len": 60.0,

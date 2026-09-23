@@ -14,6 +14,12 @@ Writes site/tests/fixtures/<clip>/ (gitignored; rebuilt by this script):
   lamps.json        lamp patch boxes and scores for a few full-size frames saved as lamp_<t>.png
   rules.json        Python evidence and final events for trajectories.json + signal.json
   risk.json         Part B's risk curve replayed over detections.json (Anticipator.observe)
+  scene_samples.json  mask bits, zone bits and distances at 3000 random reference points
+  det_frame.rgb     one frame at 960x540, raw RGB, and det_expected.json: what Ultralytics gets from
+                    site/public/pipeline/model.onnx on it (boxes in 960x540 pixels)
+
+Images are also written as raw bytes (.gray, .rgb) so the Node tests need no image decoder;
+site/tests/fixtures/refs/ holds the two references as raw grey 480x270.
 
 Each stage's input is the previous stage's Python output, so a JS module can be checked on its
 own: tracker on detections, build on tracks, rules on trajectories, and so on.
@@ -120,6 +126,40 @@ def main() -> None:
             lamps.append({"file": name, "t": round(t, 3), "origin": [x0, y0], "scores": r(lamp_scores(frame, boxes), 3)})
         if t > max(lamp_t) + 1:
             break
+    cv2.imread(str(out / "frame0.png"), cv2.IMREAD_GRAYSCALE).tofile(out / "frame0.gray")
+    for item in lamps:
+        img = cv2.imread(str(out / item["file"]))
+        cv2.cvtColor(img, cv2.COLOR_BGR2RGB).tofile(out / item["file"].replace(".png", ".rgb"))
+        item["size"] = [img.shape[1], img.shape[0]]
+    refs = ROOT / "site/tests/fixtures/refs"
+    refs.mkdir(exist_ok=True)
+    for name in ("reference_day", "reference_dusk"):
+        cv2.imread(str(ROOT / "site/public/pipeline" / f"{name}.png"), cv2.IMREAD_GRAYSCALE).tofile(refs / f"{name}.gray")
+
+    # the scene rasters at random points, straight from the Python Context
+    rng = np.random.default_rng(0)
+    pts = np.round(np.stack([rng.uniform(0, S.REF_SIZE[0] - 1, 3000), rng.uniform(0, S.REF_SIZE[1] - 1, 3000)], axis=1), 2)
+    samples = {"points": r(pts, 2)}
+    for name in ("road", "walk"):
+        samples[name] = ctx.sample(getattr(ctx, name), pts).astype(int).tolist()
+    for name in ("road_dist", "walk_dist", "cw_dist"):
+        samples[name] = r(ctx.sample(getattr(ctx, name), pts), 3)
+    for name, m in ctx.cw_masks.items():
+        samples[f"cw_{name}"] = ctx.sample(m, pts).astype(int).tolist()
+    for name, m in ctx.zones.items():
+        samples[f"zone_{name}"] = ctx.sample(m, pts).astype(int).tolist()
+    (out / "scene_samples.json").write_text(json.dumps(samples))
+
+    # the browser detector on one frame, as Ultralytics runs the same ONNX file
+    from ultralytics import YOLO
+
+    img = cv2.resize(first, (960, 540), interpolation=cv2.INTER_AREA)
+    cv2.cvtColor(img, cv2.COLOR_BGR2RGB).tofile(out / "det_frame.rgb")
+    onnx = ROOT / "site/public/pipeline/model.onnx"
+    res = YOLO(str(onnx), task="detect")(img, imgsz=(544, 960), conf=0.1, verbose=False)[0].boxes
+    (out / "det_expected.json").write_text(json.dumps({"size": [960, 540], "boxes": [
+        r(list(b) + [c, k]) for b, c, k in zip(res.xyxy.cpu().numpy(), res.conf.cpu().numpy(), res.cls.cpu().numpy())]}))
+
     (out / "alignment.json").write_text(json.dumps({"H": r(H, 8), "frame": "frame0.png", "frame_size": [480, 270],
                                                     "work_size": [w, h]}))
     (out / "lamps.json").write_text(json.dumps({"boxes": [list(map(int, b)) for b in boxes], "frames": lamps}))
