@@ -35,6 +35,7 @@ PARAMS = {
     "fty_cw_dilate": 10.0,         # px, person counts as on the crossing within this margin
     "fty_min_speed": 20.0,         # px/s, the vehicle must actually be driving through
     "fty_kerb": 0.4,               # x person height: out on the zebra, not standing at its kerb end
+    "fty_walk": 0.25,              # body heights per second: the pedestrian is walking, not standing
     "fty_pad_start": 0.3,          # s
     "fty_pad_end": 0.1,            # s
     # signal
@@ -46,6 +47,7 @@ PARAMS = {
     "stop_line_margin": 8.0,       # px past the line
     "stop_line_min": 1.0,          # s stopped
     "stopped_min": 10.0,           # s for stopped_vehicle
+    "stopped_ne_corner_x": 1720.0, # east of this the NB lanes meet the plaza entrance: cars wait there to leave
     "cong_green_n": 6,             # standing SB vehicles (approach + box) that make a jam on green
     "cong_red_n": 5,               # standing vehicles left in the box after the green ended
     "cong_min": 6.0,               # s
@@ -248,7 +250,9 @@ def failure_to_yield(ctx: Context, H_work_to_ref: np.ndarray) -> list[Evidence]:
         on_cw: dict[int, list[tuple[int, np.ndarray]]] = {}
         for ped in ctx.people:
             kerb = ctx.sample(ctx.road_dist, ped.foot)
-            hit = (ctx.sample(ped_zone, ped.foot) > 0) & (kerb > p["fty_kerb"] * np.maximum(ped.height, 20.0))
+            h = np.maximum(ped.height, 20.0)
+            walking = ped.speed > p["fty_walk"] * h  # someone standing still beside the car's path is not being cut off
+            hit = (ctx.sample(ped_zone, ped.foot) > 0) & (kerb > p["fty_kerb"] * h) & walking
             for t_, f_ in zip(ped.t[hit], ped.foot[hit]):
                 on_cw.setdefault(int(round(t_ * 10)), []).append((ped.tid, f_))
         if not on_cw:
@@ -326,6 +330,17 @@ def stop_line(ctx: Context, H: np.ndarray) -> list[Evidence]:
 # stopped vehicles
 # ---------------------------------------------------------------------------
 def stopped_vehicle(ctx: Context) -> list[Evidence]:
+    """A vehicle standing 10 s or more where traffic is supposed to flow, not in a signal queue.
+
+    Where it stands decides what counts:
+    * NB carriageway: there is no signal queue in view there, so a car standing in a lane
+      (pick-ups, drop-offs, a car left in the kerb lane) counts. The bus stop does not.
+    * Junction box (the SB path to the south exit): a car standing there is past its signal,
+      alone or stuck in a jam, so it counts.
+    * Everything else does not: the SB approach is the red-light queue (and the parking bay
+      along its left edge), and at the right edge we only see the tail of queues waiting
+      for their own signal or for people on the NB crossing.
+    """
     p = PARAMS
     spans = []  # (start, end, x, y, tid)
     for veh in ctx.vehicles:
@@ -334,7 +349,7 @@ def stopped_vehicle(ctx: Context) -> list[Evidence]:
             sel = (veh.t >= s) & (veh.t <= e)
             x, y = np.median(veh.foot[sel], axis=0)
             spans.append([s, e, float(x), float(y), veh.tid])
-    # link fragments of the same parked object (tracker id switches while it stands still)
+    # link fragments of the same standing car (tracker id switches while it stands still)
     spans.sort()
     linked: list[list] = []
     for sp in spans:
@@ -350,15 +365,13 @@ def stopped_vehicle(ctx: Context) -> list[Evidence]:
         if e - s < p["stopped_min"]:
             continue
         pt = np.array([[x, y]])
-        if ctx.sample(ctx.zones["bus"], pt)[0] > 0:
+        zone = lambda name: ctx.sample(ctx.zones[name], pt)[0] > 0  # noqa: E731
+        if zone("bus"):
             continue
-        queued = ctx.sample(ctx.zones["sb"], pt)[0] > 0 or ctx.sample(ctx.zones["stop"], pt)[0] > 0
-        if queued:
-            # a queue at the signal: only interesting if it stands through a whole green
-            green = ctx.phases_at(np.arange(s, e, 0.5)) == "green"
-            if green.sum() * 0.5 < 8.0:
-                continue
-        out.append(Evidence("stopped_vehicle", s, e, list(tids)))
+        if not (zone("nb") or zone("flow_box")) or x > p["stopped_ne_corner_x"]:
+            continue
+        out.append(Evidence("stopped_vehicle", s, e, list(dict.fromkeys(tids)),
+                            note="NB lane" if zone("nb") else "junction box"))
     return out
 
 
