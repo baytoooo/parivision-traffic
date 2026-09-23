@@ -1,5 +1,5 @@
 """
-solution.py — team PariVision.
+solution.py, team PariVision.
 
 Part A (detect_events): YOLO26 detector + ByteTrack on every 3rd frame, tracks
 mapped into a reference view of the junction, then hand-written rules on the

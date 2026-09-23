@@ -5,7 +5,7 @@ import "@fontsource/overpass-mono/600.css";
 import "../styles/global.css";
 import SiteHeader from "../components/SiteHeader.astro";
 import SiteFooter from "../components/SiteFooter.astro";
-import { DATA_IS_MOCK, TEAM_NAME } from "../config";
+import { TEAM_NAME } from "../config";
 
 interface Props {
   title: string;
@@ -32,11 +32,6 @@ const fullTitle = title === TEAM_NAME ? `${TEAM_NAME}: traffic events at a Tashk
   <body>
     <a class="skip" href="#main">Skip to content</a>
     <SiteHeader active={active} />
-    {DATA_IS_MOCK && (
-      <div class="mock-note" role="note">
-        <div class="wrap"><b>Mock data.</b> Numbers and events on this site are placeholders until our final run. Values we do not know yet say TBD.</div>
-      </div>
-    )}
     <main id="main">
       <slot />
     </main>

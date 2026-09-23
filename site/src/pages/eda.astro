@@ -1,7 +1,6 @@
 ---
 import Base from "../layouts/Base.astro";
 import SecHead from "../components/SecHead.astro";
-import { DATA_IS_MOCK } from "../config";
 import { className } from "../lib/classes";
 import { loadAllResults, loadClips, loadEda } from "../lib/data";
 import { fmtTime } from "../lib/format";
@@ -254,7 +253,6 @@ const images = eda
       {images.map((im) => (
         <figure>
           <div class="frame">
-            {DATA_IS_MOCK && <span class="tag">placeholder</span>}
             <img src={im.src} alt={im.t} width="960" height="540" loading="lazy" decoding="async" />
           </div>
           <figcaption><strong>{im.t}.</strong> {im.c}</figcaption>

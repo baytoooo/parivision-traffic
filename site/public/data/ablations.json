@@ -1,38 +1,218 @@
 [
  {
-  "name": "yolo26m @1280, 10 fps, ByteTrack",
-  "score_a": "TBD",
-  "runtime_x": "TBD",
-  "note": "Submitted configuration."
+  "name": "YOLO26m @1280, 10 fps",
+  "clips": [
+   "C3896",
+   "C3897",
+   "C3902",
+   "C3905"
+  ],
+  "score_a": 0.5262,
+  "emitted_mean": 0.7017,
+  "cost_x": 1.0,
+  "note": "Submitted configuration.",
+  "per_class": {
+   "congestion": 0.8,
+   "failure_to_yield": 0.518,
+   "illegal_turn": 0.0,
+   "illegal_u_turn": 0.0,
+   "jaywalking": 0.551,
+   "red_light": 0.667,
+   "stop_line": 0.769,
+   "stopped_vehicle": 0.905
+  }
  },
  {
-  "name": "yolo26s @960, 10 fps, ByteTrack",
-  "score_a": "TBD",
-  "runtime_x": "TBD",
-  "note": "Same rules, smaller detector. This is the Part B detector."
+  "name": "YOLO26m @1280, 5 fps",
+  "clips": [
+   "C3896",
+   "C3897",
+   "C3902",
+   "C3905"
+  ],
+  "score_a": 0.5131,
+  "emitted_mean": 0.6842,
+  "cost_x": 0.5,
+  "note": "Every 6th frame: half the detector work.",
+  "per_class": {
+   "congestion": 0.8,
+   "failure_to_yield": 0.444,
+   "illegal_turn": 0.0,
+   "illegal_u_turn": 0.0,
+   "jaywalking": 0.52,
+   "red_light": 0.667,
+   "stop_line": 0.769,
+   "stopped_vehicle": 0.905
+  }
  },
  {
-  "name": "yolo26n @640, 10 fps, ByteTrack",
-  "score_a": "TBD",
-  "runtime_x": "TBD",
-  "note": "Smallest model, 640 px input."
+  "name": "YOLO26m @1280, 3.3 fps",
+  "clips": [
+   "C3896",
+   "C3897",
+   "C3902",
+   "C3905"
+  ],
+  "score_a": 0.4064,
+  "emitted_mean": 0.5418,
+  "cost_x": 0.33,
+  "note": "Every 9th frame: a third of the detector work.",
+  "per_class": {
+   "congestion": 0.8,
+   "failure_to_yield": 0.324,
+   "illegal_turn": 0.0,
+   "illegal_u_turn": 0.0,
+   "jaywalking": 0.453,
+   "red_light": 0.0,
+   "stop_line": 0.769,
+   "stopped_vehicle": 0.905
+  }
  },
  {
-  "name": "yolo11m @1280, 10 fps, ByteTrack",
-  "score_a": "TBD",
-  "runtime_x": "TBD",
-  "note": "Previous generation of the same detector size."
+  "name": "YOLO26m @1280, 10 fps, same clips",
+  "clips": [
+   "C3897",
+   "C3905"
+  ],
+  "score_a": 0.3403,
+  "emitted_mean": 0.4764,
+  "cost_x": 1.0,
+  "note": "Baseline for the row below.",
+  "per_class": {
+   "failure_to_yield": 0.418,
+   "illegal_turn": 0.0,
+   "illegal_u_turn": 0.0,
+   "jaywalking": 0.464,
+   "red_light": 0.0,
+   "stop_line": 0.667,
+   "stopped_vehicle": 0.833
+  }
  },
  {
-  "name": "yolo26m @1280, 5 fps, ByteTrack",
-  "score_a": "TBD",
-  "runtime_x": "TBD",
-  "note": "Every 6th frame, half the detector time."
+  "name": "YOLO26s @1280, 10 fps",
+  "clips": [
+   "C3897",
+   "C3905"
+  ],
+  "score_a": 0.3436,
+  "emitted_mean": 0.481,
+  "cost_x": 0.31,
+  "note": "Smaller detector (the Part B one), same input size.",
+  "per_class": {
+   "failure_to_yield": 0.405,
+   "illegal_turn": 0.0,
+   "illegal_u_turn": 0.0,
+   "jaywalking": 0.5,
+   "red_light": 0.0,
+   "stop_line": 0.667,
+   "stopped_vehicle": 0.833
+  }
  },
  {
-  "name": "yolo26m @1280, 10 fps, no tracking",
-  "score_a": "TBD",
-  "runtime_x": "TBD",
-  "note": "Rules need speed and direction per actor, so only per-frame checks can fire."
+  "name": "YOLO26m @960, 10 fps",
+  "clips": [
+   "C3897",
+   "C3905"
+  ],
+  "score_a": 0.3301,
+  "emitted_mean": 0.4622,
+  "cost_x": 0.56,
+  "note": "Same detector, 960 px input: people near the top of the frame shrink to about 17 px.",
+  "per_class": {
+   "failure_to_yield": 0.387,
+   "illegal_turn": 0.0,
+   "illegal_u_turn": 0.0,
+   "jaywalking": 0.424,
+   "red_light": 0.0,
+   "stop_line": 0.667,
+   "stopped_vehicle": 0.833
+  }
+ },
+ {
+  "name": "YOLO26n @960, 5 fps",
+  "clips": [
+   "C3897",
+   "C3905"
+  ],
+  "score_a": 0.3367,
+  "emitted_mean": 0.4714,
+  "cost_x": 0.03,
+  "note": "The live demo's detector and frame rate (it runs in the visitor's browser).",
+  "per_class": {
+   "failure_to_yield": 0.496,
+   "illegal_turn": 0.0,
+   "illegal_u_turn": 0.0,
+   "jaywalking": 0.361,
+   "red_light": 0.0,
+   "stop_line": 0.667,
+   "stopped_vehicle": 0.833
+  }
+ },
+ {
+  "name": "YOLO26s @960, 5 fps",
+  "clips": [
+   "C3897",
+   "C3905"
+  ],
+  "score_a": 0.3496,
+  "emitted_mean": 0.4896,
+  "cost_x": 0.09,
+  "note": "The Part B detector at the demo's frame rate.",
+  "per_class": {
+   "failure_to_yield": 0.463,
+   "illegal_turn": 0.0,
+   "illegal_u_turn": 0.0,
+   "jaywalking": 0.485,
+   "red_light": 0.0,
+   "stop_line": 0.667,
+   "stopped_vehicle": 0.833
+  }
+ },
+ {
+  "name": "No registration",
+  "clips": [
+   "C3896",
+   "C3897",
+   "C3902",
+   "C3905"
+  ],
+  "score_a": 0.3934,
+  "emitted_mean": 0.5057,
+  "cost_x": 1.0,
+  "note": "Scene polygons used as drawn, without mapping each clip onto the reference view.",
+  "per_class": {
+   "congestion": 0.8,
+   "failure_to_yield": 0.367,
+   "illegal_turn": 0.0,
+   "illegal_u_turn": 0.0,
+   "jaywalking": 0.449,
+   "red_light": 0.4,
+   "stop_line": 0.619,
+   "stopped_vehicle": 0.905,
+   "wrong_way": 0.0
+  }
+ },
+ {
+  "name": "Hand-drawn road mask",
+  "clips": [
+   "C3896",
+   "C3897",
+   "C3902",
+   "C3905"
+  ],
+  "score_a": 0.5092,
+  "emitted_mean": 0.679,
+  "cost_x": 1.0,
+  "note": "Jaywalking checked against the traced carriageway instead of the drivable area learned from vehicle tracks.",
+  "per_class": {
+   "congestion": 0.8,
+   "failure_to_yield": 0.518,
+   "illegal_turn": 0.0,
+   "illegal_u_turn": 0.0,
+   "jaywalking": 0.415,
+   "red_light": 0.667,
+   "stop_line": 0.769,
+   "stopped_vehicle": 0.905
+  }
  }
 ]

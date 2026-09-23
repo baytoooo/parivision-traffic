@@ -11,8 +11,8 @@ junction and reports traffic events as time segments (Part A), and a causal
 risk score that an accident starts within 5 s (Part B). Part A is a pretrained
 detector and tracker followed by geometry and one hand-written rule per event
 class, all in one reference view of the junction. On our own labels of the
-four sample clips it scores a mean F1 of {{EMITTED_MEAN}} over the six classes
-it emits, and an official Score A of {{SCORE_A}} once the classes it does not
+four sample clips it scores a mean F1 of 0.70 over the six classes
+it emits, and an official Score A of 0.525 once the classes it does not
 emit are counted as zeros. Nothing is trained by us.
 
 ## The data, and a dev set without labels
@@ -42,7 +42,7 @@ No person labelled frames. We read the agents' reasoning for many of the events
 and it holds up, but the numbers below are indicative, and step 3 only
 re-examined places where the model disagreed, which favours the model.
 
-The dev set has {{N_LABELS}} events: mostly failure_to_yield and jaywalking,
+The dev set has 104 events: mostly failure_to_yield and jaywalking,
 then U-turns, stopped vehicles, stop-line and red-light events, three
 congestion episodes and two illegal turns. There are no accidents and no near
 misses in the samples.
@@ -74,7 +74,8 @@ misses in the samples.
 ```
 4K frame -> every 3rd frame, 1920 px (PyAV, background thread)
          -> YOLO26m @1280 (COCO weights) -> ByteTrack, one tracker per group
-         -> homography to the reference view (SIFT, midday and dusk references)
+         -> homography to the reference view (SIFT, midday and dusk references,
+            again on keyframes while the camera settles)
          -> signal phase (colour contrast of each lamp on the median head)
 trajectories in the reference view + phase + scene layout
          -> one rule per class -> per-actor intervals -> union per class -> segments
@@ -107,10 +108,10 @@ track breaks whenever a bus passes in front of them.
 **Classes we do not emit.** Score A averages over every class that is in the
 test labels or in our predictions, so a class we predict that never occurs in
 the test set adds a zero. We emit a class only when we expect it to help. Our
-U-turn rule finds U-turns round the median nose with F1 0.29 on the dev set,
-but nothing in view marks them as prohibited. At F1 0.29, predicting them pays
+U-turn rule finds U-turns round the median nose with F1 0.27 on the dev set,
+but nothing in view marks them as prohibited. At F1 0.27, predicting them pays
 off only if the organisers label them illegal with probability above about
-0.65, so they are shown on the website and not submitted. Illegal turns (right
+0.7, so they are shown on the website and not submitted. Illegal turns (right
 turns from a middle lane, two in the dev set), accidents, near misses, solid
 line crossings, obstacles and fire have no rule.
 
@@ -124,8 +125,9 @@ short events.
 
 `RiskEstimator.step` sees frames only in order. Every third frame (10 Hz) is
 decimated to 1280 px and goes through YOLO26s at 960 px and the same tracker
-(with a 1.5 s memory instead of 2 s). For each pair of road users on the carriageway it predicts
-constant-velocity motion for 3 s in metres and scores how soon and how deeply
+(with a 1.5 s memory instead of 2 s). For each pair of road users on the
+carriageway it predicts constant-velocity motion for 3 s, in metres at the
+scale of the point between them, and scores how soon and how deeply
 their footprints would overlap, weighted by closing speed; hard braking raises
 the score. A pair has to look dangerous for 0.6 s without a break; pairs on
 opposite sides of the median, and a moving car next to a parked one, are
@@ -135,24 +137,58 @@ length by thinning frames.
 
 The samples have no accidents, so Part B cannot be scored on them. What we can
 check is that it stays calm in normal traffic: on the four samples
-{{PARTB_CALM}}
+the score crosses the 0.5 alarm threshold once in 18.4 minutes, for 0.7 s in
+C3905 at 57.6 s, when a dense platoon of cars crosses the junction box side by
+side and nothing happens. On the other three clips it peaks at 0.499, just
+under the threshold.
+Before we measured each pair in a single metre scale and asked for 0.6 s of
+danger instead of three updates, queues and following cars set off about one
+false alarm per clip.
 
 ## Results on our dev set
 
-{{RESULTS_TABLE}}
+| class | F1 @0.3 | F1 @0.5 | F1 @0.7 | mean | TP / FP / FN @0.5 |
+|---|---:|---:|---:|---:|---:|
+| congestion | 0.800 | 0.800 | 0.800 | 0.800 | 2 / 0 / 1 |
+| failure_to_yield | 0.641 | 0.524 | 0.388 | 0.518 | 27 / 28 / 21 |
+| illegal_turn (no rule) | 0.000 | 0.000 | 0.000 | 0.000 | 0 / 0 / 2 |
+| illegal_u_turn (not submitted) | 0.000 | 0.000 | 0.000 | 0.000 | 0 / 0 / 9 |
+| jaywalking | 0.808 | 0.462 | 0.346 | 0.538 | 12 / 12 / 16 |
+| red_light | 0.667 | 0.667 | 0.667 | 0.667 | 1 / 0 / 1 |
+| stop_line | 0.769 | 0.769 | 0.769 | 0.769 | 5 / 3 / 0 |
+| stopped_vehicle | 1.000 | 0.857 | 0.857 | 0.905 | 6 / 1 / 1 |
+
+Score A over these eight classes: **0.525**. Mean over the six classes we emit: 0.70.
 
 Ablations (same rules, one change per row; detector variants on the two clips
 we cached their detections for):
 
-{{ABLATION_TABLE}}
+| configuration | clips | Score A | emitted classes | detector cost |
+|---|---:|---:|---:|---:|
+| YOLO26m @1280, 10 fps | 4 | 0.526 | 0.702 | 1.00x |
+| YOLO26m @1280, 5 fps | 4 | 0.513 | 0.684 | 0.50x |
+| YOLO26m @1280, 3.3 fps | 4 | 0.406 | 0.542 | 0.33x |
+| YOLO26m @1280, 10 fps, same clips | 2 | 0.340 | 0.476 | 1.00x |
+| YOLO26s @1280, 10 fps | 2 | 0.344 | 0.481 | 0.31x |
+| YOLO26m @960, 10 fps | 2 | 0.330 | 0.462 | 0.56x |
+| YOLO26n @960, 5 fps | 2 | 0.337 | 0.471 | 0.03x |
+| YOLO26s @960, 5 fps | 2 | 0.350 | 0.490 | 0.09x |
+| No registration | 4 | 0.393 | 0.506 | 1.00x |
+| Hand-drawn road mask | 4 | 0.509 | 0.679 | 1.00x |
 
 What the ablations say: registration matters; the learned drivable area is
 better than the hand-drawn road for jaywalking; and 5 fps loses little, while
-3.3 fps loses short events unless the rules adapt their gaps. The small
+3.3 fps loses a fifth of the score even with the rules' gaps scaled to the
+sampling step, because a car crosses a zebra in about a second. The small
 detectors at 960 px do about as well as the submitted one on these two clips,
 which is why the live demo can run YOLO26n in a browser.
 
-**Runtime.** {{RUNTIME}}
+**Runtime.** The submitted `predictions_samples.json` was made on an Apple M5
+laptop with PyTorch on MPS and the time guards lifted, so that it is the output
+of the full pipeline with no frames thinned: 3.3x the clip length over the four
+clips (Part A 2.0x, Part B 1.2x). The laptop is slower than a T4. With the
+default guards the pipeline stays inside the 3x budget on any machine by
+thinning frames, and `tools/t4_check.sh` measures it on a Colab T4.
 
 ## What did not work, and why
 

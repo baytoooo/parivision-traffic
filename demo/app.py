@@ -1,6 +1,11 @@
-"""Web API for the live demo (runs on a Hugging Face Space, CPU).
+"""A local web API that runs the full Python pipeline on an uploaded clip.
 
-Endpoints match site/BRIEF.md:
+    pip install -r requirements.txt -r demo/requirements.txt
+    cd demo && uvicorn app:app --port 7860
+
+The website's demo runs the TypeScript port in the browser instead
+(site/src/pipeline/); this server is for trying the submission's own code on a clip.
+
   GET  /api/health
   GET  /api/samples
   POST /api/jobs                 multipart "file" (mp4, up to 500 MB, first 120 s analysed)
@@ -9,7 +14,7 @@ Endpoints match site/BRIEF.md:
   GET  /api/jobs/{id}/video
   GET  /api/jobs/{id}/result.json
 
-One worker thread processes jobs in arrival order; the page polls for progress.
+One worker thread processes jobs in arrival order; a client polls for progress.
 """
 from __future__ import annotations
 

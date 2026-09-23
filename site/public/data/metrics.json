@@ -1,456 +1,341 @@
 {
- "model_score": "TBD",
+ "model_score": 0.5246150289839611,
  "part_a": {
-  "score_a": "TBD",
+  "score_a": 0.5246150289839611,
   "classes": [
-   "accident",
-   "near_miss",
-   "red_light",
-   "wrong_way",
-   "illegal_u_turn",
-   "stopped_vehicle",
-   "jaywalking",
+   "congestion",
    "failure_to_yield",
    "illegal_turn",
-   "solid_line_crossing",
+   "illegal_u_turn",
+   "jaywalking",
+   "red_light",
    "stop_line",
-   "congestion",
-   "road_obstacle",
-   "fire_smoke"
+   "stopped_vehicle"
   ],
   "per_class": {
-   "accident": {
+   "congestion": {
     "0.3": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
+     "tp": 2,
+     "fp": 0,
+     "fn": 1,
+     "precision": 1.0,
+     "recall": 0.6666666666666666,
+     "f1": 0.8
     },
     "0.5": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
+     "tp": 2,
+     "fp": 0,
+     "fn": 1,
+     "precision": 1.0,
+     "recall": 0.6666666666666666,
+     "f1": 0.8
     },
     "0.7": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
+     "tp": 2,
+     "fp": 0,
+     "fn": 1,
+     "precision": 1.0,
+     "recall": 0.6666666666666666,
+     "f1": 0.8
     },
-    "f1_mean": "TBD"
-   },
-   "near_miss": {
-    "0.3": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
-    },
-    "0.5": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
-    },
-    "0.7": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
-    },
-    "f1_mean": "TBD"
-   },
-   "red_light": {
-    "0.3": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
-    },
-    "0.5": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
-    },
-    "0.7": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
-    },
-    "f1_mean": "TBD"
-   },
-   "wrong_way": {
-    "0.3": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
-    },
-    "0.5": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
-    },
-    "0.7": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
-    },
-    "f1_mean": "TBD"
-   },
-   "illegal_u_turn": {
-    "0.3": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
-    },
-    "0.5": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
-    },
-    "0.7": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
-    },
-    "f1_mean": "TBD"
-   },
-   "stopped_vehicle": {
-    "0.3": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
-    },
-    "0.5": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
-    },
-    "0.7": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
-    },
-    "f1_mean": "TBD"
-   },
-   "jaywalking": {
-    "0.3": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
-    },
-    "0.5": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
-    },
-    "0.7": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
-    },
-    "f1_mean": "TBD"
+    "f1_mean": 0.8000000000000002
    },
    "failure_to_yield": {
     "0.3": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
+     "tp": 33,
+     "fp": 22,
+     "fn": 15,
+     "precision": 0.6,
+     "recall": 0.6875,
+     "f1": 0.6407766990291262
     },
     "0.5": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
+     "tp": 27,
+     "fp": 28,
+     "fn": 21,
+     "precision": 0.4909090909090909,
+     "recall": 0.5625,
+     "f1": 0.5242718446601942
     },
     "0.7": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
+     "tp": 20,
+     "fp": 35,
+     "fn": 28,
+     "precision": 0.36363636363636365,
+     "recall": 0.4166666666666667,
+     "f1": 0.38834951456310685
     },
-    "f1_mean": "TBD"
+    "f1_mean": 0.517799352750809
    },
    "illegal_turn": {
     "0.3": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
+     "tp": 0,
+     "fp": 0,
+     "fn": 2,
+     "precision": 0.0,
+     "recall": 0.0,
+     "f1": 0.0
     },
     "0.5": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
+     "tp": 0,
+     "fp": 0,
+     "fn": 2,
+     "precision": 0.0,
+     "recall": 0.0,
+     "f1": 0.0
     },
     "0.7": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
+     "tp": 0,
+     "fp": 0,
+     "fn": 2,
+     "precision": 0.0,
+     "recall": 0.0,
+     "f1": 0.0
     },
-    "f1_mean": "TBD"
+    "f1_mean": 0.0
    },
-   "solid_line_crossing": {
+   "illegal_u_turn": {
     "0.3": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
+     "tp": 0,
+     "fp": 0,
+     "fn": 9,
+     "precision": 0.0,
+     "recall": 0.0,
+     "f1": 0.0
     },
     "0.5": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
+     "tp": 0,
+     "fp": 0,
+     "fn": 9,
+     "precision": 0.0,
+     "recall": 0.0,
+     "f1": 0.0
     },
     "0.7": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
+     "tp": 0,
+     "fp": 0,
+     "fn": 9,
+     "precision": 0.0,
+     "recall": 0.0,
+     "f1": 0.0
     },
-    "f1_mean": "TBD"
+    "f1_mean": 0.0
+   },
+   "jaywalking": {
+    "0.3": {
+     "tp": 21,
+     "fp": 3,
+     "fn": 7,
+     "precision": 0.875,
+     "recall": 0.75,
+     "f1": 0.8076923076923077
+    },
+    "0.5": {
+     "tp": 12,
+     "fp": 12,
+     "fn": 16,
+     "precision": 0.5,
+     "recall": 0.42857142857142855,
+     "f1": 0.4615384615384615
+    },
+    "0.7": {
+     "tp": 9,
+     "fp": 15,
+     "fn": 19,
+     "precision": 0.375,
+     "recall": 0.32142857142857145,
+     "f1": 0.3461538461538462
+    },
+    "f1_mean": 0.5384615384615384
+   },
+   "red_light": {
+    "0.3": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 1,
+     "precision": 1.0,
+     "recall": 0.5,
+     "f1": 0.6666666666666666
+    },
+    "0.5": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 1,
+     "precision": 1.0,
+     "recall": 0.5,
+     "f1": 0.6666666666666666
+    },
+    "0.7": {
+     "tp": 1,
+     "fp": 0,
+     "fn": 1,
+     "precision": 1.0,
+     "recall": 0.5,
+     "f1": 0.6666666666666666
+    },
+    "f1_mean": 0.6666666666666666
    },
    "stop_line": {
     "0.3": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
+     "tp": 5,
+     "fp": 3,
+     "fn": 0,
+     "precision": 0.625,
+     "recall": 1.0,
+     "f1": 0.7692307692307693
     },
     "0.5": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
+     "tp": 5,
+     "fp": 3,
+     "fn": 0,
+     "precision": 0.625,
+     "recall": 1.0,
+     "f1": 0.7692307692307693
     },
     "0.7": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
+     "tp": 5,
+     "fp": 3,
+     "fn": 0,
+     "precision": 0.625,
+     "recall": 1.0,
+     "f1": 0.7692307692307693
     },
-    "f1_mean": "TBD"
+    "f1_mean": 0.7692307692307693
    },
-   "congestion": {
+   "stopped_vehicle": {
     "0.3": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
+     "tp": 7,
+     "fp": 0,
+     "fn": 0,
+     "precision": 1.0,
+     "recall": 1.0,
+     "f1": 1.0
     },
     "0.5": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
+     "tp": 6,
+     "fp": 1,
+     "fn": 1,
+     "precision": 0.8571428571428571,
+     "recall": 0.8571428571428571,
+     "f1": 0.8571428571428571
     },
     "0.7": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
+     "tp": 6,
+     "fp": 1,
+     "fn": 1,
+     "precision": 0.8571428571428571,
+     "recall": 0.8571428571428571,
+     "f1": 0.8571428571428571
     },
-    "f1_mean": "TBD"
-   },
-   "road_obstacle": {
-    "0.3": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
-    },
-    "0.5": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
-    },
-    "0.7": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
-    },
-    "f1_mean": "TBD"
-   },
-   "fire_smoke": {
-    "0.3": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
-    },
-    "0.5": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
-    },
-    "0.7": {
-     "tp": "TBD",
-     "fp": "TBD",
-     "fn": "TBD",
-     "precision": "TBD",
-     "recall": "TBD",
-     "f1": "TBD"
-    },
-    "f1_mean": "TBD"
+    "f1_mean": 0.9047619047619048
    }
   },
   "micro": {
    "0.3": {
-    "tp": "TBD",
-    "fp": "TBD",
-    "fn": "TBD",
-    "precision": "TBD",
-    "recall": "TBD",
-    "f1": "TBD"
+    "tp": 69,
+    "fp": 28,
+    "fn": 35,
+    "precision": 0.711340206185567,
+    "recall": 0.6634615384615384,
+    "f1": 0.6865671641791045
    },
    "0.5": {
-    "tp": "TBD",
-    "fp": "TBD",
-    "fn": "TBD",
-    "precision": "TBD",
-    "recall": "TBD",
-    "f1": "TBD"
+    "tp": 53,
+    "fp": 44,
+    "fn": 51,
+    "precision": 0.5463917525773195,
+    "recall": 0.5096153846153846,
+    "f1": 0.527363184079602
    },
    "0.7": {
-    "tp": "TBD",
-    "fp": "TBD",
-    "fn": "TBD",
-    "precision": "TBD",
-    "recall": "TBD",
-    "f1": "TBD"
+    "tp": 43,
+    "fp": 54,
+    "fn": 61,
+    "precision": 0.44329896907216493,
+    "recall": 0.41346153846153844,
+    "f1": 0.42786069651741293
    }
   },
   "class_agnostic": {
    "0.3": {
-    "tp": "TBD",
-    "fp": "TBD",
-    "fn": "TBD",
-    "precision": "TBD",
-    "recall": "TBD",
-    "f1": "TBD"
+    "tp": 71,
+    "fp": 26,
+    "fn": 33,
+    "precision": 0.7319587628865979,
+    "recall": 0.6826923076923077,
+    "f1": 0.7064676616915424
    },
    "0.5": {
-    "tp": "TBD",
-    "fp": "TBD",
-    "fn": "TBD",
-    "precision": "TBD",
-    "recall": "TBD",
-    "f1": "TBD"
+    "tp": 54,
+    "fp": 43,
+    "fn": 50,
+    "precision": 0.5567010309278351,
+    "recall": 0.5192307692307693,
+    "f1": 0.5373134328358209
    },
    "0.7": {
-    "tp": "TBD",
-    "fp": "TBD",
-    "fn": "TBD",
-    "precision": "TBD",
-    "recall": "TBD",
-    "f1": "TBD"
+    "tp": 43,
+    "fp": 54,
+    "fn": 61,
+    "precision": 0.44329896907216493,
+    "recall": 0.41346153846153844,
+    "f1": 0.42786069651741293
    }
   },
-  "per_video": null
+  "per_video": [
+   {
+    "video": "C3896.MP4",
+    "gt": 28,
+    "pred": 25,
+    "congestion": "2/0/1",
+    "failure_to_yield": "7/6/5",
+    "illegal_turn": "0/0/0",
+    "illegal_u_turn": "0/0/3",
+    "jaywalking": "3/2/2",
+    "red_light": "1/0/0",
+    "stop_line": "2/0/0",
+    "stopped_vehicle": "2/0/0"
+   },
+   {
+    "video": "C3897.MP4",
+    "gt": 32,
+    "pred": 28,
+    "congestion": "0/0/0",
+    "failure_to_yield": "6/9/9",
+    "illegal_turn": "0/0/1",
+    "illegal_u_turn": "0/0/3",
+    "jaywalking": "3/4/6",
+    "red_light": "0/0/0",
+    "stop_line": "1/2/0",
+    "stopped_vehicle": "2/1/1"
+   },
+   {
+    "video": "C3902.MP4",
+    "gt": 28,
+    "pred": 26,
+    "congestion": "0/0/0",
+    "failure_to_yield": "9/5/4",
+    "illegal_turn": "0/0/1",
+    "illegal_u_turn": "0/0/2",
+    "jaywalking": "6/3/4",
+    "red_light": "0/0/0",
+    "stop_line": "1/1/0",
+    "stopped_vehicle": "1/0/0"
+   },
+   {
+    "video": "C3905.MP4",
+    "gt": 16,
+    "pred": 18,
+    "congestion": "0/0/0",
+    "failure_to_yield": "5/8/3",
+    "illegal_turn": "0/0/0",
+    "illegal_u_turn": "0/0/1",
+    "jaywalking": "0/3/4",
+    "red_light": "0/0/1",
+    "stop_line": "1/0/0",
+    "stopped_vehicle": "1/0/0"
+   }
+  ]
  },
  "part_b": null,
  "missing_videos": [],

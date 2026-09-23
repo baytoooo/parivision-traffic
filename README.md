@@ -115,11 +115,49 @@ missing `camera.md`) and `docs/labeling.md` (how we built the dev set).
 
 ## Results on our dev labels
 
-<!-- RESULTS_TABLE -->
+Scored with the organisers' `evaluate.py` against our own labels of the four
+samples (104 events; `labels/dev_labels.json`, built as `docs/labeling.md`
+describes). F1 is the mean over tIoU 0.3, 0.5 and 0.7.
+
+| class | F1 | TP / FP / FN at tIoU 0.5 |
+|---|---:|---:|
+| congestion | 0.800 | 2 / 0 / 1 |
+| failure_to_yield | 0.518 | 27 / 28 / 21 |
+| jaywalking | 0.538 | 12 / 12 / 16 |
+| red_light | 0.667 | 1 / 0 / 1 |
+| stop_line | 0.769 | 5 / 3 / 0 |
+| stopped_vehicle | 0.905 | 6 / 1 / 1 |
+| illegal_u_turn (not submitted) | 0 | 0 / 0 / 9 |
+| illegal_turn (no rule) | 0 | 0 / 0 / 2 |
+
+Score A is **0.525**; the mean over the six classes we emit is 0.70. The labels
+were made by AI agents and checked by other agents, not by people, so treat
+these numbers as indicative. The samples contain no accidents, so Part B is
+not scored; its risk score crosses 0.5 once in the four clips, for 0.7 s
+(C3905 at 57.6 s, a dense platoon of cars crossing the junction box side by
+side; nothing happens).
+`python evaluate.py --pred predictions_samples.json --gt labels/dev_labels.json --per-video`
+prints the full report.
 
 ## Runtime
 
-<!-- RUNTIME -->
+`predictions_samples.json` comes from the official harness on an Apple M5
+laptop (16 GB, PyTorch on MPS). The laptop is slower than a T4, so for that
+run we lifted the time guards (`PARIVISION_TIME_SHARE=12
+PARIVISION_TOTAL_LIMIT=30 PARIVISION_RISK_SHARE=10`, `--time-factor 40`) to get
+the output of the full pipeline, with no frames thinned out:
+
+| clip | length | Part A | Part B | total |
+|---|---:|---:|---:|---:|
+| C3896 | 340 s | 595 s | 491 s | 3.2x |
+| C3897 | 318 s | 919 s | 437 s | 4.3x |
+| C3902 | 318 s | 540 s | 317 s | 2.7x |
+| C3905 | 128 s | 200 s | 118 s | 2.5x |
+
+With the default guards the pipeline always stays inside the harness budget:
+Part A thins its frames and stops at 1.3x the clip length, and Part B keeps
+both parts under 2.8x. `tools/t4_check.sh` runs the harness with the official
+3x budget on a Colab or Kaggle T4 and prints the same table.
 
 ## Determinism
 

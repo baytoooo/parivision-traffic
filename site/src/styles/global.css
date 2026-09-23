@@ -188,15 +188,6 @@ code { font-size: 0.9em; background: var(--asphalt-3); padding: 0.08em 0.35em; b
   .nav a.nav-demo { margin: 12px 0 0; text-align: center; border-radius: var(--radius); border: 0; }
 }
 
-/* ------------------------------------------------------------ mock notice */
-.mock-note {
-  font-family: var(--font-mono); font-size: 0.75rem; color: var(--paint-2);
-  border-bottom: 1px solid var(--line);
-  background: repeating-linear-gradient(-45deg, rgba(243,195,22,0.07) 0 12px, transparent 12px 24px);
-}
-.mock-note .wrap { padding-block: 6px; }
-.mock-note b { color: var(--zebra); font-weight: 600; }
-
 /* ------------------------------------------------------------ page head */
 .page-head { padding-block: clamp(36px, 6vw, 72px) clamp(20px, 3vw, 32px); }
 .kicker {
@@ -298,11 +289,6 @@ td.t { font-family: var(--font-mono); white-space: nowrap; }
 figure { margin: 0; }
 figcaption { font-size: 0.85rem; color: var(--muted); margin-top: 8px; line-height: 1.45; }
 .frame { position: relative; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--asphalt-0); }
-.frame .tag {
-  position: absolute; top: 8px; left: 8px; z-index: 2;
-  font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.05em; text-transform: uppercase;
-  background: rgba(14,15,17,0.8); color: var(--zebra); padding: 3px 7px; border: 1px dashed var(--zebra);
-}
 
 /* ------------------------------------------------------------ footer */
 .site-footer { border-top: 1px solid var(--line); margin-top: 48px; background: var(--asphalt-0); }

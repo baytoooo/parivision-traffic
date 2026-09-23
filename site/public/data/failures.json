@@ -1,23 +1,44 @@
 [
  {
-  "clip": "C3896",
-  "t": 0,
-  "label": "stopped_vehicle",
-  "kind": "false positive",
-  "caption": "One stopped_vehicle segment covers the whole clip, 0.0 to 340.2 s. There is no such event in our labels. Cause still being checked (TBD)."
- },
- {
-  "clip": "C3896",
-  "t": 91.5,
+  "clip": "C3897",
+  "t": 171.3,
   "label": "jaywalking",
-  "kind": "merged too long",
-  "caption": "Several people jaywalk at overlapping times, and same-class segments are merged, so we output one 133 s segment (91.5 to 224.7 s). Our labels have five shorter ones, and at IoU 0.3 the long segment matches none of them."
+  "kind": "false positive",
+  "caption": "A delivery rider on a moped slows down and puts a foot on the road to let a car pass. The detector loses the moped for those frames, and at that moment the rider is too slow for our speed test to flag him as a rider, so he counts as a pedestrian standing in the junction box."
  },
  {
   "clip": "C3905",
-  "t": 44,
+  "t": 68.8,
+  "label": "failure_to_yield",
+  "kind": "false positive",
+  "caption": "Two men wait at the kerb end of the zebra for their walk phase while a car with a green light drives past them. The rule counts them as out on the crossing. It cannot yet tell someone waiting at the end of the stripes from someone about to step off."
+ },
+ {
+  "clip": "C3897",
+  "t": 58.8,
+  "label": "stop_line",
+  "kind": "disputed",
+  "caption": "Cars in the median lane crossed the line on green, then waited about 20 s behind a car turning at the median nose. When the light went red they were still past the line, and the rule called it a stop-line violation. Our labels say it is not one; the task's definition could be read either way."
+ },
+ {
+  "clip": "C3905",
+  "t": 33.6,
+  "label": "red_light",
+  "kind": "missed",
+  "caption": "A scooter creeps over the stop line 0.8 s before green, while the red and amber lamps are lit together. Our lamp reader calls red plus amber 'yellow', so the red-light rule never looks at it."
+ },
+ {
+  "clip": "C3896",
+  "t": 126.5,
+  "label": "congestion",
+  "kind": "missed",
+  "caption": "The southbound junction box fills up and jams through a whole green, but the jam crawls at 1 to 2 m/s instead of standing still. The rule only counts vehicles that stand, so it never sees 8 of them on green."
+ },
+ {
+  "clip": "C3897",
+  "t": 253.0,
   "label": "jaywalking",
-  "kind": "hard case",
-  "caption": "Dusk clip, underexposed. Pedestrians in dark clothing on the far crossing are small and low contrast. Per-class recall on this clip is TBD."
+  "kind": "missed",
+  "caption": "A man walks up the road beside the west zebra, coming in at the bottom edge of the frame. While his feet are below the frame his foot point sits on the image edge, outside the area the rule checks, so it sees only 0.6 s of him off the crossing and needs 1 s."
  }
 ]
