@@ -31,7 +31,7 @@ const SCHEMA = {
 function prompt(it) {
   const what = it.kind === 'fp'
     ? `Our model predicted a "${it.label}" segment ${it.start.toFixed(1)}-${it.end.toFixed(1)} s that our dev labels do not have. Actors the model used: ${it.actors}.`
-    : `Our dev labels have a "${it.label}" segment ${it.start.toFixed(1)}-${it.end.toFixed(1)} s that the model did not find. ${it.note || ''}`
+    : `Our dev labels have a "${it.label}" segment ${it.start.toFixed(1)}-${it.end.toFixed(1)} s that the model did not find. ${it.note || ''}${args.items_file ? `The entry with id "${it.id}" in ${ROOT}/${args.items_file} has a "note" field with what the dev-set verifier saw (it may be wrong); read it first.` : ''}`
   return `You are adjudicating a traffic-event dev set. Project root: ${ROOT}. Read ${ROOT}/docs/scene.md and
 ${ROOT}/docs/labeling.md first (layout, directions, crossings, class definitions, start/end conventions) and look at
 ${ROOT}/docs/scene_overlay.jpg. Clip ${it.clip}: proxy cache/proxy/${it.clip}.mp4 (960x540, 10 fps; proxy pixel =

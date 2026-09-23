@@ -14,7 +14,10 @@ from .segments import finalize
 ENABLED = ("jaywalking", "failure_to_yield", "red_light", "stop_line", "stopped_vehicle", "wrong_way", "congestion")
 SHOWN = ENABLED + ("illegal_u_turn",)
 
-GAP = {"jaywalking": 0.5, "failure_to_yield": 1.0, "red_light": 0.0, "stop_line": 0.5,
+# Segments of one class closer than GAP seconds are joined. The task merges only overlapping
+# events, so a car crossing a zebra right after another is a separate event (GAP 0); congestion
+# and stopped vehicles bridge short detection gaps inside one episode.
+GAP = {"jaywalking": 0.5, "failure_to_yield": 0.0, "red_light": 0.0, "stop_line": 0.5,
        "stopped_vehicle": 1.0, "wrong_way": 1.0, "congestion": 8.0, "illegal_u_turn": 0.0}
 MIN_LEN = {"jaywalking": 1.0, "failure_to_yield": 0.3, "red_light": 0.5, "stop_line": 1.0,
            "stopped_vehicle": 10.0, "wrong_way": 1.5, "congestion": 6.0, "illegal_u_turn": 2.0}
