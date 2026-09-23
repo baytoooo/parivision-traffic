@@ -5,8 +5,10 @@ pipeline unions them per class into the final segments; the renderer and the
 website use the evidence to draw who did what.
 
 Distances are in reference pixels (1920x1080 view). Around the north crossing
-one metre is roughly 25-30 px; the thresholds below were tuned on our dev
-labels of the sample clips (see docs/results.md).
+one metre across the view is about 50 px (``scene.metres_per_px``), and much
+less along the avenue, which the camera sees end-on. Where it matters,
+thresholds are scaled by the person's own box height instead. They were tuned
+on our dev labels of the sample clips (tools/tune.py, tools/ablation.py).
 """
 from __future__ import annotations
 

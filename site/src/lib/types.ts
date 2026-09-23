@@ -95,13 +95,50 @@ export interface Runtime {
   clips: { clip: string; duration: number; part_a_sec: number; part_b_sec: number; total_sec: number }[];
 }
 
-export interface Eda {
+/** One clip's container facts (tools/eda.py, from ffprobe). */
+export interface EdaClip {
+  id: string;
+  width: number;
+  height: number;
+  fps: number;
+  duration: number;
+  codec: string;
+  pix_fmt: string;
+  bitrate_mbps: number;
+  created_utc: string;
+}
+
+/** Signal phases measured onset to onset over complete phases (tools/eda.py signal_stats). */
+export interface SignalStat {
+  segments: Seg[];
+  green: number | null;
+  yellow: number | null;
+  red: number | null;
+  cycle: number | null;
+  cycles: number;
+  unknown_sec: number;
+}
+
+/** Events of one class in our dev labels (tools/make_site_data.py label_stats). */
+export interface LabelStat {
+  n: number;
   clips: string[];
-  density: Record<string, { t: number[]; vehicles: number[]; people: number[] }>;
-  speeds: { sb: number[]; nb: number[] };
-  signal_cycle: { green: Num; red: Num; cycle: Num };
+  median_sec: number;
+  total_sec: number;
+}
+
+export interface Eda {
+  clips: EdaClip[];
+  /** Mean detections per frame (confidence 0.35 or more) per 5 s bin, by class. */
+  counts: Record<string, { t: number[]; [objectClass: string]: number[] }>;
+  /** Mean tracked vehicles per frame per 5 s bin, split by speed at 40 px/s. */
+  density: Record<string, { t: number[]; vehicles_moving: number[]; vehicles_standing: number[] }>;
+  signal: Record<string, SignalStat>;
+  light: Record<string, { mean_luma: number }>;
+  /** Share of person foot points (tracked samples) by where they are. */
+  pedestrians: { on_crossing: number; off_crossing_on_road: number; pavement: number };
   images: { heatmap_vehicle: string; heatmap_person: string; trajectories: string; directions: string };
-  findings: string[];
+  labels?: Record<string, LabelStat>;
 }
 
 export interface Example {

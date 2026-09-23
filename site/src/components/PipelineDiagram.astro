@@ -17,21 +17,21 @@ const partA: Node[] = [
   { id: "a1", title: "4K clip", lines: ["3840x2160, 29.97 fps", "H.264 4:2:2 10-bit"], kind: "data", c: 0, r: 0 },
   { id: "a2", title: "Sample", lines: ["every 3rd frame, about 10 fps", "resized to 1920x1080"], kind: "rule", c: 1, r: 0 },
   { id: "a3", title: "Detect", lines: ["YOLO26m, COCO weights", "1280 px input, conf 0.1"], kind: "learned", c: 2, r: 0 },
-  { id: "a4", title: "Track", lines: ["ByteTrack, one tracker per", "group: vehicles, people, bikes"], kind: "rule", c: 3, r: 0 },
+  { id: "a4", title: "Track", lines: ["ByteTrack, one tracker per group:", "vehicles, people, bikes, animals"], kind: "rule", c: 3, r: 0 },
   { id: "a5", title: "Register", lines: ["SIFT + MAGSAC homography", "clip -> reference view"], kind: "geometry", c: 0, r: 1 },
   { id: "a6", title: "Trajectories", lines: ["foot points in reference px", "smoothed speed and heading"], kind: "geometry", c: 1, r: 1 },
-  { id: "a7", title: "Rules", lines: ["per actor and interval", "6 classes emitted"], kind: "rule", c: 2, r: 1 },
+  { id: "a7", title: "Rules", lines: ["per actor and interval", "7 classes emitted"], kind: "rule", c: 2, r: 1 },
   { id: "a8", title: "Segments", lines: ["union per class, no overlap", "[start, end, class]"], kind: "output", c: 3, r: 1 },
 ];
 const inputs: Node[] = [
-  { id: "s1", title: "Signal phase", lines: ["lamp colour on the median", "head, every 0.2 s"], kind: "rule", c: 1, r: 2 },
-  { id: "s2", title: "Scene layout", lines: ["stop line, crossings, lanes,", "bus stop; drawn once"], kind: "geometry", c: 2, r: 2 },
+  { id: "s1", title: "Signal phase", lines: ["lamp colour on the median", "head, every 0.1 s"], kind: "rule", c: 1, r: 2 },
+  { id: "s2", title: "Scene layout", lines: ["stop line, crossings, road,", "bus stop; drawn once"], kind: "geometry", c: 2, r: 2 },
 ];
 const partB: Node[] = [
   { id: "b1", title: "Frames as they arrive", lines: ["causal: past frames only", "every 3rd, 1280 px wide"], kind: "data", c: 0, r: 3 },
-  { id: "b2", title: "Detect and track", lines: ["YOLO26s at 960 px, conf 0.2", "same ByteTrack setup"], kind: "learned", c: 1, r: 3 },
-  { id: "b3", title: "Look ahead", lines: ["constant velocity, 4 s", "footprints in reference px"], kind: "geometry", c: 2, r: 3 },
-  { id: "b4", title: "Risk per frame", lines: ["pair hazards combined, EMA", "0.5 = contact likely in 5 s"], kind: "output", c: 3, r: 3 },
+  { id: "b2", title: "Detect and track", lines: ["YOLO26s at 960 px, conf 0.2", "ByteTrack, 1.5 s buffer (A: 2 s)"], kind: "learned", c: 1, r: 3 },
+  { id: "b3", title: "Look ahead", lines: ["constant velocity, 3 s", "footprints in metres"], kind: "geometry", c: 2, r: 3 },
+  { id: "b4", title: "Risk per frame", lines: ["worst pair hazard, EMA", "0.5 = contact likely in 5 s"], kind: "output", c: 3, r: 3 },
 ];
 const all = [...partA, ...inputs, ...partB];
 
@@ -75,7 +75,7 @@ const medianY = ROW_Y[3] - 40;
 
 // ---------- tall layout
 const TW = 360, TBW = 300, TX = 44, TBH = 70, TG = 30;
-const tallOrder = ["a1", "a2", "s1", "a3", "a4", "a5", "s2", "a6", "a7", "a8", "b1", "b2", "b3", "b4"];
+const tallOrder = ["a1", "a2", "s1", "a3", "a4", "a5", "a6", "s2", "a7", "a8", "b1", "b2", "b3", "b4"];
 const tallSide = new Set(["s1", "s2"]);
 const tPos: Record<string, { x: number; y: number; w: number }> = {};
 let ty = 34;
@@ -98,7 +98,7 @@ for (const chain of [chainA, chainB]) {
 }
 tPaths.push({ d: `M${tPos.s1.x + tPos.s1.w - 30},${tPos.a2.y + TBH} L${tPos.s1.x + tPos.s1.w - 30},${tPos.s1.y - 6}`, cls: "side" });
 tPaths.push({ d: `M${tPos.s1.x + tPos.s1.w},${tPos.s1.y + TBH / 2} L${TW - 8},${tPos.s1.y + TBH / 2} L${TW - 8},${tPos.a7.y + TBH / 2} L${TX + TBW + 6},${tPos.a7.y + TBH / 2}`, cls: "side" });
-tPaths.push({ d: `M${tPos.s2.x + tPos.s2.w - 30},${tPos.s2.y + TBH} L${tPos.s2.x + tPos.s2.w - 30},${tPos.a6.y - 6}`, cls: "side" });
+tPaths.push({ d: `M${tPos.s2.x + tPos.s2.w - 30},${tPos.s2.y + TBH} L${tPos.s2.x + tPos.s2.w - 30},${tPos.a7.y - 6}`, cls: "side" });
 const tMedian = tPos.b1.y - 44;
 
 const kindLabel: Record<Kind, string> = { data: "input", learned: "learned", rule: "rule", geometry: "geometry", output: "output" };

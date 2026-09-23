@@ -1,7 +1,8 @@
 """Scene layout of the intersection in reference coordinates.
 
-Reference = the 1920x1080 downscale of the sample clips (all four share the
-same framing). The organisers did not ship camera.md, so everything here was
+Reference = the 1920x1080 downscale of the morning sample clips. The
+afternoon clips are framed up to 60 px differently, which registration.py
+takes care of. The organisers did not ship camera.md, so everything here was
 traced by hand on a median background image (docs/scene.md has the picture
 and the reasoning). At runtime the shapes are mapped into each clip with the
 homography from ``registration.align``.
@@ -65,7 +66,9 @@ STOP_LINE_SB = [(285, 527), (930, 457)]
 # Lamp centres, top to bottom. A 2-lamp pedestrian head on the left corner
 # pole (walking man for the west crossing) is not used for the vehicle phase.
 SIGNAL_LAMPS = {"red": (1157, 371), "yellow": (1157, 388), "green": (1156, 406)}
-PED_SIGNAL_LAMPS = {"red": (279, 492), "green": (266, 510)}
+# Two-lamp pedestrian head for the west crossing, on the left corner pole. Not used
+# by the pipeline (docs/scene.md explains why); kept as a record of where it is.
+PED_SIGNAL_LAMPS = {"red": (267, 493), "green": (266, 510)}
 
 
 def poly(points) -> np.ndarray:
@@ -111,7 +114,7 @@ def masks(size=REF_SIZE) -> dict[str, np.ndarray]:
     ``walk_check`` is where a pedestrian counts as being on the carriageway:
     the hand-drawn road, restricted to where vehicles were actually seen
     driving in the sample clips (``assets/drivable.png``, built by
-    tools/eda.py from vehicle tracks), plus the junction box. That drops the
+    tools/drivable_mask.py from vehicle tracks), plus the junction box. That drops the
     kerb strips, the bus-stop edge and the median edge, where people stand
     all day without being in anyone's way.
     """

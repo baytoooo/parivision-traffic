@@ -19,7 +19,7 @@ const steps = [
   { n: "01", t: "Sample", d: "Every 3rd 4K frame, resized to 1920 px" },
   { n: "02", t: "Detect and track", d: "YOLO26m, then ByteTrack per object group" },
   { n: "03", t: "Register", d: "Homography into one reference view" },
-  { n: "04", t: "Read the signal", d: "Lamp colour on the median head, every 0.2 s" },
+  { n: "04", t: "Read the signal", d: "Lamp colour on the median head, every 0.1 s" },
   { n: "05", t: "Apply rules", d: "Trajectories plus phase give per-actor intervals" },
   { n: "06", t: "Segments", d: "Merged per class, written as [start, end, class]" },
 ];
@@ -61,7 +61,7 @@ const pages = [
         </div>
         <button class="clip-toggle" type="button" id="hero-toggle" aria-pressed="false">Play</button>
       </div>
-      <figcaption>A short loop from {hero?.id} with our boxes and track ids drawn on. The camera sits on a building at the south-west corner and looks north-west up the avenue.</figcaption>
+      <figcaption>A short loop from {hero?.id} with our boxes, event labels and signal phase drawn on. The camera sits high on a building at one corner of the junction and looks up the avenue.</figcaption>
     </figure>
   </section>
 

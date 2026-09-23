@@ -10,15 +10,18 @@ median background.
 
 ## Camera
 
-A Sony camcorder on a tripod, high up on a building at the south-west corner
-of a signalised four-way junction in Tashkent. It looks north-west, straight
-up the avenue. Files are XAVC S: 3840x2160, 29.97 fps, H.264 High 4:2:2
+A Sony camcorder on a tripod, high up on a building at one corner of a
+signalised four-way junction in Tashkent, looking straight up the avenue. We
+call the arms north, south, east and west as seen from the camera, with the
+avenue running "north" away from it. These are names, not compass bearings;
+we did not check them against a map. Files are XAVC S: 3840x2160, 29.97 fps, H.264 High 4:2:2
 10-bit at about 140 Mbit/s. There is no camera motion inside a clip, and the
 two morning samples have the same framing to within a pixel. The two
 afternoon clips do not: C3902 is shifted by about 60 px horizontally and
-36 px vertically with a 2% zoom, C3905 by about 15 and 22 px. So every clip
-is registered to the reference view with a homography from SIFT features
-(`src/parivision/registration.py`), against a midday and a dusk reference.
+36 px vertically with a 2% zoom, C3905 by about 15 and 23 px with a 1% zoom.
+So every clip is registered to the reference view with a homography from SIFT
+features (`src/parivision/registration.py`), against a midday and a dusk
+reference.
 
 | clip  | length  | local time (Tashkent)   | light                         |
 |-------|---------|-------------------------|-------------------------------|
@@ -71,12 +74,14 @@ Nothing else in view is a legal place to cross.
   two-lamp pedestrian signal (walking and standing man) for the west
   crossing. Its walk phase runs with the avenue green, because people on the
   west crossing walk parallel to the avenue. We first mistook it for the
-  vehicle signal; it turns red about 7 s before the vehicle signal does, and
+  vehicle signal; it turns red about 6 s before the vehicle signal does, at the
+  moment the vehicle green starts to flash, and
   that made every car in the last platoon look like a red-light runner.
 
-The vehicle cycle is the same in all four clips: 35.8 s green (the last 3 s
-flashing), 2.8 s yellow, 35.8 s red, with a short red-and-yellow before green
-in the afternoon clips. That is a 75 s cycle.
+Measured from one phase onset to the next, the morning clips run 36 s green
+(the last 3 s flashing), 3 s yellow and 36 s red: a 75 s cycle. The
+afternoon clips run 38 s green, 3 s yellow and 39 s red, the last 3 s of it
+with the yellow lamp lit as well: an 80 s cycle.
 
 The phase comes from the colour contrast of each lamp (`src/parivision/signal.py`):
 red lamp redder than its housing, yellow lamp warmer, green lamp greener. The
@@ -105,7 +110,7 @@ car briefly hiding the head.
 * Buses sit at the NB bus stop for 20 to 60 s. They are at a stop, not a
   stopped vehicle.
 * The SB queue at a red light can stand still for 35 s or more. That is
-  a queue at a signal, not congestion and not a stopped vehicle, unless it
+  a queue at a signal, not a stopped vehicle, and not congestion unless it
   still does not move when the light is green.
 * Drivers and passengers are often detected as people through the car
   windows. They are dropped when the person box sits inside a vehicle box.

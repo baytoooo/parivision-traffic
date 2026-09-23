@@ -1,11 +1,11 @@
 """Part B: causal accident anticipation.
 
 Only frames already received are used. Every third frame (10 Hz) goes through
-a small detector and the same ByteTrack setup as Part A; each road user gets
-a constant-velocity prediction over the next few seconds and every pair that
-is closing in on each other is scored by how soon and how deep their
-predicted footprints overlap. Hard braking adds to the risk. The per-pair
-hazards are combined as independent events and smoothed with a short EMA.
+a small detector and the same ByteTrack thresholds as Part A (with a shorter
+1.5 s track buffer); each road user gets a constant-velocity prediction over
+the next 3 s, in metres, and every pair that is closing in on each other is
+scored by how soon and how deep their predicted footprints overlap. Hard
+braking adds to the risk. The score is the worst pair, smoothed with an EMA.
 
 Calibration target: 0.5 should mean "contact is likely within 5 s". On the
 sample clips (normal traffic, no collisions) the score stays well below 0.5.
@@ -130,8 +130,10 @@ class Anticipator:
             self.started = now
         if k % self.stride or self._out_of_time(now, t_sec):
             return self.score
+        first = self.alignment is None
         self._process(frame, t_sec)
-        self.busy += time.perf_counter() - now
+        if not first:  # the first frame loads the model and registers the view: a one-off, not the pace
+            self.busy += time.perf_counter() - now
         # stay inside our share of the time budget: thin out frames if we fall behind
         behind = self.busy > OWN_TIME_SHARE * t_sec or self._projected(now, t_sec) > 0.9 * self.budget
         if t_sec > 5.0 and behind:

@@ -1,17 +1,17 @@
 [
  {
-  "name": "c3896_crossing",
-  "label": "Busy crossing, midday",
+  "name": "north_crossing_midday",
+  "label": "Midday, pedestrians on the north crossing",
   "seconds": 30
  },
  {
-  "name": "c3897_red_phase",
-  "label": "Red phase and queue, midday",
+  "name": "west_crossing_turns",
+  "label": "Right turns over the west crossing",
   "seconds": 30
  },
  {
-  "name": "c3905_dusk",
-  "label": "Dusk, headlights on",
+  "name": "dusk_queue",
+  "label": "Dusk, red-light queue and U-turn",
   "seconds": 30
  }
 ]

@@ -2,79 +2,82 @@
 import Base from "../layouts/Base.astro";
 import SecHead from "../components/SecHead.astro";
 import { DATA_IS_MOCK } from "../config";
-import { loadAllResults, loadClips, loadEda, signalStats } from "../lib/data";
-import { fmtNum, fmtTime, isNum } from "../lib/format";
+import { className } from "../lib/classes";
+import { loadAllResults, loadClips, loadEda } from "../lib/data";
+import { fmtTime } from "../lib/format";
+import type { SignalStat } from "../lib/types";
 
 const clips = loadClips();
 const results = loadAllResults();
 const eda = loadEda();
 
-// counts over time, per clip, for the interactive chart
+const mean = (a?: number[]) => (a && a.length ? a.reduce((x, y) => x + y, 0) / a.length : NaN);
+const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
+const edaClip = (id: string) => eda?.clips.find((c) => c.id === id);
+
+// distinct tracks per 5 s by class, per clip (interactive chart)
 const counts = Object.fromEntries(clips.map((c) => [c.id, results[c.id]?.counts ?? null]));
 const clipMeta = clips.map((c) => ({ id: c.id, start: c.local_time, light: c.light }));
 
-// density per clip for small multiples (sent to the browser)
-const density = eda?.density ?? {};
-
-// mean vehicles and people in view per clip, placed by time of day (static SVG)
+// per-frame means per 5 s bin (small multiples) and per clip (bars, by time of day)
+const density = Object.fromEntries(
+  clips.map((c) => {
+    const d = eda?.density[c.id];
+    const people = eda?.counts[c.id]?.person;
+    return [c.id, d ? { t: d.t, moving: d.vehicles_moving, standing: d.vehicles_standing, people: people ?? [] } : null];
+  }),
+);
 const tod = clips
   .map((c) => {
     const d = density[c.id];
-    const mean = (a?: number[]) => (a && a.length ? a.reduce((x, y) => x + y, 0) / a.length : NaN);
     const [hh, mm] = (c.local_time.split(" ")[1] ?? "0:0").split(":").map(Number);
-    return { id: c.id, minutes: hh * 60 + mm, time: c.local_time.split(" ")[1], veh: mean(d?.vehicles), ppl: mean(d?.people), light: c.light.split(",")[0] };
+    return { id: c.id, minutes: hh * 60 + mm, time: c.local_time.split(" ")[1], moving: mean(d?.moving), standing: mean(d?.standing), people: mean(d?.people), light: c.light.split(",")[0] };
   })
   .sort((a, b) => a.minutes - b.minutes);
-const todMax = Math.max(1, ...tod.flatMap((r) => [r.veh, r.ppl]).filter(Number.isFinite));
-const todCeil = Math.ceil(todMax / 10) * 10;
+const todMax = Math.max(1, ...tod.flatMap((r) => [r.moving, r.standing, r.people]).filter(Number.isFinite));
+const todCeil = Math.ceil(todMax / 5) * 5;
 
-// speed histogram (static SVG)
-const bin = 4;
-const allSpeeds = [...(eda?.speeds.sb ?? []), ...(eda?.speeds.nb ?? [])];
-const vmax = Math.max(8, ...allSpeeds);
-const nb = Math.ceil(vmax / bin);
-const hist = (arr: number[]) => {
-  const h = new Array(nb).fill(0);
-  for (const v of arr) h[Math.min(nb - 1, Math.floor(v / bin))]++;
-  return h;
-};
-const hSB = hist(eda?.speeds.sb ?? []);
-const hNB = hist(eda?.speeds.nb ?? []);
-const hMax = Math.max(1, ...hSB, ...hNB);
-const median = (a: number[]) => {
-  if (!a.length) return NaN;
-  const s = [...a].sort((x, y) => x - y);
-  return s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2;
-};
-const medSB = median(eda?.speeds.sb ?? []);
-const medNB = median(eda?.speeds.nb ?? []);
-const HW = 480, HH = 240, HL = 34, HR = 10, HT = 14, HB = 30;
-const hx = (v: number) => HL + (v / (nb * bin)) * (HW - HL - HR);
-const hy = (n: number) => HT + (1 - n / hMax) * (HH - HT - HB);
-const stepPath = (h: number[]) => {
-  let d = `M${hx(0)},${hy(0)}`;
-  h.forEach((n, i) => {
-    d += ` L${hx(i * bin)},${hy(n)} L${hx((i + 1) * bin)},${hy(n)}`;
-  });
-  return d + ` L${hx(nb * bin)},${hy(0)}`;
-};
+// signal plans: clips grouped by their cycle length
+const sig = clips.map((c) => ({ id: c.id, time: c.local_time.split(" ")[1], s: eda?.signal[c.id] as SignalStat | undefined }));
+const plans: { cycle: number; clips: string[]; green: number; yellow: number; red: number }[] = [];
+for (const { id, s } of sig) {
+  if (!s || s.cycle == null || s.green == null || s.yellow == null || s.red == null) continue;
+  const plan = plans.find((p) => Math.abs(p.cycle - s.cycle!) < 2);
+  if (plan) plan.clips.push(id);
+  else plans.push({ cycle: Math.round(s.cycle), clips: [id], green: Math.round(s.green), yellow: Math.round(s.yellow), red: Math.round(s.red) });
+}
 
-// signal cycle
-const cyc = eda?.signal_cycle;
-const g = isNum(cyc?.green) ? cyc!.green : NaN;
-const r = isNum(cyc?.red) ? cyc!.red : NaN;
-const perClipSignal = clips.map((c) => ({ id: c.id, time: c.local_time.split(" ")[1], ...signalStats(results[c.id]?.signal) }));
+// where pedestrians are, and what our dev labels contain
+const ped = eda?.pedestrians;
+const labelRows = Object.entries(eda?.labels ?? {}).sort((a, b) => b[1].n - a[1].n);
+const nLabels = labelRows.reduce((a, [, v]) => a + v.n, 0);
+const fty = eda?.labels?.failure_to_yield;
+
+const luma = clips.map((c) => ({ id: c.id, light: c.light.split(",")[0], v: eda?.light[c.id]?.mean_luma ?? NaN }));
+const lumaDay = Math.max(...luma.map((l) => l.v).filter(Number.isFinite));
+const lumaDusk = Math.min(...luma.map((l) => l.v).filter(Number.isFinite));
+const plansText = plans.map((p) => `${p.cycle} s (${p.green} s green, ${p.yellow} s yellow, ${p.red} s red) in ${p.clips.join(" and ")}`).join(", and ");
+const reds = plans.map((p) => p.red);
+
+const findings = [
+  "The clips are not framed the same. The afternoon ones are shifted by up to 60 px and zoomed by about 2% against the morning ones, so every zone is drawn once in a reference view and each clip is registered onto it with a homography.",
+  plans.length ? `The signal plan changes during the day: a cycle of ${plansText}. The rules read the phase from the lamps in every sampled frame instead of assuming a timetable.` : "",
+  reds.length ? `The southbound queue stands through every red, ${Math.min(...reds)} to ${Math.max(...reds)} s. So stopped_vehicle ignores the southbound approach, and congestion only counts a queue that still stands 8 s into the green.` : "",
+  ped ? `${pct(ped.off_crossing_on_road)} of pedestrian positions are on the carriageway outside a zebra, against ${pct(ped.on_crossing)} on a zebra. The rest, ${pct(ped.pavement)}, are on pavements, kerbs, islands and the median, which is where the jaywalking rule must not fire.` : "",
+  fty ? `Failure to yield is the most frequent event in our labels and a short one: median ${fty.median_sec.toFixed(1)} s from the car entering the zebra to leaving it. At 5 fps that is about five frames, which is why Part A samples 10 frames per second.` : "",
+  Number.isFinite(lumaDusk) ? `The dusk clip is much darker than the midday ones (mean brightness ${lumaDusk.toFixed(0)} against ${lumaDay.toFixed(0)} out of 255), so registration matches every clip against a dusk reference as well as a midday one.` : "",
+].filter(Boolean);
 
 const images = eda
   ? [
-      { src: eda.images.heatmap_vehicle, t: "Where vehicles are", c: "Share of time each reference pixel is covered by a vehicle foot point, all four clips." },
-      { src: eda.images.heatmap_person, t: "Where people walk: desire lines", c: "The same for pedestrians. Paths that leave the two zebras are the desire lines the jaywalking rule has to catch." },
-      { src: eda.images.trajectories, t: "Trajectories", c: "Every track mapped into the reference view, vehicles and people." },
-      { src: eda.images.directions, t: "Lane direction field", c: "Median heading of vehicle tracks per grid cell. The wrong_way rule compares each vehicle with the legal direction of its carriageway." },
+      { src: eda.images.heatmap_vehicle, t: "Where vehicles drive", c: "Foot points of vehicles moving faster than 40 px/s in the reference view, all four clips, blurred and on a log scale." },
+      { src: eda.images.heatmap_person, t: "Where people walk", c: "The same for pedestrians, moving or standing, with riders and people seen through car windows left out. Paths that leave the two zebras are the desire lines the jaywalking rule has to catch." },
+      { src: eda.images.trajectories, t: "Trajectories", c: "Every vehicle and person track with at least 15 samples, mapped into the reference view, drawn where it moves at 15 px/s or more and coloured by heading." },
+      { src: eda.images.directions, t: "Lane direction field", c: "Mean heading of vehicles moving faster than 60 px/s per 40 px cell. Short arrows mark cells where headings disagree. The wrong_way rule compares each vehicle with the legal direction of its carriageway." },
     ]
   : [];
 ---
-<Base title="EDA" description="What is in the four sample clips: object counts over time, traffic density by time of day, signal cycles, speeds, where people walk, and what it changed in our solution." active="eda">
+<Base title="EDA" description="What is in the four sample clips: road users over time, traffic by time of day, signal plans, where pedestrians are, what our dev labels contain, and what it changed in our solution." active="eda">
   <header class="page-head wrap">
     <p class="kicker">Exploratory analysis</p>
     <h1>What is in the footage</h1>
@@ -86,7 +89,7 @@ const images = eda
     <div class="table-scroll">
       <table>
         <thead>
-          <tr><th scope="col">Clip</th><th scope="col">Local time</th><th scope="col">Light</th><th scope="col" class="num">Resolution</th><th scope="col" class="num">fps</th><th scope="col" class="num">Length</th><th scope="col" class="num">Frames</th><th scope="col" class="num">Our labels</th></tr>
+          <tr><th scope="col">Clip</th><th scope="col">Local time</th><th scope="col">Light</th><th scope="col" class="num">Brightness</th><th scope="col" class="num">Resolution</th><th scope="col" class="num">fps</th><th scope="col" class="num">Length</th><th scope="col" class="num">Bitrate</th><th scope="col" class="num">Our labels</th></tr>
         </thead>
         <tbody>
           {clips.map((c) => (
@@ -94,21 +97,23 @@ const images = eda
               <th scope="row" class="mono">{c.id}</th>
               <td class="t">{c.local_time}</td>
               <td>{c.light}</td>
+              <td class="num">{eda?.light[c.id]?.mean_luma?.toFixed(0) ?? "-"}</td>
               <td class="num">{c.width}x{c.height}</td>
               <td class="num">{c.fps}</td>
               <td class="num">{fmtTime(c.duration)}</td>
-              <td class="num">{Math.round(c.duration * c.fps).toLocaleString("en-US")}</td>
+              <td class="num">{edaClip(c.id) ? `${edaClip(c.id)!.bitrate_mbps} Mbit/s` : "-"}</td>
               <td class="num">{results[c.id]?.labels?.length ?? "TBD"}</td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
+    <p class="note">Brightness is the mean grey level (0 to 255) of frames sampled every 10 s. All clips are {edaClip(clips[0]?.id)?.codec ?? "H.264"}, {edaClip(clips[0]?.id)?.pix_fmt ?? ""}.</p>
   </section>
 
   <section class="section wrap" id="counts">
-    <SecHead num="02" title="Objects in view over time">
-      <p>Detector counts per 5 s, by class, from our tracks. Click a class in the legend to hide it; hover or tap the chart for values.</p>
+    <SecHead num="02" title="Road users over time">
+      <p>Distinct tracked road users per 5 s, by class, from our tracks. Click a class in the legend to hide it; hover or tap the chart for values.</p>
     </SecHead>
     <div class="tabs" role="tablist" aria-label="Clip" id="count-tabs">
       {clips.map((c, i) => (
@@ -119,27 +124,36 @@ const images = eda
   </section>
 
   <section class="section wrap" id="density">
-    <SecHead num="03" title="Traffic density by time of day">
-      <p>Mean number of vehicles and people in view per clip, placed at the time the clip starts, then the full curve for each clip.</p>
+    <SecHead num="03" title="Traffic by time of day">
+      <p>How many vehicles are in view at once, split into moving and standing (40 px/s), and how many people the detector sees, as the mean per frame over each clip. Below, the same per 5 s. The standing count rises and falls with the red phase.</p>
     </SecHead>
     <figure class="panel panel-pad tod">
-      <svg viewBox="0 0 480 236" class="chart stat-chart" role="img" aria-label={`Mean vehicles and people in view: ${tod.map((t) => `${t.id} at ${t.time}, ${t.veh.toFixed(0)} vehicles, ${t.ppl.toFixed(0)} people`).join("; ")}`}>
+      <svg viewBox="0 0 480 236" class="chart stat-chart" role="img" aria-label={`Mean per frame: ${tod.map((t) => `${t.id} at ${t.time}, ${t.moving.toFixed(1)} moving and ${t.standing.toFixed(1)} standing vehicles, ${t.people.toFixed(1)} people`).join("; ")}`}>
         {[0, 0.25, 0.5, 0.75, 1].map((f) => (
           <g>
             <line x1="36" x2="476" y1={22 + (1 - f) * 150} y2={22 + (1 - f) * 150} class="c-grid" />
-            <text x="30" y={26 + (1 - f) * 150} text-anchor="end">{Math.round(todCeil * f)}</text>
+            <text x="30" y={26 + (1 - f) * 150} text-anchor="end">{+(todCeil * f).toFixed(1)}</text>
           </g>
         ))}
         {tod.map((t, i) => {
           const cx = 36 + ((i + 0.5) / tod.length) * 440;
-          const hv = (t.veh / todCeil) * 150;
-          const hp = (t.ppl / todCeil) * 150;
+          const bars = [
+            { v: t.moving, cls: "bar-mov" },
+            { v: t.standing, cls: "bar-std" },
+            { v: t.people, cls: "bar-ppl" },
+          ];
           return (
             <g>
-              <rect x={cx - 34} y={172 - hv} width="32" height={hv} class="bar-veh" />
-              <rect x={cx + 2} y={172 - hp} width="32" height={hp} class="bar-ppl" />
-              <text x={cx - 18} y={166 - hv} text-anchor="middle" class="bar-v">{t.veh.toFixed(0)}</text>
-              <text x={cx + 18} y={166 - hp} text-anchor="middle" class="bar-v">{t.ppl.toFixed(0)}</text>
+              {bars.map((b, k) => {
+                const h = (Number.isFinite(b.v) ? b.v : 0) / todCeil * 150;
+                const x = cx - 39 + k * 27;
+                return (
+                  <g>
+                    <rect x={x} y={172 - h} width="24" height={h} class={b.cls} />
+                    <text x={x + 12} y={166 - h} text-anchor="middle" class="bar-v">{Number.isFinite(b.v) ? b.v.toFixed(1) : ""}</text>
+                  </g>
+                );
+              })}
               <text x={cx} y="194" text-anchor="middle" class="bar-x">{t.time}</text>
               <text x={cx} y="211" text-anchor="middle">{t.id}</text>
               <text x={cx} y="228" text-anchor="middle">{t.light}</text>
@@ -147,7 +161,7 @@ const images = eda
           );
         })}
       </svg>
-      <figcaption><span class="key"><i class="sw veh"></i>vehicles</span> <span class="key"><i class="sw ppl"></i>people</span></figcaption>
+      <figcaption><span class="key"><i class="sw mov"></i>moving vehicles</span> <span class="key"><i class="sw std"></i>standing vehicles</span> <span class="key"><i class="sw ppl"></i>people</span></figcaption>
     </figure>
     <div class="multiples">
       {clips.map((c) => (
@@ -161,32 +175,33 @@ const images = eda
 
   <section class="section wrap two" id="signal">
     <div>
-      <SecHead num="04" title="Signal cycle">
-        <p>From our signal reader, complete phases only. Green includes the flashing green and yellow at its end. The SB queue waits through every red, so any rule about stopped cars has to know the phase.</p>
+      <SecHead num="04" title="Signal plans">
+        <p>From our reader of the three-lamp head on the median nose, measured from one phase change to the next over complete phases. Green includes its flashing end. The afternoon plan lights yellow together with red for the last 3 s of red; that counts as red here.</p>
       </SecHead>
-      <div class="stats sig-stats">
-        <div class="stat"><span class={`v${isNum(cyc?.green) ? "" : " is-tbd"}`}>{fmtNum(cyc?.green, 1)}<small>s</small></span><span class="k"><span class="dot green"></span> Green, mean</span></div>
-        <div class="stat"><span class={`v${isNum(cyc?.red) ? "" : " is-tbd"}`}>{fmtNum(cyc?.red, 1)}<small>s</small></span><span class="k"><span class="dot red"></span> Red, mean</span></div>
-        <div class="stat"><span class={`v${isNum(cyc?.cycle) ? "" : " is-tbd"}`}>{fmtNum(cyc?.cycle, 1)}<small>s</small></span><span class="k">Full cycle</span></div>
-      </div>
-      {Number.isFinite(g) && Number.isFinite(r) && (
-        <div class="cycle-bar" role="img" aria-label={`Green ${g.toFixed(1)} s then red ${r.toFixed(1)} s`}>
-          <span class="cb-green" style={`flex:${g}`}>green {g.toFixed(0)} s</span>
-          <span class="cb-red" style={`flex:${r}`}>red {r.toFixed(0)} s</span>
+      {plans.map((p) => (
+        <div class="plan">
+          <p class="plan-cap"><strong>{p.cycle} s cycle</strong> <span class="mono">{p.clips.join(", ")}</span></p>
+          <div class="cycle-bar" role="img" aria-label={`Green ${p.green} s, yellow ${p.yellow} s, red ${p.red} s`}>
+            <span class="cb-green" style={`flex:${p.green}`}>green {p.green} s</span>
+            <span class="cb-yellow" style={`flex:${p.yellow}`}>{p.yellow}</span>
+            <span class="cb-red" style={`flex:${p.red}`}>red {p.red} s</span>
+          </div>
         </div>
-      )}
+      ))}
     </div>
     <div class="table-scroll sig-table">
       <table>
-        <thead><tr><th scope="col">Clip</th><th scope="col" class="num">Full cycles</th><th scope="col" class="num">Green</th><th scope="col" class="num">Red</th><th scope="col" class="num">Unreadable</th></tr></thead>
+        <thead><tr><th scope="col">Clip</th><th scope="col" class="num">Full cycles</th><th scope="col" class="num">Green</th><th scope="col" class="num">Yellow</th><th scope="col" class="num">Red</th><th scope="col" class="num">Cycle</th><th scope="col" class="num">Unreadable</th></tr></thead>
         <tbody>
-          {perClipSignal.map((p) => (
+          {sig.map(({ id, time, s }) => (
             <tr>
-              <th scope="row" class="mono">{p.id} <span class="tab-sub">{p.time}</span></th>
-              <td class="num">{p.cycles}</td>
-              <td class="num">{Number.isFinite(p.green) ? `${p.green.toFixed(1)} s` : "-"}</td>
-              <td class="num">{Number.isFinite(p.red) ? `${p.red.toFixed(1)} s` : "-"}</td>
-              <td class="num">{p.unknown.toFixed(1)} s</td>
+              <th scope="row" class="mono">{id} <span class="tab-sub">{time}</span></th>
+              <td class="num">{s?.cycles ?? "-"}</td>
+              <td class="num">{s?.green != null ? `${s.green.toFixed(1)} s` : "-"}</td>
+              <td class="num">{s?.yellow != null ? `${s.yellow.toFixed(1)} s` : "-"}</td>
+              <td class="num">{s?.red != null ? `${s.red.toFixed(1)} s` : "-"}</td>
+              <td class="num">{s?.cycle != null ? `${s.cycle.toFixed(1)} s` : "-"}</td>
+              <td class="num">{s ? `${s.unknown_sec.toFixed(1)} s` : "-"}</td>
             </tr>
           ))}
         </tbody>
@@ -194,36 +209,45 @@ const images = eda
     </div>
   </section>
 
-  <section class="section wrap" id="speeds">
-    <SecHead num="05" title="Speeds per carriageway">
-      <p>Median speed of each vehicle track on the two avenue carriageways, in km/h. Dashed lines are the medians.</p>
-    </SecHead>
-    <figure class="panel panel-pad">
-      <svg viewBox={`0 0 ${HW} ${HH}`} class="chart stat-chart" role="img" aria-label={`Speed histogram. Median southbound ${medSB.toFixed(0)} km/h, northbound ${medNB.toFixed(0)} km/h.`}>
-        {[0, 0.5, 1].map((f) => (
-          <g>
-            <line x1={HL} x2={HW - HR} y1={hy(hMax * f)} y2={hy(hMax * f)} class="c-grid" />
-            <text x={HL - 6} y={hy(hMax * f) + 3.5} text-anchor="end">{Math.round(hMax * f)}</text>
-          </g>
-        ))}
-        {Array.from({ length: Math.floor((nb * bin) / 20) + 1 }, (_, i) => i * 20).map((v) => (
-          <text x={hx(v)} y={HH - HB + 16} text-anchor="middle">{v}</text>
-        ))}
-        <text x={HW - HR} y={HH - 2} text-anchor="end">km/h</text>
-        <path d={stepPath(hSB)} class="h-sb" />
-        <path d={stepPath(hNB)} class="h-nb" />
-        {Number.isFinite(medSB) && <line x1={hx(medSB)} x2={hx(medSB)} y1={HT} y2={HH - HB} class="m-sb" />}
-        {Number.isFinite(medNB) && <line x1={hx(medNB)} x2={hx(medNB)} y1={HT} y2={HH - HB} class="m-nb" />}
-      </svg>
-      <figcaption>
-        <span class="key"><i class="sw sb"></i>southbound, median {medSB.toFixed(0)} km/h, {eda?.speeds.sb.length ?? 0} tracks</span>
-        <span class="key"><i class="sw nb"></i>northbound, median {medNB.toFixed(0)} km/h, {eda?.speeds.nb.length ?? 0} tracks</span>
-      </figcaption>
-    </figure>
+  <section class="section wrap two" id="people">
+    <div>
+      <SecHead num="05" title="Where pedestrians are">
+        <p>Every tracked pedestrian position in the four clips (10 per second per person), by where the feet are. Riders and people seen through car windows are left out, as in the rules. "On the carriageway" means the area vehicles actually drive on, a margin away from the kerbs.</p>
+      </SecHead>
+      {ped && (
+        <div class="share" role="img" aria-label={`On a zebra ${pct(ped.on_crossing)}, on the carriageway outside a zebra ${pct(ped.off_crossing_on_road)}, elsewhere ${pct(ped.pavement)}`}>
+          <span class="sh-cw" style={`flex:${ped.on_crossing}`}>{pct(ped.on_crossing)}</span>
+          <span class="sh-road" style={`flex:${ped.off_crossing_on_road}`}>{pct(ped.off_crossing_on_road)}</span>
+          <span class="sh-pav" style={`flex:${ped.pavement}`}>{pct(ped.pavement)}</span>
+        </div>
+      )}
+      <p class="share-key"><span class="key"><i class="sw cw"></i>on a zebra</span> <span class="key"><i class="sw road"></i>on the carriageway outside a zebra</span> <span class="key"><i class="sw pav"></i>pavement, kerbs, islands, median</span></p>
+    </div>
+    <div>
+      <SecHead num="06" title="Events in our dev labels">
+        <p>{nLabels} events over {(clips.reduce((a, c) => a + c.duration, 0) / 60).toFixed(1)} minutes. How the labels were made is on the <a href="/report">report page</a>.</p>
+      </SecHead>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th scope="col">Class</th><th scope="col" class="num">Events</th><th scope="col" class="num">Clips</th><th scope="col" class="num">Median length</th><th scope="col" class="num">Total</th></tr></thead>
+          <tbody>
+            {labelRows.map(([k, v]) => (
+              <tr>
+                <th scope="row">{className(k)}</th>
+                <td class="num">{v.n}</td>
+                <td class="num">{v.clips.length}</td>
+                <td class="num">{v.median_sec.toFixed(1)} s</td>
+                <td class="num">{fmtTime(v.total_sec)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   </section>
 
   <section class="section wrap" id="maps">
-    <SecHead num="06" title="Where things move">
+    <SecHead num="07" title="Where things move">
       <p>All four clips, mapped into the reference view.</p>
     </SecHead>
     <div class="maps">
@@ -240,9 +264,9 @@ const images = eda
   </section>
 
   <section class="section wrap" id="findings">
-    <SecHead num="07" title="What this changed in our solution" />
+    <SecHead num="08" title="What this changed in our solution" />
     <ol class="findings">
-      {(eda?.findings ?? []).map((f) => <li>{f}</li>)}
+      {findings.map((f) => <li>{f}</li>)}
     </ol>
   </section>
 
@@ -252,34 +276,43 @@ const images = eda
 <style>
   .stat-chart { width: 100%; height: auto; max-width: 620px; }
   .chart.stat-chart text { font-size: 12.5px; }
-  .tod, #speeds figure { max-width: 680px; }
-  .tod .bar-veh { fill: var(--paint); }
+  .tod { max-width: 680px; }
+  .tod .bar-mov { fill: var(--paint); }
+  .tod .bar-std { fill: var(--sig-red); }
   .tod .bar-ppl { fill: var(--zebra); }
   .tod text.bar-v { fill: var(--paint-2); }
   .tod text.bar-x { fill: var(--paint); font-weight: 600; }
   .key { display: inline-flex; align-items: center; gap: 7px; margin-right: 16px; }
   .sw { width: 14px; height: 8px; display: inline-block; }
-  .sw.veh, .sw.sb { background: var(--paint); }
-  .sw.ppl, .sw.nb { background: var(--zebra); }
+  .sw.mov { background: var(--paint); }
+  .sw.std { background: var(--sig-red); }
+  .sw.ppl, .sw.cw { background: var(--zebra); }
+  .sw.road { background: var(--sig-red); }
+  .sw.pav { background: var(--line-2); }
+  .note { color: var(--paint-2); font-size: .85rem; margin-top: 10px; }
 
   .multiples { display: grid; gap: 12px; margin-top: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); }
   .mult-cap { margin: 0 0 6px; color: var(--paint-2); font-size: .85rem; }
 
   .two { display: grid; gap: 24px; }
   @media (min-width: 980px) { .two { grid-template-columns: 1fr 1fr; align-items: start; } }
-  .sig-stats { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
-  .sig-stats .k { display: inline-flex; align-items: center; gap: 6px; }
+  .plan { margin-top: 14px; }
+  .plan-cap { margin: 0 0 6px; color: var(--paint-2); display: flex; gap: 12px; align-items: baseline; }
+  .plan-cap strong { color: var(--paint); }
   .cycle-bar { display: flex; margin-top: 12px; height: 34px; border-radius: var(--radius); overflow: hidden; font: 600 .75rem var(--font-mono); }
   .cycle-bar span { display: flex; align-items: center; padding: 0 10px; color: #0e0f11; white-space: nowrap; overflow: hidden; }
   .cb-green { background: var(--sig-green); }
   .cb-red { background: var(--sig-red); }
+  .cb-yellow { background: var(--sig-amber); justify-content: center; padding: 0 !important; }
+
+  .share { display: flex; margin-top: 14px; height: 38px; border-radius: var(--radius); overflow: hidden; font: 600 .75rem var(--font-mono); }
+  .share span { display: flex; align-items: center; justify-content: center; min-width: 3.2em; color: #0e0f11; white-space: nowrap; }
+  .sh-cw { background: var(--zebra); }
+  .sh-road { background: var(--sig-red); }
+  .sh-pav { background: var(--line-2); color: var(--paint) !important; }
+  .share-key { margin-top: 10px; font-size: .85rem; color: var(--paint-2); }
   @media (min-width: 980px) { .sig-table { margin-top: 64px; } }
 
-  .h-sb { fill: rgba(238,235,226,.1); stroke: var(--paint); stroke-width: 1.6; }
-  .h-nb { fill: rgba(243,195,22,.12); stroke: var(--zebra); stroke-width: 1.6; }
-  .m-sb { stroke: var(--paint); stroke-dasharray: 3 3; }
-  .m-nb { stroke: var(--zebra); stroke-dasharray: 3 3; }
-  #speeds svg { width: 100%; height: auto; }
 
   .maps { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); }
   .maps img { width: 100%; }
@@ -303,7 +336,7 @@ const images = eda
   interface Payload {
     counts: Record<string, Counts | null>;
     clips: { id: string; start: string; light: string }[];
-    density: Record<string, { t: number[]; vehicles: number[]; people: number[] }>;
+    density: Record<string, { t: number[]; moving: number[]; standing: number[]; people: number[] } | null>;
   }
   const data: Payload = JSON.parse(document.getElementById("eda-data")!.textContent || "{}");
 
@@ -340,8 +373,8 @@ const images = eda
       b.tabIndex = on ? 0 : -1;
     });
     if (!host || !c) return;
-    const label = `Objects in view over time in clip ${id}, per 5 seconds`;
-    if (!chart) chart = new LineChart(host, { x: c.t, series: seriesFor(c), ariaLabel: label, xFormat: mmss, yLabel: "objects in view" });
+    const label = `Road users tracked per 5 seconds in clip ${id}, by class`;
+    if (!chart) chart = new LineChart(host, { x: c.t, series: seriesFor(c), ariaLabel: label, xFormat: mmss, yLabel: "road users per 5 s" });
     else chart.setData(c.t, seriesFor(c), label);
   };
   tabs.forEach((b, i) => {
@@ -365,15 +398,16 @@ const images = eda
     new LineChart(el, {
       x: d.t,
       series: [
-        { key: "vehicles", label: "vehicles", values: d.vehicles, color: "#eeebe2" },
+        { key: "moving", label: "moving vehicles", values: d.moving, color: "#eeebe2" },
+        { key: "standing", label: "standing vehicles", values: d.standing, color: "#ff5b4c" },
         { key: "people", label: "people", values: d.people, color: "#f3c316" },
       ],
       height: 170,
-      area: "vehicles",
+      area: "moving",
       legend: false,
       xFormat: (t) => clock(meta.start, t),
       xTickStep: 60,
-      ariaLabel: `Vehicles and people in view over time in clip ${id}`,
+      ariaLabel: `Moving and standing vehicles and people in view, per frame, over time in clip ${id}`,
     });
   });
 </script>

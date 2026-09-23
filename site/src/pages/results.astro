@@ -115,8 +115,8 @@ const statusText = { on: "emitted", off: "rule off", none: "no rule" } as const;
 
   {examples.length > 0 && (
     <section class="section wrap" id="examples">
-      <SecHead num="02" title="One example per class we emit">
-        <p>Each card opens the clip at that moment in the player above.</p>
+      <SecHead num="02" title="Examples of each class we find">
+        <p>Up to three per class and clip, the longest ones. Each card opens the clip at that moment in the player above.</p>
       </SecHead>
       <ul class="cards" role="list">
         {examples.map((ex) => (
@@ -157,7 +157,7 @@ const statusText = { on: "emitted", off: "rule off", none: "no rule" } as const;
 
   <section class="section wrap" id="ablations">
     <SecHead num="04" title="Ablations">
-      <p>Same rules, same dev labels, one change per row. Cost is detector compute (input pixels times frames) relative to the submitted configuration.</p>
+      <p>Same rules, same dev labels, one change per row. Cost is detector compute (model size, input pixels and frames) relative to the submitted configuration.</p>
     </SecHead>
     <div class="table-scroll">
       <table>

@@ -21,7 +21,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from parivision import scene as S  # noqa: E402
-from parivision.rules import DIRECTION_ZONES  # noqa: E402
+from parivision.signal import fill_phases  # noqa: E402
+
+sys.path.insert(0, str(ROOT / "tools"))
+from run_rules import load_context  # noqa: E402
 
 CLIPS = ["C3896", "C3897", "C3902", "C3905"]
 COCO = {0: "person", 1: "bicycle", 2: "car", 3: "motorcycle", 5: "bus", 7: "truck"}
@@ -39,6 +42,51 @@ def clip_meta(clip: str) -> dict:
             "duration": round(float(d["format"]["duration"]), 1), "codec": f"{v['codec_name']} {v.get('profile', '')}",
             "pix_fmt": v.get("pix_fmt"), "bitrate_mbps": round(int(v.get("bit_rate", 0)) / 1e6, 1),
             "created_utc": d["format"].get("tags", {}).get("creation_time")}
+
+
+def signal_stats(t: np.ndarray, phases: list[str]) -> dict:
+    """Phase lengths from onset to onset over complete phases, the cycle, and unreadable time.
+
+    Blips under 1 s (a car passing in front of the head) are folded into the phase before them.
+    """
+    dt = float(np.median(np.diff(t))) if len(t) > 1 else 0.0
+    segs: list[list] = []
+    for ti, p in zip(t.tolist(), list(phases)):
+        if segs and segs[-1][2] == p:
+            segs[-1][1] = round(ti, 1)
+        else:
+            segs.append([round(ti, 1), round(ti, 1), p])
+    steady: list[list] = []
+    for a, b, p in segs:
+        if steady and (b - a < 1.0 or steady[-1][2] == p):
+            steady[-1][1] = b
+        else:
+            steady.append([a, b, p])
+    # Only phases with a seen start and a seen end count: not the one already on when the clip
+    # starts, and not one next to an unreadable spell. The afternoon plan's red-and-yellow before
+    # green reads as yellow and belongs to red.
+    kinds = [q for _, _, q in steady]
+    greens, yellows, reds, g_on = [], [], [], []
+    for i in range(1, len(steady)):
+        a, _, q = steady[i]
+        prev = kinds[i - 1]
+        nxt, start_next = (kinds[i + 1], steady[i + 1][0]) if i + 1 < len(steady) else (None, None)
+        if q == "green" and prev in ("red", "yellow"):
+            g_on.append(a)
+            if nxt == "yellow":
+                greens.append(start_next - a)
+        elif q == "yellow" and prev == "green" and nxt == "red":
+            yellows.append(start_next - a)
+        elif q == "red" and prev in ("yellow", "green"):
+            if nxt == "green":
+                reds.append(start_next - a)
+            elif nxt == "yellow" and i + 2 < len(steady) and kinds[i + 2] == "green":
+                reds.append(steady[i + 2][0] - a)
+    g = np.array(g_on)
+    mean = lambda v: round(float(np.mean(v)), 1) if len(v) else None  # noqa: E731
+    return {"segments": segs, "green": mean(greens), "yellow": mean(yellows), "red": mean(reds),
+            "cycle": round(float(np.median(np.diff(g))), 1) if len(g) > 1 else None, "cycles": len(reds),
+            "unknown_sec": round(float(sum(b - a + dt for a, b, p in segs if p == "unknown")), 1)}
 
 
 def heat(points: np.ndarray, sigma: float = 6.0) -> np.ndarray:
@@ -66,15 +114,16 @@ def main() -> None:
     bg = cv2.imread(str(ROOT / "src/parivision/assets/reference_day.jpg"))
     dark = (bg * 0.42).astype(np.uint8)
 
-    eda = {"clips": [], "counts": {}, "density": {}, "speeds": {}, "signal": {}, "light": {}, "pedestrians": {},
-           "images": {}, "findings": []}
+    eda = {"clips": [], "counts": {}, "density": {}, "signal": {}, "light": {}, "pedestrians": {}, "images": {}}
     all_veh, all_ped, veh_vel = [], [], []
     ped_stats = {"on_crossing": 0, "off_crossing_on_road": 0, "pavement": 0}
     for clip in CLIPS:
         meta = clip_meta(clip)
         eda["clips"].append(meta)
-        tracks = pickle.load(open(ROOT / "cache/tracks" / f"{clip}.pkl", "rb"))["trajectories"]
-        z = np.load(next((ROOT / "cache/det").glob(f"{clip}__*.npz")))
+        ctx, _ = load_context(clip)
+        tracks = ctx.trajectories
+        pedestrians = {id(tr) for tr in ctx.people}  # riders and people seen through car windows left out
+        z = np.load(ROOT / "cache/det" / f"{clip}__yolo26m_1280_1920_10fps.npz")  # the submitted detector
         det = z["det"]
         det = det[det[:, 6] >= 0.35]
         dur = meta["duration"]
@@ -96,7 +145,7 @@ def main() -> None:
                 idx = np.clip(np.digitize(tr.t, bins) - 1, 0, len(bins) - 2)
                 np.add.at(moving, idx[tr.speed > 40], 1)
                 np.add.at(standing, idx[tr.speed <= 40], 1)
-            elif tr.is_person:
+            elif id(tr) in pedestrians:
                 all_ped.append(tr.foot)
                 p = np.round(tr.foot).astype(int)
                 ok = (p[:, 0] >= 0) & (p[:, 0] < 1920) & (p[:, 1] >= 0) & (p[:, 1] < 1080)
@@ -110,38 +159,8 @@ def main() -> None:
         eda["density"][clip] = {"t": bins[:-1].tolist(), "vehicles_moving": np.round(moving / per_bin, 2).tolist(),
                                 "vehicles_standing": np.round(standing / per_bin, 2).tolist()}
 
-        # speeds by zone (m/s via the local scale)
-        zones = {name: np.zeros((1080, 1920), np.uint8) for name in ("sb", "nb")}
-        for name in zones:
-            cv2.fillPoly(zones[name], [np.asarray(DIRECTION_ZONES[name][0], np.int32)], 1)
-        box = np.zeros((1080, 1920), np.uint8)
-        cv2.fillPoly(box, [np.asarray(S.JUNCTION_BOX, np.int32)], 1)
-        zones["junction"] = box
-        sp = {k: [] for k in zones}
-        for tr in tracks:
-            if not tr.is_vehicle:
-                continue
-            p = np.round(tr.foot).astype(int)
-            ok = (p[:, 0] >= 0) & (p[:, 0] < 1920) & (p[:, 1] >= 0) & (p[:, 1] < 1080)
-            for k, m in zones.items():
-                inside = np.zeros(len(p), bool)
-                inside[ok] = m[p[ok, 1], p[ok, 0]] > 0
-                sel = inside & (tr.speed > 20)
-                if sel.any():
-                    mpp = np.array([S.metres_per_px(x, y) for x, y in tr.foot[sel]])
-                    sp[k] += (tr.speed[sel] * mpp * 3.6).round(1).tolist()  # km/h
-        eda["speeds"][clip] = {k: {"p10": round(float(np.percentile(v, 10)), 1), "p50": round(float(np.median(v)), 1),
-                                   "p90": round(float(np.percentile(v, 90)), 1), "n": len(v)} if v else None
-                               for k, v in sp.items()}
-
         sig = json.loads((ROOT / "cache/signal" / f"{clip}.json").read_text())
-        segs = [s for s in sig["segments"] if s[1] - s[0] > 1.0]
-        greens = [b - a for a, b, p in segs[1:-1] if p == "green"]
-        reds = [b - a for a, b, p in segs[1:-1] if p == "red"]
-        yellows = [b - a for a, b, p in segs[1:-1] if p == "yellow"]
-        eda["signal"][clip] = {"segments": sig["segments"], "green": round(float(np.mean(greens)), 1) if greens else None,
-                               "red": round(float(np.mean(reds)), 1) if reds else None,
-                               "yellow": round(float(np.mean(yellows)), 1) if yellows else None}
+        eda["signal"][clip] = signal_stats(np.array(sig["times"]), fill_phases(sig["phases"], np.array(sig["times"])))
         cap = cv2.VideoCapture(str(ROOT / "cache/proxy" / f"{clip}.mp4"))
         lum = []
         for i in range(0, int(cap.get(cv2.CAP_PROP_FRAME_COUNT)), 100):
@@ -190,7 +209,7 @@ def main() -> None:
     cv2.imwrite(str(out / "media/eda/directions.jpg"), field, [cv2.IMWRITE_JPEG_QUALITY, 85])
     eda["images"] = {k: f"/media/eda/{k}.jpg" for k in ("heatmap_vehicle", "heatmap_person", "trajectories", "directions")}
     (out / "eda.json").write_text(json.dumps(eda))
-    print(json.dumps({k: eda[k] for k in ("speeds", "pedestrians", "light")}, indent=1))
+    print(json.dumps({k: eda[k] for k in ("pedestrians", "light")}, indent=1))
     print({c: {k: v for k, v in eda["signal"][c].items() if k != "segments"} for c in CLIPS})
 
 

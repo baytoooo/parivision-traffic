@@ -13,19 +13,20 @@ const statusText = { on: "emitted", off: "rule off", none: "no rule" } as const;
 const learned = [
   { part: "A", stage: "Detection", how: "Learned", detail: "YOLO26m with COCO weights, not fine-tuned. 1280 px input, confidence 0.1. Keeps person, bicycle, car, motorcycle, bus, truck and six animal classes." },
   { part: "A", stage: "Tracking", how: "Algorithm", detail: "ByteTrack (the Ultralytics implementation), one tracker per group so boxes of different kinds never get linked. High 0.3, low 0.1, new track 0.4, 2 s buffer." },
-  { part: "A", stage: "Registration", how: "Geometry", detail: "SIFT, 6000 features, on a per-pixel median of a few frames; homography by MAGSAC with 3 px tolerance, against a midday and a dusk reference." },
-  { part: "A", stage: "Signal phase", how: "Rule", detail: "Lamp patches mapped from the reference view; the lamp with the strongest colour contrast (at least 18 on a 0 to 255 scale) wins." },
-  { part: "A", stage: "Rider or pedestrian", how: "Rule", detail: "A person whose box is at least 30% covered by a bicycle or motorbike box, or whose median speed is above 110 px/s, is a rider." },
-  { part: "A", stage: "Events", how: "Rules", detail: "One function per class on trajectories, zones and phase. Thresholds were tuned by hand on our dev labels." },
+  { part: "A", stage: "Registration", how: "Geometry", detail: "SIFT, 6000 features, on the clip's first sampled frame; homography by MAGSAC with 3 px tolerance on 960 px wide copies, against a midday and a dusk reference, both per-pixel median backgrounds." },
+  { part: "A", stage: "Signal phase", how: "Rule", detail: "Lamp patches on the median-nose head, mapped from the reference view; the lamp with the strongest colour contrast relative to its threshold wins (20 on a 0 to 255 scale for red and yellow, 6 for green)." },
+  { part: "A", stage: "Rider or pedestrian", how: "Rule", detail: "A person whose box is more than 30% covered by a bicycle or motorbike box in over 40% of its samples, or whose median speed is above 110 px/s, is a rider." },
+  { part: "A", stage: "Events", how: "Rules", detail: "One function per class on trajectories, zones and phase. Thresholds were tuned on our dev labels, by hand and with a small grid search for jaywalking and failure to yield." },
   { part: "B", stage: "Detection", how: "Learned", detail: "YOLO26s with COCO weights at 960 px, confidence 0.2, every 3rd frame (10 Hz)." },
-  { part: "B", stage: "Risk", how: "Hand-built model", detail: "Constant-velocity look-ahead of 4 s from 0.8 s of history; pair hazard from closing speed and footprint overlap, plus hard braking; combined as independent events, EMA 0.35." },
+  { part: "B", stage: "Risk", how: "Hand-built model", detail: "Constant-velocity look-ahead of 3 s from 0.8 s of history; pair hazard from closing speed, time to contact and footprint overlap, plus hard braking; the worst pair sets the score, EMA 0.35." },
 ];
 
 const licences = [
-  { what: "YOLO26m, YOLO26s weights", who: "Ultralytics", lic: "AGPL-3.0", use: "Detectors for Part A and Part B" },
+  { what: "YOLO26m, YOLO26s, YOLO26n weights", who: "Ultralytics", lic: "AGPL-3.0", use: "Detectors for Part A and Part B; YOLO26n only in the CPU fallback" },
   { what: "COCO 2017", who: "COCO Consortium", lic: "Annotations CC BY 4.0; images under their Flickr licences", use: "What the detector weights were trained on. We did not train on it ourselves." },
   { what: "ByteTrack (Ultralytics implementation)", who: "Zhang et al.; Ultralytics", lic: "MIT (original), AGPL-3.0 (Ultralytics)", use: "Multi-object tracking" },
-  { what: "OpenCV", who: "OpenCV team", lic: "Apache 2.0", use: "Decoding, SIFT, homography, colour" },
+  { what: "OpenCV", who: "OpenCV team", lic: "Apache 2.0", use: "Video metadata, SIFT, homography, colour" },
+  { what: "PyAV", who: "PyAV contributors", lic: "BSD-3-Clause", use: "Decoding the clips for Part A" },
   { what: "PyTorch", who: "PyTorch Foundation", lic: "BSD-3-Clause", use: "Runs the detectors" },
   { what: "Sample clips C3896, C3897, C3902, C3905", who: "Hackathon organisers", lic: "Competition use only", use: "Our dev set, labelled by us" },
 ];
@@ -44,7 +45,7 @@ const licences = [
 
   <section class="section wrap" id="scene">
     <SecHead num="02" title="The scene">
-      <p>A camcorder on a tripod, high on a building at the south-west corner, looking north-west up the avenue. We describe everything in one 1920x1080 reference view; the 4K clips are mapped onto it.</p>
+      <p>A camcorder on a tripod, high on a building at one corner of the junction, looking straight up the avenue. North, south, east and west are our names for the arms as the camera sees them, not compass bearings. We describe everything in one 1920x1080 reference view; the 4K clips are mapped onto it.</p>
     </SecHead>
     <div class="scene-grid">
       <figure>
@@ -54,7 +55,7 @@ const licences = [
       <div class="prose scene-text">
         <p><strong>Southbound (SB)</strong> traffic comes towards the camera on the left of the median, four lanes at the stop line. <strong>Northbound (NB)</strong> traffic drives away on the right, past a bus stop near the top of the frame.</p>
         <p>The <strong>north crossing</strong> is a zebra across both carriageways just past the SB stop line, split by the median nose. The <strong>west crossing</strong> is a long diagonal zebra over the west arm at the bottom left, between three pink islands. Nothing else in view is a legal place to cross.</p>
-        <p>Things that are easy to get wrong here: cars parked along the left edge are off the carriageway; buses wait at the NB stop for 20 to 60 s; the SB queue at a red light can stand still for a minute; cyclists come out of the detector as a person plus a bike.</p>
+        <p>Things that are easy to get wrong here: cars parked along the left edge are off the carriageway; buses wait at the NB stop for 20 to 60 s; the SB queue at a red light stands still for 36 to 39 s; cyclists come out of the detector as a person plus a bike.</p>
       </div>
     </div>
   </section>
@@ -80,7 +81,7 @@ const licences = [
 
   <section class="section wrap" id="rules">
     <SecHead num="04" title="The rule for each class">
-      <p>Distances are in pixels of the reference view; near the north crossing one metre is 25 to 30 px. Score A averages over classes, so a class we predict that never happens in the test set adds a zero. That is why eight classes are not emitted yet.</p>
+      <p>Distances are in pixels of the reference view; near the north crossing one metre left to right is about 50 px, and fewer along the avenue. Score A averages over classes, so a class we predict that never happens in the test set adds a zero. That is why seven classes are not emitted yet.</p>
     </SecHead>
     <ol class="rules" role="list">
       {CLASSES.map((c) => (
@@ -100,9 +101,9 @@ const licences = [
     <div>
       <SecHead num="05" title="How we read the signal" />
       <div class="prose">
-        <p>The heads over the SB lanes face away from the camera. Two heads do face it: one on the pole at the left corner and one on the median nose. Both follow the avenue phase and stay readable at dusk.</p>
-        <p>For each of the three lamps we take a small patch around its centre, mapped from the reference view into the frame. A lit red lamp is much redder than its dark housing, a lit green one much greener, a lit yellow one much warmer. The lamp with the strongest contrast wins. Position decides the phase, not colour alone, so tail lights passing behind the head do not read as red.</p>
-        <p>When every lamp is dark the head is "off": the flashing part of green, or a car hiding the head. The cycle here is green, 3 s flashing green, about 3 s yellow, then red. We sample it every 0.2 s.</p>
+        <p>The heads over the SB lanes face away from the camera. Two heads do face it. The one on the median nose is a three-lamp vehicle signal for the approach from the south, which runs in the same phase as SB; we read the phase from it, and it stays readable at dusk. The one on the pole at the left corner is a two-lamp pedestrian signal for the west crossing, and we do not use it.</p>
+        <p>For each of the three lamps we take a small patch around its centre, mapped from the reference view into the frame. A lit red lamp is much redder than its dark housing, a lit green one much greener, a lit yellow one much warmer. The lamp with the strongest contrast relative to its own threshold wins. Position decides the phase, not colour alone, so tail lights passing behind the head do not read as red.</p>
+        <p>When every lamp is dark the head is "off": the flashing part of green, or a car hiding the head. The cycle here is green, 3 s flashing green, about 3 s yellow, then red. We sample it every 0.1 s.</p>
       </div>
     </div>
     <figure class="lamp-fig" aria-hidden="true">
@@ -124,8 +125,8 @@ const licences = [
   <section class="section wrap" id="registration">
     <SecHead num="06" title="Why registration was needed" />
     <div class="prose">
-      <p>The camera does not move inside a clip, but the clips are not framed identically: the afternoon session is about 20 px off from the morning one. Every zone we test against (stop line, crossings, carriageways, bus stop) is drawn once, by hand, in the reference view. If we drew them per clip, a new test clip with slightly different framing would put the stop line in the wrong place.</p>
-      <p>So for every clip we take the per-pixel median of a few frames, which removes most of the traffic, match SIFT features against a midday and a dusk reference, and keep the homography with the most inliers. Tracks are then mapped into the reference view before any rule looks at them.</p>
+      <p>The camera does not move inside a clip, but the clips are not framed identically: the two afternoon clips are about 20 and 50 px off from the morning ones, and slightly zoomed. Every zone we test against (stop line, crossings, carriageways, bus stop) is drawn once, by hand, in the reference view. If we drew them per clip, a new test clip with slightly different framing would put the stop line in the wrong place.</p>
+      <p>So for every clip we match SIFT features of its first sampled frame against a midday and a dusk reference, each a per-pixel median background with most of the traffic removed, and keep the homography with the most inliers. Tracks are then mapped into the reference view before any rule looks at them.</p>
     </div>
   </section>
 
@@ -150,12 +151,12 @@ const licences = [
         <div><dt>Source</dt><dd>3840x2160, 29.97 fps, about 140 Mbit/s</dd></div>
         <div><dt>Part A frames</dt><dd>every 3rd, 9.99 per second, resized to 1920 px, batches of 8</dd></div>
         <div><dt>Part A detector</dt><dd>YOLO26m at 1280 px</dd></div>
-        <div><dt>Part A time cap</dt><dd>stops at 1.6x the clip length; the organisers' runner allows 3x for A and B together</dd></div>
-        <div><dt>Part B frames</dt><dd>every 3rd frame it receives, 1280 px wide, YOLO26s at 960 px</dd></div>
+        <div><dt>Part A time cap</dt><dd>stops at 1.3x the clip length (at least 60 s), and before that drops to every 2nd or 3rd sampled frame if it falls behind; the organisers' runner allows 3x for A and B together</dd></div>
+        <div><dt>Part B frames</dt><dd>every 3rd frame it receives, 1280 px wide, YOLO26s at 960 px; down to 1 per second if it falls behind, and none after 95% of its budget (2.8x the clip length minus Part A's time)</dd></div>
         <div><dt>Measured runtime</dt><dd class={isNum(runtime) ? "" : "tbd"}>{isNum(runtime) ? `${runtime.toFixed(2)}x clip length, Part A + Part B, ${rt?.machine}` : fmtNum(runtime)}</dd></div>
       </dl>
       <div class="prose">
-        <p>At 10 fps a walking pedestrian moves about 4 px of the reference view between samples near the north crossing, and a car at 40 km/h about 30 px. That is enough to know who is on a zebra and who crosses the stop line. The ablations on the <a href="/results#ablations">Results page</a> show what 5 fps and smaller detectors do to the score.</p>
+        <p>At 10 fps a walking pedestrian moves about 7 px of the reference view between samples near the north crossing, and a car at 40 km/h about 1.1 m. That is enough to know who is on a zebra and who crosses the stop line. The ablations on the <a href="/results#ablations">Results page</a> show what 5 fps and smaller detectors do to the score.</p>
       </div>
     </div>
   </section>

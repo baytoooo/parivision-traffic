@@ -114,7 +114,7 @@ const presentClasses = CLASSES.filter((c) => rows.some((r) => r.l === c.key));
         </table>
       </div>
     </section>
-    <noscript><p>The dashboard needs JavaScript. The same events are on the Results page.</p></noscript>
+    <noscript><p>The dashboard needs JavaScript, and so does the event table on the Results page. The same events are in {clips.map((c, i) => <Fragment>{i ? ", " : ""}<a href={`/data/results/${c.id}.json`}>{c.id}.json</a></Fragment>)}.</p></noscript>
   </div>
 
   <script type="application/json" id="dash-data" set:html={JSON.stringify({ rows, clips: clipMeta, classes: classMeta, zones: zoneMeta })} />
@@ -222,8 +222,8 @@ const presentClasses = CLASSES.filter((c) => rows.some((r) => r.l === c.key));
   const zname = (k: string) => D.zones.find((z) => z.key === k)?.name ?? k;
   const clipById = Object.fromEntries(D.clips.map((c) => [c.id, c]));
   const clockSec = (clip: string, t: number) => {
-    const [hh, mm] = (clipById[clip]?.start.split(" ")[1] ?? "0:0").split(":").map(Number);
-    return hh * 3600 + mm * 60 + t;
+    const [hh, mm, ss = 0] = (clipById[clip]?.start.split(" ")[1] ?? "0:0").split(":").map(Number);
+    return hh * 3600 + mm * 60 + ss + t;
   };
   const clockStr = (sec: number) => {
     const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = Math.floor(sec % 60);

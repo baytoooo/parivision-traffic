@@ -135,7 +135,7 @@ links are TODO for now.
 Demo API (base URL in one config constant, default `https://parivision-traffic-demo.hf.space`):
 * `POST /api/jobs` multipart field `file` -> `{"job_id": "..."}`; 413 if too big
 * `POST /api/jobs/sample/<name>` -> `{"job_id": "..."}`
-* `GET /api/samples` -> `[{"name": "c3896_crossing", "label": "Busy crossing, midday", "seconds": 30}]`
+* `GET /api/samples` -> `[{"name": "north_crossing_midday", "label": "Midday, pedestrians on the north crossing", "seconds": 30}]`
 * `GET /api/jobs/<id>` -> `{"status": "queued|running|done|error", "progress": 0.42, "stage": "detecting and tracking", "eta_sec": 35, "error": null, "result": {same shape as results/<clip>.json without labels, plus "video": "/api/jobs/<id>/video"}}`
 * `GET /api/health` -> `{"ok": true}`
 Build the demo against a mock mode (`?mock=1` or when the API is unreachable

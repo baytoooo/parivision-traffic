@@ -2,14 +2,16 @@
 
 Each lamp gets a small patch around its centre (mapped from reference pixels
 into the frame). A lit red lamp is much redder than its dark housing, a lit
-green one much greener, and a lit yellow one much warmer. The lamp with the
-strongest colour contrast wins; when every lamp is dark the head is "off"
+green one much greener, and a lit yellow one much warmer. Each lamp's contrast
+is divided by its own threshold (``MIN_CONTRAST``) and the lamp furthest above
+it wins; when every lamp is below its threshold the head is "off"
 (the flashing-green part of the cycle, or a car hiding the head). Lamp
 position, not just colour, decides the phase, so tail lights passing behind
 the head do not read as red.
 
-Sequence at this junction: green, 3 s flashing green, ~3 s yellow, red,
-then back to green.
+Sequence at this junction: green (the last 3 s flashing), 3 s yellow, red,
+then back to green. The afternoon plan lights red and yellow together for the
+last 3 s of red.
 """
 from __future__ import annotations
 

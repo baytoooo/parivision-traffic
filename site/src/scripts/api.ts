@@ -134,19 +134,16 @@ export class HttpApi implements Api {
   }
 }
 
-/** The stages our server reports, in order; the mock replays the same names. */
+/** The stages our server reports (demo/app.py, demo/worker.py, pipeline.analyse), in order; the mock replays them. */
 export const STAGES = [
-  "queued",
-  "reading video",
-  "registering to the reference view",
-  "reading the signal",
+  "waiting in the queue",
+  "aligning the view",
   "detecting and tracking",
-  "applying rules",
-  "scoring risk",
+  "applying event rules",
   "rendering the annotated video",
 ];
 
-const MOCK_TIMES = [1.0, 1.2, 1.2, 1.0, 4.6, 1.0, 1.0, 1.4]; // seconds per stage
+const MOCK_TIMES = [1.0, 1.2, 5.8, 1.0, 1.4]; // seconds per stage
 
 interface MockJob {
   started: number;
