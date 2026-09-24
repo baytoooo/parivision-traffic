@@ -289,4 +289,6 @@ Links: Amal Karimov, [GitHub](https://github.com/Shen-de-Dia) and
 [LinkedIn](https://www.linkedin.com/in/ka-a-a07690405/); Komronbek Qodirov,
 [GitHub](https://github.com/baytoooo),
 [LinkedIn](https://www.linkedin.com/in/kamron-kadirov-7a8149303/) and
-[portfolio](https://bayto.uz). More on the [team page](https://parivision-traffic.vercel.app/team).
+[portfolio](https://bayto.uz); Aziza Adizova,
+[LinkedIn](https://www.linkedin.com/in/aziza-adizova-033a712a0/). More on the
+[team page](https://parivision-traffic.vercel.app/team).
