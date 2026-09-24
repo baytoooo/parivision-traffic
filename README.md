@@ -284,3 +284,9 @@ this repository is released under AGPL-3.0 (`LICENSE`).
 | Amal Karimov (captain) | scene layout, signal and vehicle rules | traced the junction in the reference view; found the vehicle signal head and wrote its phase reader; red_light, stop_line, stopped_vehicle and congestion rules |
 | Komronbek Qodirov | pipeline, live demo, website | video decoding, detection, tracking, registration and the time budget; Part B; the in-browser port of the pipeline and the website |
 | Aziza Adizova | dev set, pedestrian rules, report | wrote the labelling guide, ran the labelling, verifier and adjudicator agents and checked part of their reasoning by hand; jaywalking and failure_to_yield rules and their error analysis; EDA and the report |
+
+Links: Amal Karimov, [GitHub](https://github.com/Shen-de-Dia) and
+[LinkedIn](https://www.linkedin.com/in/ka-a-a07690405/); Komronbek Qodirov,
+[GitHub](https://github.com/baytoooo),
+[LinkedIn](https://www.linkedin.com/in/kamron-kadirov-7a8149303/) and
+[portfolio](https://bayto.uz). More on the [team page](https://parivision-traffic.vercel.app/team).
