@@ -494,3 +494,85 @@ def u_turns(ctx: Context) -> list[Evidence]:
             continue
         out.append(Evidence("illegal_u_turn", s_, e_, [veh.tid], note="U-turn round the median nose"))
     return out
+
+
+# Collisions. The foot points in this oblique view are rough, so two cars in adjacent lanes often
+# look in contact; what tells a crash from traffic is what follows: road users that met at speed
+# and then stand still together. Checked on our samples (no crash, no evidence) and on public CCTV
+# crash clips (tools/crash_check.py). Metres, not pixels, because the rule also runs on other
+# cameras there: `mpp(x, y)` is metres per pixel at a point of the trajectories' plane.
+CRASH = {
+    "contact": 1.0,       # x the sum of the two footprint radii (risk.RADIUS_M)
+    "closing": 3.0,       # m/s towards each other in the 0.5 s before contact
+    "pre_speed": 5.0,     # m/s median speed of the faster one over the 1 s before: not a box jump
+    "stop_speed": 1.0,    # m/s: both count as standing below this
+    "stop_within": 2.0,   # s after contact by which both stand
+    "stay": 3.0,          # s they then stand together
+    "near": 4.0,          # m apart at most while they stand
+    "kick": 1.5,          # m/s: both velocities change across the contact (a car stopping behind a
+                          # standing one changes its own velocity only; an impact moves both)
+    "end_pad": 1.0,       # s after they come to rest: the event ends when all involved stop moving
+}
+
+
+def collisions(trajectories: list[Trajectory], mpp, p: dict = CRASH) -> list[Evidence]:
+    from .risk import RADIUS_M
+
+    step = 0.1
+    tracks = []
+    for tr in trajectories:
+        if len(tr.t) < 5 or not (tr.is_vehicle or tr.is_person or tr.group == "bicycle"):
+            continue
+        keys, first = np.unique(np.round(tr.t / step).astype(int), return_index=True)
+        tracks.append((tr, keys, first))
+    out = []
+    for i in range(len(tracks)):
+        A, ka, fa = tracks[i]
+        for j in range(i + 1, len(tracks)):
+            B, kb, fb = tracks[j]
+            if not (A.is_vehicle or B.is_vehicle):
+                continue
+            common, ia, ib = np.intersect1d(ka, kb, assume_unique=True, return_indices=True)
+            if len(common) < 10:
+                continue
+            ia, ib = fa[ia], fb[ib]  # sample indices on the shared 0.1 s grid
+            pa, pb = A.foot[ia], B.foot[ib]
+            if np.min(np.abs(pa - pb).max(axis=1)) > 400:  # never within 400 px of each other
+                continue
+            m = np.array([mpp(*q) for q in (pa + pb) / 2])
+            d = np.linalg.norm(pa - pb, axis=1) * m
+            sa = np.linalg.norm(A.vel[ia], axis=1) * m
+            sb = np.linalg.norm(B.vel[ib], axis=1) * m
+            sep = (pa - pb) * m[:, None]
+            closing = -np.sum((A.vel[ia] - B.vel[ib]) * m[:, None] * sep, axis=1) / np.maximum(d, 1e-3)
+            ts = common * step
+            reach = (RADIUS_M.get(A.cls, 1.0) + RADIUS_M.get(B.cls, 1.0)) * p["contact"]
+            for n in np.nonzero(d <= reach)[0]:
+                before = (ts >= ts[n] - 1.0) & (ts < ts[n])
+                if before.sum() < 3 or closing[(ts >= ts[n] - 0.5) & (ts < ts[n])].max(initial=0.0) < p["closing"]:
+                    continue
+                if max(np.median(sa[before]), np.median(sb[before])) < p["pre_speed"]:
+                    continue
+                after = (ts > ts[n]) & (ts <= ts[n] + 0.7)
+                if after.sum() < 2:
+                    continue
+                va, vb = A.vel[ia] * m[:, None], B.vel[ib] * m[:, None]
+                kick = [np.linalg.norm(v[after].mean(axis=0) - np.median(v[before], axis=0)) for v in (va, vb)]
+                if min(kick) < p["kick"]:
+                    continue
+                still = (sa < p["stop_speed"]) & (sb < p["stop_speed"]) & (d < p["near"])
+                rest = np.nonzero(still & (ts > ts[n]) & (ts <= ts[n] + p["stop_within"]))[0]
+                if not len(rest):
+                    continue
+                t_rest = ts[rest[0]]
+                window = (ts >= t_rest) & (ts <= t_rest + p["stay"])
+                if ts[window].max() - t_rest < p["stay"] - 0.3 or still[window].mean() < 0.8:
+                    continue
+                out.append(Evidence("accident", float(ts[n]), float(t_rest + p["end_pad"]), [A.tid, B.tid],
+                                    note=f"met at {closing[before].max():.0f} m/s"))
+                break
+    return out
+
+
+def accident(ctx: Context) -> list[Evidence]:
+    return collisions(ctx.trajectories, S.metres_per_px)
