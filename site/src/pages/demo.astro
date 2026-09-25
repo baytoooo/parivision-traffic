@@ -1,7 +1,7 @@
 ---
 import Base from "../layouts/Base.astro";
 import ClipPanel from "../components/ClipPanel.astro";
-import { CONVERT_CMD, UPLOAD_MAX_SECONDS } from "../config";
+import { UPLOAD_MAX_SECONDS } from "../config";
 
 const maxMin = UPLOAD_MAX_SECONDS / 60;
 ---
@@ -32,7 +32,7 @@ const maxMin = UPLOAD_MAX_SECONDS / 60;
         <span class="drop-main">Choose an .mp4 or drop it here</span>
         <span class="drop-sub">Any file size. The file is read on this device and not uploaded. We analyse the first {maxMin} minutes. 1080p is recommended; 4K works but is slower.</span>
       </label>
-      <p class="codec-note">The camera's own files are 10-bit 4:2:2 H.264. Safari and Chrome on a Mac decode them, but browsers on Windows and Linux may not. 8-bit H.264 at 1080p, the format of our sample clips, is the safest choice. To convert the first {maxMin} minutes of a camera file: <code>{CONVERT_CMD}</code></p>
+      <p class="codec-note">Any .mp4 works. The camera's own files are 10-bit 4:2:2 H.264: most browsers on Windows and Linux cannot play them, and Chrome on a Mac decodes them slowly, in software. In both cases we first convert the file here, in the browser, which takes a few minutes for {maxMin} minutes of 4K. 8-bit H.264 at 1080p, the format of our sample clips, needs no conversion.</p>
       <div class="file-info" id="file-info" hidden>
         <dl>
           <div><dt>File</dt><dd id="file-name" class="mono"></dd></div>
@@ -103,6 +103,7 @@ const maxMin = UPLOAD_MAX_SECONDS / 60;
       <h2 class="h-card" id="notes-heading">How the browser run differs from our submission</h2>
       <ul class="facts-list">
         <li>The first run downloads the detector (10 MB) and the ONNX Runtime engine (14 MB for WebAssembly, 27 MB for WebGPU, less when the server compresses it). The browser keeps both in its cache for the next runs.</li>
+        <li>A file this browser cannot play, or decodes too slowly, is converted first by ffmpeg.wasm (a 33 MB download the first time): the first {maxMin} minutes, 1920 px wide, 8-bit H.264 at CRF 23. The pipeline then reads that copy. On our Apple M5 Mac, Chrome converts the first 2 minutes of a camera file in 75 to 80 s. The converter is ffmpeg.wasm (MIT) around an FFmpeg core licensed GPL-2.0-or-later; its source is at <a href="https://github.com/ffmpegwasm/ffmpeg.wasm">github.com/ffmpegwasm/ffmpeg.wasm</a>.</li>
         <li>The detector runs on WebGPU where the browser offers it. Elsewhere it runs on the CPU through WebAssembly, which is slower.</li>
         <li>It reads the first {maxMin} minutes of a clip at 5 frames per second. The submission reads 10 frames per second.</li>
         <li>The detector is the small YOLO26n at 960 px wide, about a thirtieth of the compute of the submission's YOLO26m at 1280 px and 10 frames per second. On the two clips we could compare, it scores within 0.01 mean F1 of it (see the <a href="/results#ablations">ablations</a>).</li>
@@ -140,7 +141,6 @@ const maxMin = UPLOAD_MAX_SECONDS / 60;
   .drop-main { font-weight: 800; font-size: 1.05rem; }
   .drop-sub { font-size: .85rem; color: var(--paint-2); }
   .codec-note { margin: 10px 0 0; font-size: .82rem; color: var(--paint-2); }
-  .codec-note code { overflow-wrap: anywhere; }
 
   .file-info { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; margin-top: 12px; }
   .file-info dl { margin: 0; display: grid; gap: 2px; min-width: 0; }

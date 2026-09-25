@@ -2,26 +2,44 @@
 // A job reads frames from a hidden <video> by seeking to t = k / 5 s (5 frames per second, as
 // pipeline.py's "cpu" profile), draws each one at the detector's width and the signal head at
 // work scale, and posts them to the pipeline's worker, which owns the ONNX session and the
-// Analyser. The page polls job() as it polled the Python demo server; nothing leaves the device.
+// Analyser. A clip the <video> cannot decode (the camera's own 10-bit 4:2:2 files in most browsers
+// on Windows and Linux), or decodes only slowly, is first converted in the page by ffmpeg.wasm
+// (transcode.ts). The page polls job() as it polled the Python demo server; nothing leaves the
+// device.
 
-import { CONVERT_CMD, UPLOAD_MAX_SECONDS } from "../config";
+import { UPLOAD_MAX_SECONDS } from "../config";
 import type { ClipResult, Counts, Job, Sample } from "../lib/types";
 import { ALIGN_DOWNSCALE, rgbaToGray } from "../pipeline/align";
 import { roundHalfEven } from "../pipeline/geometry";
 import type { Backend, FromWorker, Pixels, ToWorker } from "../pipeline/messages";
 import type { PipelineResult } from "../pipeline/types";
-import { ApiError, STAGES, type Api, type Health } from "./api";
+import { ApiError, CONVERT, STAGES, type Api, type Health } from "./api";
 
 const FPS = 5; // pipeline.py PROFILES["cpu"]: analysed frames per second
 const WORK_WIDTH = 1920; // pipeline.py WORK_WIDTH: the work frame, whose pixels the pipeline's boxes are in
 const IN_FLIGHT = 2; // frames posted to the worker and not yet done
 const SEEK_TIMEOUT_MS = 20000;
+const OPEN_TIMEOUT_MS = 30000;
+const FIRST_FRAME_MS = 8000; // from the clip's metadata to its first frame; longer means no decoder
+// A browser may decode a clip in software: Chrome on a Mac does so for the camera's 10-bit 4:2:2
+// files and then takes 0.2 to 0.4 s per seek at 4K (seconds on a busy machine), where converting
+// the clip and analysing the copy takes 0.2 s per frame in all. Clips it decodes in hardware, 4K
+// or not, seek in 10 to 70 ms.
+const PROBE = [1, 2, 3].map((k) => k / FPS); // seeks timed before choosing
+const SLOW_SEEK_MS = 150; // most of them slower than this: convert the clip first
 const REFERENCES = ["day", "dusk"]; // public/pipeline/reference_<name>.png
 const [READ, LOAD, ALIGN, DETECT, RULES] = STAGES;
-// where each stage starts on the progress bar; detection is most of the work
-const AT: Record<string, number> = { [READ]: 0, [LOAD]: 0.04, [ALIGN]: 0.12, [DETECT]: 0.14, [RULES]: 0.97 };
 
-const CANNOT_DECODE = `This browser cannot decode this clip. The camera's own files are 10-bit 4:2:2 H.264, which Safari and Chrome on a Mac decode but browsers on Windows and Linux may not. Convert it first: ${CONVERT_CMD}`;
+/** A job's stages in order, each with where it starts on the progress bar. */
+type Plan = [stage: string, start: number][];
+// Detection is most of the work, unless the clip is converted first: for 4K that takes about
+// twice as long as everything after it. Both plans read the clip in the same span, as a job only
+// switches to the second after reading.
+const PLAN: Plan = [[READ, 0], [LOAD, 0.04], [ALIGN, 0.12], [DETECT, 0.14], [RULES, 0.97]];
+const PLAN_CONVERTED: Plan = [[READ, 0], [CONVERT, 0.04], [LOAD, 0.7], [ALIGN, 0.73], [DETECT, 0.74], [RULES, 0.99]];
+
+/** openVideo's error when the browser cannot show a frame of the clip; the job then converts it. */
+class CannotDecode extends Error {}
 
 type Handler = (m: FromWorker) => void;
 
@@ -29,9 +47,12 @@ interface LocalJob {
   id: string;
   signal: AbortSignal;
   status: Job["status"];
+  plan: Plan;
   stage: string;
   progress: number;
   stageStarted: number;
+  /** How much of the current stage is done, 0 to 1. */
+  stageDone: number;
   framesDone: number;
   framesTotal: number;
   error: string | null;
@@ -107,7 +128,8 @@ async function fetchClip(url: string, signal: AbortSignal, onProgress: (f: numbe
   return new Blob(chunks, { type: "video/mp4" });
 }
 
-/** A muted <video> in the page (some browsers decode nothing for a detached one), ready to seek. */
+/** A muted <video> in the page (some browsers decode nothing for a detached one), ready to seek.
+ * Rejects with CannotDecode when the browser shows no frame of the clip. */
 function openVideo(url: string): Promise<HTMLVideoElement> {
   const v = document.createElement("video");
   v.muted = true;
@@ -117,20 +139,47 @@ function openVideo(url: string): Promise<HTMLVideoElement> {
   v.style.cssText = "position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none;z-index:-1";
   document.body.append(v);
   return new Promise((resolve, reject) => {
+    let timer = 0;
     const done = (err?: string) => {
       clearTimeout(timer);
-      v.onloadeddata = v.onerror = null;
+      v.onloadedmetadata = v.onloadeddata = v.onerror = null;
       if (err) {
-        v.remove();
-        reject(new Error(err));
+        // a detached video that plays the audio keeps loading the clip, whose URL the job revokes
+        closeVideo(v);
+        reject(new CannotDecode(err));
       } else resolve(v);
     };
-    const timer = setTimeout(() => done("The browser took too long to open the clip."), 30000);
-    v.onloadeddata = () =>
-      done(v.videoWidth && Number.isFinite(v.duration) && v.duration > 0 ? undefined : "This browser opens the file but cannot read its frames or its length.");
-    v.onerror = () => done(CANNOT_DECODE);
+    // a background tab may not load the video at all; only a visible page times out
+    const arm = (ms: number, err: string) => {
+      timer = window.setTimeout(() => (document.hidden ? arm(ms, err) : done(err)), ms);
+    };
+    arm(OPEN_TIMEOUT_MS, "The browser took too long to open the clip.");
+    v.onloadedmetadata = () => {
+      if (!v.videoWidth) return done("This browser opens the file but cannot decode its picture.");
+      clearTimeout(timer);
+      arm(FIRST_FRAME_MS, "This browser opens the file but shows no frame of it.");
+    };
+    v.onloadeddata = () => done(Number.isFinite(v.duration) && v.duration > 0 ? undefined : "This browser cannot read the length of the clip.");
+    v.onerror = () => done("This browser cannot decode the clip.");
     v.src = url;
   });
+}
+
+/** For openVideo(...).catch: null when the browser cannot decode the clip. */
+function orNull(e: unknown): null {
+  if (e instanceof CannotDecode) return null;
+  throw e;
+}
+
+/** openVideo for a job; a video that opens only after the job has stopped is closed again. */
+async function openFor(job: LocalJob, url: string): Promise<HTMLVideoElement> {
+  const opening = openVideo(url);
+  try {
+    return await wait(job, opening);
+  } catch (e) {
+    opening.then(closeVideo, () => undefined);
+    throw e;
+  }
 }
 
 /** Seeks and resolves once the frame at `t` can be drawn. A background tab may stall seeking; only a
@@ -150,7 +199,7 @@ function seek(v: HTMLVideoElement, t: number): Promise<void> {
     };
     const bad = () => {
       cleanup();
-      reject(new Error(CANNOT_DECODE));
+      reject(new Error(`The browser could not decode the clip at ${t.toFixed(1)} s.`));
     };
     const arm = () => {
       timer = window.setTimeout(() => {
@@ -164,6 +213,30 @@ function seek(v: HTMLVideoElement, t: number): Promise<void> {
     arm();
     v.currentTime = t;
   });
+}
+
+/** Whether most seeks to `times` take longer than `limit` ms; it stops seeking once that is
+ * settled. False when the page goes to the background, where seeking is slow for any decoder. */
+async function seeksSlowly(v: HTMLVideoElement, times: number[], limit: number): Promise<boolean> {
+  const most = Math.floor(times.length / 2) + 1;
+  let slow = 0;
+  let fast = 0;
+  for (const t of times) {
+    const t0 = performance.now();
+    await seek(v, t);
+    if (document.hidden) return false;
+    if (performance.now() - t0 > limit) slow++;
+    else fast++;
+    if (slow >= most || fast >= most) break;
+  }
+  return slow >= most;
+}
+
+/** Frees the browser's decoder of a video from openVideo and takes it off the page. */
+function closeVideo(v: HTMLVideoElement): void {
+  v.removeAttribute("src");
+  v.load();
+  v.remove();
 }
 
 /** Draws the current video frame into the canvases the pipeline reads. */
@@ -241,6 +314,8 @@ function message(e: unknown): string {
 
 export class LocalApi implements Api {
   readonly mock = false;
+  /** ?transcode=1 converts every clip, also one this browser decodes, to try the conversion anywhere. */
+  readonly alwaysConvert = new URLSearchParams(location.search).get("transcode") === "1";
   /** Where the detector runs: a guess from health(), then what the worker reports once the model is loaded. */
   backend: Backend | null = null;
   private worker: Worker | null = null;
@@ -297,6 +372,10 @@ export class LocalApi implements Api {
     if (j.status === "running" && j.stage === DETECT && j.framesDone >= 3) {
       const perFrame = (performance.now() - j.stageStarted) / 1000 / j.framesDone;
       eta = Math.round(perFrame * (j.framesTotal - j.framesDone)) + 1;
+    } else if (j.status === "running" && j.stage === CONVERT && j.stageDone >= 0.02) {
+      // the conversion's own time left; the stages after it follow
+      const elapsed = (performance.now() - j.stageStarted) / 1000;
+      eta = Math.round((elapsed * (1 - j.stageDone)) / j.stageDone) + 1;
     } else if (j.status === "running" && j.stage === RULES) eta = 1;
     return { status: j.status, progress: Math.round(j.progress * 1000) / 1000, stage: j.stage, eta_sec: eta, error: j.error, result: j.result };
   }
@@ -315,9 +394,11 @@ export class LocalApi implements Api {
       id: `local-${Date.now().toString(36)}-${++this.n}`,
       signal,
       status: "running",
+      plan: PLAN,
       stage: READ,
       progress: 0,
       stageStarted: performance.now(),
+      stageDone: 0,
       framesDone: 0,
       framesTotal: 0,
       error: null,
@@ -335,17 +416,54 @@ export class LocalApi implements Api {
 
   private setStage(job: LocalJob, stage: string): void {
     job.stage = stage;
-    job.progress = AT[stage];
     job.stageStarted = performance.now();
+    this.advance(job, 0);
+  }
+
+  /** Puts the job's progress bar at fraction `f` of its current stage. */
+  private advance(job: LocalJob, f: number): void {
+    const i = job.plan.findIndex(([stage]) => stage === job.stage);
+    if (i < 0) return;
+    const start = job.plan[i][1];
+    const end = i + 1 < job.plan.length ? job.plan[i + 1][1] : 1;
+    job.stageDone = f;
+    job.progress = start + (end - start) * f;
   }
 
   private async run(job: LocalJob, clip: string, getClip: (job: LocalJob, onProgress: (f: number) => void) => Promise<Blob>): Promise<void> {
     let video: HTMLVideoElement | null = null;
     this.active = job;
     try {
-      const blob = await wait(job, getClip(job, (f) => (job.progress = AT[READ] + (AT[LOAD] - AT[READ]) * f)));
+      const blob = await wait(job, getClip(job, (f) => this.advance(job, f)));
       job.url = URL.createObjectURL(blob);
-      video = await wait(job, openVideo(job.url));
+      // the clip is converted first when this browser cannot decode it, decodes it slowly or
+      // fails a seek; slow is true when it decodes every frame, only slowly
+      video = this.alwaysConvert ? null : await openFor(job, job.url).catch(orNull);
+      const slow = video ? await wait(job, seeksSlowly(video, PROBE, SLOW_SEEK_MS).catch(() => null)) : null;
+      if (video && slow !== false) {
+        closeVideo(video);
+        video = null;
+      }
+      if (!video) {
+        URL.revokeObjectURL(job.url);
+        job.url = null;
+        job.plan = PLAN_CONVERTED;
+        this.setStage(job, CONVERT);
+        // ffmpeg stops with the job, cancelled or failed
+        const halt = new AbortController();
+        job.stopped.catch(() => halt.abort());
+        let playable: Blob = blob;
+        try {
+          const { transcode } = await wait(job, import("./transcode"));
+          playable = await wait(job, transcode(blob, UPLOAD_MAX_SECONDS, (f) => this.advance(job, f), halt.signal));
+        } catch (e) {
+          // a clip this browser decodes, if slowly, is analysed as it is when the conversion fails
+          if (slow !== true || (e instanceof ApiError && e.kind === "aborted")) throw e;
+          job.plan = PLAN;
+        }
+        job.url = URL.createObjectURL(playable);
+        video = await openFor(job, job.url);
+      }
       const limit = Math.min(video.duration, UPLOAD_MAX_SECONDS);
       const work: [number, number] = [WORK_WIDTH, roundHalfEven((video.videoHeight * WORK_WIDTH) / video.videoWidth)];
       const times: number[] = [];
@@ -354,7 +472,7 @@ export class LocalApi implements Api {
 
       this.setStage(job, LOAD);
       // the model's bytes; the ONNX Runtime engine loads after them, in the rest of the stage
-      const engine = await wait(job, this.load((f) => (job.progress = AT[LOAD] + 0.75 * (AT[ALIGN] - AT[LOAD]) * f)));
+      const engine = await wait(job, this.load((f) => this.advance(job, 0.75 * f)));
 
       this.setStage(job, ALIGN);
       const frames = new FrameReader(video, work, engine.input[1]);
@@ -369,7 +487,7 @@ export class LocalApi implements Api {
       job.on["frame-done"] = () => {
         inFlight--;
         job.framesDone++;
-        job.progress = AT[DETECT] + ((AT[RULES] - AT[DETECT]) * job.framesDone) / job.framesTotal;
+        this.advance(job, job.framesDone / job.framesTotal);
         wake?.();
       };
       const slot = () => wait(job, new Promise<void>((r) => (wake = r)));
@@ -400,11 +518,7 @@ export class LocalApi implements Api {
       job.stop(e instanceof Error ? e : new Error(message(e)));
     } finally {
       job.on = {};
-      if (video) {
-        video.removeAttribute("src");
-        video.load(); // lets the browser drop the decoder; the object URL stays for the result
-        video.remove();
-      }
+      if (video) closeVideo(video); // the object URL stays for the result
       if (this.active === job) this.active = null;
     }
   }

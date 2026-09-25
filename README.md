@@ -45,11 +45,14 @@ PARIVISION_TIME_SHARE=12 PARIVISION_TOTAL_LIMIT=30 PARIVISION_RISK_SHARE=10 \
 ```
 
 The three variables and `--time-factor 40` lift the time guards, so nothing is
-thinned out (see Runtime). We made the file on an Apple M5 laptop with
-PyTorch 2.14 on MPS, where the detector runs in fp32. On a CUDA GPU it runs in
-fp16, so boxes and a few event boundaries can differ slightly. (The pinned
-torch 2.6.0 is for CUDA. On MPS it is several times slower, slow enough that
-Ultralytics' NMS time limit drops some boxes, so on a Mac use a newer torch.)
+thinned out (see Runtime). We made the file on an Apple M5 laptop with PyTorch
+2.14 on MPS, where the detector runs in fp32. On a CUDA GPU it runs in fp16,
+so boxes and a few event boundaries can differ slightly: the same command on a
+Colab T4 gave 24, 26 and 18 events on C3896, C3902 and C3905, against 25, 26
+and 18 in this file (C3897 could not be downloaded there because of a Google
+Drive quota). (The pinned torch 2.6.0 is for CUDA. On MPS it is several times
+slower, slow enough that Ultralytics' NMS time limit drops some boxes, so on a
+Mac use a newer torch.)
 
 ## How it works
 
@@ -298,8 +301,10 @@ ByteTrack implementation), ByteTrack itself (Zhang et al., MIT), PyTorch and
 torchvision (BSD-3-Clause), lap (BSD-2-Clause), OpenCV (Apache-2.0), PyAV
 (BSD-3-Clause; its wheels bundle an FFmpeg build that includes x264 and x265,
 which are GPL), NumPy, SciPy (BSD), and for the website demo only
-onnxruntime-web (MIT). Because we ship Ultralytics weights and call its code,
-this repository is released under AGPL-3.0 (`LICENSE`).
+onnxruntime-web (MIT) and ffmpeg.wasm (MIT wrapper around an FFmpeg core under
+GPL-2.0-or-later, which converts clips the browser cannot play). Because we
+ship Ultralytics weights and call its code, this repository is released under
+AGPL-3.0 (`LICENSE`).
 
 ## Team
 

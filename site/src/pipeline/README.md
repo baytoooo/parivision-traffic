@@ -48,8 +48,15 @@ A job, message by message (types in `messages.ts`):
    onnxruntime-web's WebGPU build when `navigator.gpu` gives an adapter and its
    WASM build otherwise, creates the session (WebGPU, falling back to WASM) and
    posts `ready` with the backend and the detector input size.
-2. The page opens the clip in a hidden `<video>`, draws the first frame grey at
-   480 x 270 and posts `align`. The worker runs `alignToReference`, builds the
+2. The page opens the clip in a hidden `<video>` and times a few seeks. If the
+   browser shows no frame of it (the camera's 10-bit 4:2:2 files in most
+   browsers on Windows and Linux), seeks slowly because it decodes in software
+   (the same files in Chrome on a Mac), fails a seek, or the page has
+   `?transcode=1`, the page first converts the first 120 s with ffmpeg.wasm
+   (`src/scripts/transcode.ts`) to 8-bit H.264, 1920 px wide, and opens that. If
+   the conversion fails on a clip the browser decodes, only slowly, the page
+   reads the original after all. It draws the first frame grey
+   at 480 x 270 and posts `align`. The worker runs `alignToReference`, builds the
    lamp patches and an Analyser, and posts `aligned` with H and the lamp crop.
 3. For t = k / 5 s while t < min(duration, 120 s): the page seeks, draws the
    frame at 960 px wide and the lamp crop at work scale, and posts `frame` (pixel

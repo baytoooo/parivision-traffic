@@ -1,8 +1,8 @@
 // Demo page controller: what this browser can run, file or sample, job progress, result.
-import { CONVERT_CMD, RISK_MERGE_GAP, RISK_THETA, UPLOAD_MAX_SECONDS } from "../config";
+import { RISK_MERGE_GAP, RISK_THETA, UPLOAD_MAX_SECONDS } from "../config";
 import { fmtBytes, fmtTime } from "../lib/format";
 import type { ClipResult, Job, Sample } from "../lib/types";
-import { ApiError, MockApi, STAGES, type Api } from "./api";
+import { ApiError, CONVERT, MockApi, STAGES, type Api } from "./api";
 import { LocalApi } from "./local_api";
 import { Player } from "./player";
 
@@ -21,6 +21,8 @@ let engineState: EngineState = "checking";
 let file: File | null = null;
 let fileOk = false;
 let running = false;
+/** Whether the running job converts its clip first, which adds a stage to the list. */
+let converting = false;
 let abort: AbortController | null = null;
 let player: Player | null = null;
 let lastResult: { result: ClipResult; source: string; jobId: string } | null = null;
@@ -155,15 +157,17 @@ async function chooseFile(f: File | null) {
   }
   const meta = await readDuration(f);
   if (file !== f) return;
+  fileOk = true;
   if (!meta || !meta.width) {
     $("file-dur").textContent = "unknown";
-    return fileMsg(`This browser cannot open the file, so it cannot analyse it. The camera's own files are 10-bit 4:2:2 H.264, which Safari and Chrome on a Mac decode but browsers on Windows and Linux may not. Convert it first: ${CONVERT_CMD}`, "err");
+    fileMsg(`This browser cannot play the file, so we first convert it here, in the browser. For ${UPLOAD_MAX_SECONDS / 60} minutes of 4K that takes a few minutes.`, "warn");
+    return updateAnalyse();
   }
   $("file-dur").textContent = `${fmtTime(meta.duration)}, ${meta.width}x${meta.height}`;
-  fileOk = true;
-  if (meta.duration > UPLOAD_MAX_SECONDS + 0.5)
+  if (local.alwaysConvert && !api.mock) fileMsg("Started with ?transcode=1: we convert the clip in this browser first, although this browser can play it.", "warn");
+  else if (meta.duration > UPLOAD_MAX_SECONDS + 0.5)
     fileMsg(`This clip is ${fmtTime(meta.duration, 0)} long. Only the first ${fmtTime(UPLOAD_MAX_SECONDS, 0)} is analysed.`, "warn");
-  else if (meta.width >= 3000) fileMsg("4K works, but the browser takes longer to seek through it than through 1080p.", "warn");
+  else if (meta.width >= 3000) fileMsg("4K works but is slower. If this browser decodes the clip slowly, as Chrome does with the camera's own 10-bit files, we convert it here first.", "warn");
   else fileMsg("Ready.", "ok");
   updateAnalyse();
 }
@@ -187,10 +191,12 @@ function renderStages(stage: string, status: Job["status"] | "starting") {
   const ol = $("stages");
   ol.textContent = "";
   const cur = stage.toLowerCase();
-  let idx = STAGES.findIndex((s) => s === cur);
-  if (idx < 0) idx = STAGES.findIndex((s) => cur.includes(s) || s.includes(cur));
-  const curItem = status === "starting" ? 0 : status === "done" ? STAGES.length : idx;
-  STAGES.forEach((name, i) => {
+  if (cur === CONVERT) converting = true;
+  const stages = converting ? [STAGES[0], CONVERT, ...STAGES.slice(1)] : STAGES;
+  let idx = stages.findIndex((s) => s === cur);
+  if (idx < 0) idx = stages.findIndex((s) => cur.includes(s) || s.includes(cur));
+  const curItem = status === "starting" ? 0 : status === "done" ? stages.length : idx;
+  stages.forEach((name, i) => {
     const li = document.createElement("li");
     li.textContent = name;
     li.className = curItem < 0 ? "pending" : i < curItem ? "done" : i === curItem ? "active" : "pending";
@@ -214,7 +220,8 @@ function setProgress(f: number, stage: string, eta: number | null, status: Job["
   bar.setAttribute("aria-valuetext", `${pct}%, ${stage}`);
   $("pct").textContent = `${pct}%`;
   $("stage").textContent = stage;
-  $("eta").textContent = eta === null || eta === undefined ? "estimating time left" : eta <= 1 ? "almost done" : `about ${Math.round(eta)} s left`;
+  $("eta").textContent =
+    eta === null || eta === undefined ? "estimating time left" : eta <= 1 ? "almost done" : eta < 90 ? `about ${Math.round(eta)} s left` : `about ${Math.round(eta / 60)} min left`;
   renderStages(stage, status);
 }
 
@@ -253,6 +260,7 @@ async function runJob(source: string, start: (signal: AbortSignal) => Promise<st
   if (running) return;
   abort = new AbortController();
   const signal = abort.signal;
+  converting = false;
   setRunning(true);
   show("job");
   $("job-title").textContent = source;

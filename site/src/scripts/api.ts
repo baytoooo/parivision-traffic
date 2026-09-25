@@ -27,6 +27,8 @@ export interface Api {
 /** The stages a job reports as Job.stage, in order (named like those of the Python demo server,
  * demo/worker.py and pipeline.analyse); the page lists them and the mock replays them. */
 export const STAGES = ["reading the clip", "loading the model", "aligning the view", "detecting and tracking", "applying event rules"];
+/** The stage after the first when this browser cannot decode the clip, or decodes it slowly, and converts it first. */
+export const CONVERT = "converting the video in this browser";
 
 const MOCK_TIMES = [0.8, 1.2, 1.0, 5.8, 1.0]; // seconds per stage
 
