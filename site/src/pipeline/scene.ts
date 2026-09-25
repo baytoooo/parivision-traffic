@@ -16,6 +16,8 @@ export interface LayerInfo {
 export interface SceneConstants {
   ref_size: [number, number];
   rules: Record<string, number>;
+  /** rules.CRASH: the collision rule's thresholds (metres, m/s, s). */
+  crash: Record<string, number>;
   direction_zones: Record<string, { polygon: [number, number][]; heading: number }>;
   crosswalks: Record<string, [number, number][]>;
   stop_line_sb: [[number, number], [number, number]];

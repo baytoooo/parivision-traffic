@@ -20,8 +20,8 @@ export const CLASSES: ClassMeta[] = [
     key: "accident",
     name: "Accident",
     code: "ACC",
-    status: "none",
-    rule: "Not emitted by Part A. Part B gives a per-frame probability that one starts within 5 s; the sample clips contain no accidents to tune it on.",
+    status: "on",
+    rule: "Two road users meet at speed, both velocities change at the contact, and both then stand together for 2 s. Checked on public CCTV crash clips; it never fires in our samples. Part B gives the per-frame probability that one starts within 5 s.",
   },
   {
     key: "near_miss",

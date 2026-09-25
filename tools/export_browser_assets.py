@@ -94,6 +94,7 @@ def constants() -> dict:
     return {
         "ref_size": list(S.REF_SIZE),
         "rules": R.PARAMS,
+        "crash": R.CRASH,
         "direction_zones": {k: {"polygon": v[0], "heading": v[1]} for k, v in R.DIRECTION_ZONES.items()},
         "crosswalks": {k: list(v) for k, v in S.CROSSWALKS.items()},
         "stop_line_sb": list(S.STOP_LINE_SB),

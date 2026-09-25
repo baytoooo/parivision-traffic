@@ -283,7 +283,7 @@ const presentClasses = CLASSES.filter((c) => rows.some((r) => r.l === c.key));
       )
       .join("");
     const other = D.classes.length - D.classes.filter((c) => D.rows.some((r) => r.l === c.key)).length;
-    box.insertAdjacentHTML("beforeend", `<p class="card-note">${other} of ${D.classes.length} classes have no events here: six have no rule, U-turns are found but not submitted, and wrong way never fired (see Approach).</p>`);
+    box.insertAdjacentHTML("beforeend", `<p class="card-note">${other} of ${D.classes.length} classes have no events here: five have no rule, U-turns are found but not submitted, and wrong way and accident never fired (see Approach).</p>`);
   }
 
   function zones() {

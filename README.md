@@ -84,7 +84,8 @@ map (`scene.PERSON_HEIGHT_PX`, fitted on ~150k pedestrian boxes).
 | wrong_way | a vehicle or bike moves against the lane direction on either carriageway for 1.5 s or more |
 | congestion | southbound traffic stands still while it has green: at least 8 s into the green, 8 or more vehicles stand on the last stretch of the approach and past the stop line (or 5 past the stop line alone) for 6 s or more; it carries on into the red while 5 or more still stand past the stop line |
 | illegal_u_turn | detected (SB traffic round the median nose into NB) and shown on the website, not submitted: nothing in view says these U-turns are prohibited, and a predicted class the test set lacks costs a zero in the macro average |
-| others | no rule: accident, near_miss, illegal_turn, solid_line_crossing, road_obstacle, fire_smoke |
+| accident | two road users meet at speed (closing at 3 m/s or more, the faster one doing 3 m/s or more), both velocities change at the contact, and both then stand together for 2 s; the event runs from the contact until they stand |
+| others | no rule: near_miss, illegal_turn, solid_line_crossing, road_obstacle, fire_smoke |
 
 Segments of one class are merged when they overlap, as the task asks, and
 when the gap between them is short (0 to 3 s depending on the class, 8 s for
@@ -147,9 +148,9 @@ describes). F1 is the mean over tIoU 0.3, 0.5 and 0.7.
 | illegal_u_turn (not submitted) | 0 | 0 / 0 / 9 |
 | illegal_turn (no rule) | 0 | 0 / 0 / 2 |
 
-Score A is **0.525**. We emit seven classes, and the mean F1 over the six that
-fired on the samples is 0.70 (wrong_way never fired and is not in our labels,
-so `evaluate.py` leaves it out). The dev labels are committed in `labels/`. We
+Score A is **0.525**. We emit eight classes, and the mean F1 over the six that
+fired on the samples is 0.70 (wrong_way and accident never fired and are not in
+our labels, so `evaluate.py` leaves them out). The dev labels are committed in `labels/`. We
 drafted them with Claude agents (a hosted model, used only to build the dev
 set; `solution.py` never calls it), and other agents checked them; no person
 labelled frames, so treat these numbers as indicative. The agent logs are not
@@ -159,6 +160,23 @@ in the four clips, for 0.7 s (C3905 at 57.6 s, a dense platoon of cars
 crossing the junction box side by side; nothing happens).
 `python evaluate.py --pred predictions_samples.json --gt labels/dev_labels.json --per-video`
 prints the full report.
+
+## Checking on crash footage
+
+The samples have no crash, so we checked the accident rule and the Part B risk
+model on the public ACCIDENT benchmark (CVPR 2026): 95 of its CARLA crash
+clips and 34 real CCTV crash clips from intersections, each with the moment of
+impact annotated (`labels/accident_*.csv` lists them; `tools/crash_check.py`
+downloads, runs and scores them). These are other cameras, so the check runs
+without our scene layout and takes metres per pixel from the size of the
+vehicles. The rule finds 24 of the 95 synthetic crashes within 2 s of the
+impact and 1 of the 34 real ones, most of which are low-resolution videos where
+the detector misses the striking car, and it never fires before an impact. It
+fires nowhere in our 18 minutes of normal traffic, which is why we submit the
+class: if the test set has no crash, a class we never predict costs nothing.
+Part B raises an alarm in the 10 s before 11 of the synthetic and 4 of the real
+impacts. Raising its gain catches more crashes but also sets off many alarms in
+normal traffic, so we left it as it was.
 
 ## Runtime
 
@@ -264,6 +282,12 @@ LICENSE                AGPL-3.0
   repository. Used for scene analysis, our dev labels and tuning. The website
   shows annotated renders of them, as the task asks, and three 30 s cuts for
   the in-browser demo.
+* **ACCIDENT benchmark** (Picek et al., CVPR 2026; Kaggle `picekl/accident`):
+  used only to check the accident rule and Part B, never for training.
+  Licence: CC BY-NC-SA 4.0 for the data, CC BY 4.0 for the annotations. The
+  clips are not in this repository; `labels/accident_real.csv` and
+  `labels/accident_synthetic.csv` list the ones we used, with the benchmark's
+  annotations.
 * **Our dev labels** (`labels/`): 104 events on the four sample clips, drafted
   with Claude agents as `docs/labeling.md` describes. AGPL-3.0, with the rest
   of the repository.

@@ -8,6 +8,7 @@
 // Math.fround as NumPy does it.
 
 import { median, percentile, roundHalfEven, signedSide, warpPoints } from "./geometry.ts";
+import { metresPerPx } from "./risk.ts";
 import type { Mat3 } from "./geometry.ts";
 import type { DistName, Scene, SceneConstants } from "./scene.ts";
 import { finalize, runs } from "./segments.ts";
@@ -503,6 +504,99 @@ export function uTurns(ctx: Context): Evidence[] {
   return out;
 }
 
+// ---------------------------------------------------------------------------
+// collisions
+// ---------------------------------------------------------------------------
+/** Python f"{x:.0f}" for x >= 0: like Math.round, but an exact tie rounds to even. */
+const fixed0 = (x: number) => String(Number.isInteger(x * 2) && !Number.isInteger(x) ? roundHalfEven(x) : Math.round(x));
+
+/** np.median over the rows of a column (axis 0) of 2-vectors. */
+const medianVec = (v: number[][]) => [median(v.map((q) => q[0])), median(v.map((q) => q[1]))];
+
+/**
+ * rules.collisions: road users that meet at speed, both change velocity at the contact and then
+ * stand together. `mpp(x, y)` is metres per pixel of the trajectories' plane; `p` is rules.CRASH.
+ */
+export function collisions(trajectories: Trajectory[], mpp: (x: number, y: number) => number,
+  p: Record<string, number>, radius: Record<string, number>, k: Classes = COCO): Evidence[] {
+  const step = 0.1;
+  const tracks: { tr: Trajectory; keys: number[]; first: number[] }[] = [];
+  for (const tr of trajectories) {
+    if (tr.t.length < 5 || !(isVehicle(tr, k) || isPerson(tr, k) || tr.group === "bicycle")) continue;
+    // np.unique(np.round(t / step).astype(int), return_index=True)
+    const raw = tr.t.map((t) => roundHalfEven(t / step));
+    const order = raw.map((_, i) => i).sort((a, b) => raw[a] - raw[b] || a - b);
+    const keys: number[] = [], first: number[] = [];
+    for (const i of order) if (!keys.length || raw[i] !== keys[keys.length - 1]) { keys.push(raw[i]); first.push(i); }
+    tracks.push({ tr, keys, first });
+  }
+  const out: Evidence[] = [];
+  const hyp = (x: number, y: number) => Math.sqrt(x * x + y * y);
+  for (let i = 0; i < tracks.length; i++) {
+    const { tr: A, keys: ka, first: fa } = tracks[i];
+    for (let j = i + 1; j < tracks.length; j++) {
+      const { tr: B, keys: kb, first: fb } = tracks[j];
+      if (!(isVehicle(A, k) || isVehicle(B, k))) continue;
+      const ia: number[] = [], ib: number[] = [], common: number[] = [];
+      for (let x = 0, y = 0; x < ka.length && y < kb.length;) {
+        if (ka[x] === kb[y]) { common.push(ka[x]); ia.push(fa[x++]); ib.push(fb[y++]); }
+        else if (ka[x] < kb[y]) x++;
+        else y++;
+      }
+      if (common.length < 10) continue;
+      const pa = ia.map((q) => A.foot[q]), pb = ib.map((q) => B.foot[q]);
+      if (Math.min(...pa.map((a, n) => Math.max(Math.abs(a[0] - pb[n][0]), Math.abs(a[1] - pb[n][1])))) > 400) continue;
+      const m = pa.map((a, n) => mpp((a[0] + pb[n][0]) / 2, (a[1] + pb[n][1]) / 2));
+      const d = pa.map((a, n) => hyp(a[0] - pb[n][0], a[1] - pb[n][1]) * m[n]);
+      const va = ia.map((q, n) => [A.vel[q][0] * m[n], A.vel[q][1] * m[n]]);
+      const vb = ib.map((q, n) => [B.vel[q][0] * m[n], B.vel[q][1] * m[n]]);
+      const sa = ia.map((q, n) => hyp(A.vel[q][0], A.vel[q][1]) * m[n]);
+      const sb = ib.map((q, n) => hyp(B.vel[q][0], B.vel[q][1]) * m[n]);
+      const closing = pa.map((a, n) => {  // same operation order as NumPy: ((vA - vB) * m) * ((pA - pB) * m)
+        const [av, bv] = [A.vel[ia[n]], B.vel[ib[n]]];
+        const rx = (av[0] - bv[0]) * m[n] * ((a[0] - pb[n][0]) * m[n]);
+        const ry = (av[1] - bv[1]) * m[n] * ((a[1] - pb[n][1]) * m[n]);
+        return -(rx + ry) / Math.max(d[n], 1e-3);
+      });
+      const ts = common.map((c) => c * step);
+      const reach = ((radius[String(A.cls)] ?? 1.0) + (radius[String(B.cls)] ?? 1.0)) * p.contact;
+      const still = ts.map((_, n) => sa[n] < p.stop_speed && sb[n] < p.stop_speed && d[n] < p.near);
+      const pick = (f: (t: number) => boolean) => ts.flatMap((t, q) => (f(t) ? [q] : []));
+      for (let n = 0; n < ts.length; n++) {
+        if (!(d[n] <= reach)) continue;
+        const before = pick((t) => t >= ts[n] - 1.0 && t < ts[n]);
+        const late = pick((t) => t >= ts[n] - 0.5 && t < ts[n]);
+        if (before.length < 3 || Math.max(0.0, ...late.map((q) => closing[q])) < p.closing) continue;
+        if (Math.max(median(before.map((q) => sa[q])), median(before.map((q) => sb[q]))) < p.pre_speed) continue;
+        const after = pick((t) => t > ts[n] && t <= ts[n] + 0.7);
+        if (after.length < 2) continue;
+        const kick = [va, vb].map((v) => {
+          const mean = [0, 1].map((c) => after.reduce((acc, q) => acc + v[q][c], 0) / after.length);
+          const med = medianVec(before.map((q) => v[q]));
+          return hyp(mean[0] - med[0], mean[1] - med[1]);
+        });
+        if (Math.min(...kick) < p.kick) continue;
+        const rest = pick((t) => t > ts[n] && t <= ts[n] + p.stop_within).filter((q) => still[q]);
+        if (!rest.length) continue;
+        const tRest = ts[rest[0]];
+        const win = pick((t) => t >= tRest && t <= tRest + p.stay);
+        if (Math.max(...win.map((q) => ts[q])) - tRest < p.stay - 0.3) continue;
+        if (win.filter((q) => still[q]).length / win.length < 0.8) continue;
+        out.push({ label: "accident", start: ts[n], end: tRest + p.end_pad, actors: [A.tid, B.tid],
+          note: `met at ${fixed0(Math.max(...before.map((q) => closing[q])))} m/s` });
+        break;
+      }
+    }
+  }
+  return out;
+}
+
+export function accident(ctx: Context): Evidence[] {
+  const scene = ctx.scene;
+  return collisions(ctx.trajectories, (x, y) => metresPerPx(scene, x, y), scene.c.crash,
+    scene.c.risk.RADIUS_M as Record<string, number>, ctx.classes);
+}
+
 /** events.detect_from_context: every rule's evidence, and the final [start, end, label] segments. */
 export function detectFromContext(ctx: Context, H: Mat3): { events: Seg[]; evidence: Evidence[] } {
   const { enabled, shown, gap, min_len } = ctx.scene.c.events;
@@ -515,6 +609,7 @@ export function detectFromContext(ctx: Context, H: Mat3): { events: Seg[]; evide
     ...stoppedVehicle(ctx),
     ...wrongWay(ctx),
     ...uTurns(ctx),
+    ...accident(ctx),
   ];
   evidence = evidence.filter((ev) => shown.includes(ev.label));
   const perClass: Record<string, [number, number][]> = {};

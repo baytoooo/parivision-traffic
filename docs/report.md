@@ -7,39 +7,35 @@ https://github.com/baytoooo/parivision-traffic.
 
 ## What we built
 
-Our pipeline takes the organisers' 4K footage of a Tashkent junction and
-reports traffic events as time segments (Part A) and a causal risk score that
-an accident starts within 5 s (Part B). Part A runs a COCO-pretrained YOLO26m
-and ByteTrack at 10 frames per second, maps the tracks into one reference
-view of the junction, reads the vehicle signal from its lamps and applies one
-hand-written rule per event class. Part B projects each pair of road users
-3 s ahead and scores how soon they would meet. We trained nothing; the
-[Approach page](https://parivision-traffic.vercel.app/approach) has the
-details.
+Our pipeline reports traffic events in the organisers' 4K footage as time
+segments (Part A) and gives a causal risk that an accident starts within 5 s
+(Part B). Part A runs a COCO-pretrained YOLO26m and ByteTrack at 10 frames per
+second, maps the tracks into one reference view of the junction, reads the
+vehicle signal from its lamps and applies one hand-written rule per class.
+Part B projects each pair of road users 3 s ahead and scores how soon they
+would meet. We trained nothing; the
+[Approach page](https://parivision-traffic.vercel.app/approach) has details.
 
 ## A dev set made with Claude agents
 
-The organisers gave four clips (18.4 minutes) and no labels, so we built a
-dev set with Claude agents working from our guide (`docs/labeling.md`). A
-verifier agent tried to refute each of the labelling agents' 351 claims on
-zoomed crops and kept 285. An adjudicator agent then reviewed 52
-disagreements between model and labels: the model was wrong in 34, the labels
-in 13, and 5 differed only in boundaries. No person labelled frames. We
-checked only part of the agents' reasoning by hand, so our numbers are
-indicative, and the adjudication favours the model because it only looked
-where the model disagreed.
+The organisers gave four clips (18.4 minutes) and no labels, so Claude agents
+labelled them from our guide (`docs/labeling.md`). A verifier agent kept 285
+of 351 claims, and an adjudicator agent reviewed 52 disagreements between
+model and labels (the model was wrong in 34, the labels in 13). No person
+labelled frames and we checked only part of the reasoning, so our numbers are
+indicative; the adjudication favours the model, since it only looked where the
+model disagreed.
 
 The result is 104 events: 48 failure_to_yield, 28 jaywalking, 9 U-turns,
 7 stopped vehicles, 5 stop-line, 3 congestion, 2 red-light and 2 illegal-turn,
-and no accidents or near misses. The labels are in `labels/`. Claude, a
-hosted model, was used only to build them; `solution.py` never calls it. The
-agent logs are not in the repository, so the labels cannot be regenerated.
+and no accidents or near misses. Claude, a hosted model, was used only to
+build these labels (`labels/`); `solution.py` never calls it.
 
 ## What worked
 
-* **Score.** The official Score A on our dev set is 0.525. We emit seven
+* **Score.** The official Score A on our dev set is 0.525. We emit eight
   classes; the six that fired on the samples average an F1 of 0.70 (wrong_way
-  never fired). We tuned the rules on these labels, so we expect less on the
+  and accident never fired). We tuned the rules on these labels, so we expect less on the
   test set. The per-class tables and the ablations are on the
   [Results page](https://parivision-traffic.vercel.app/results).
 * **Registration.** The afternoon clips are shifted by up to about 60 px and
@@ -76,19 +72,22 @@ agent logs are not in the repository, so the labels cannot be regenerated.
 * **Smaller misses.** Congestion that crawls at 1 to 2 m/s is missed. Our
   lamp reader calls red plus amber "yellow", and the rule ignores crossings in
   the last 1.5 s before green, so we miss one of the two red-light events.
+* **Crashes we cannot see coming.** The samples have no crash, so we checked
+  the accident rule and Part B on the public ACCIDENT benchmark. The rule finds
+  24 of 95 synthetic crashes and 1 of 34 real CCTV crashes (mostly
+  low-resolution clips where the detector misses the striking car), and never
+  fires in our normal traffic, so we submit it. Part B warns before 11 of the
+  synthetic and 4 of the real impacts; making it more eager costs more false
+  alarms than it gains, and rear-end hits on a standing car stay invisible to it.
 * **Classes we leave out.** U-turns are found with F1 0.27 but not submitted,
-  because nothing in view says they are prohibited. Six classes, among them
-  accidents and near misses, have no rule, and Part B cannot be calibrated
-  without accidents.
+  because nothing in view says they are prohibited. Five classes, among them
+  near misses, have no rule.
 * **Decoding, not the model, sets the runtime.** On a Colab T4 our detectors
   cost 0.34x (Part A) and 0.19x (Part B) of real time, but Colab's two vCPUs
   decode these 4K 10-bit clips at only 9 to 12 frames per second, so the
-  harness alone needs about 3x the clip length to read them for Part B and
-  nothing fits the budget there. We could not test on a machine with more
-  cores and a T4 together. Part A now measures the decode speed and stops
-  early enough to leave the harness its share, so a slow machine gives a
-  shorter result instead of an empty one. `predictions_samples.json` comes
-  from an Apple M5 laptop with the time guards off (3.3x the clip length).
+  harness alone needs about 3x the clip length to read them for Part B. Part A
+  now measures the decode speed and leaves the harness its share, so a slow
+  machine gives a shorter result instead of an empty one.
 
 ## What we would do next
 

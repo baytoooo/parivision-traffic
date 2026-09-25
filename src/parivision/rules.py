@@ -502,12 +502,12 @@ def u_turns(ctx: Context) -> list[Evidence]:
 # crash clips (tools/crash_check.py). Metres, not pixels, because the rule also runs on other
 # cameras there: `mpp(x, y)` is metres per pixel at a point of the trajectories' plane.
 CRASH = {
-    "contact": 1.0,       # x the sum of the two footprint radii (risk.RADIUS_M)
+    "contact": 1.3,       # x the sum of the two footprint radii (risk.RADIUS_M): foot points are rough
     "closing": 3.0,       # m/s towards each other in the 0.5 s before contact
-    "pre_speed": 5.0,     # m/s median speed of the faster one over the 1 s before: not a box jump
+    "pre_speed": 3.0,     # m/s median speed of the faster one over the 1 s before: not a box jump
     "stop_speed": 1.0,    # m/s: both count as standing below this
-    "stop_within": 2.0,   # s after contact by which both stand
-    "stay": 3.0,          # s they then stand together
+    "stop_within": 3.0,   # s after contact by which both stand
+    "stay": 2.0,          # s they then stand together
     "near": 4.0,          # m apart at most while they stand
     "kick": 1.5,          # m/s: both velocities change across the contact (a car stopping behind a
                           # standing one changes its own velocity only; an impact moves both)

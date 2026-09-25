@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { test } from "node:test";
-import { Context, detectFromContext } from "../src/pipeline/rules.ts";
+import { collisions, Context, detectFromContext } from "../src/pipeline/rules.ts";
 import { loadScene } from "../src/pipeline/scene.ts";
 import type { Trajectory } from "../src/pipeline/types.ts";
 
@@ -136,4 +136,31 @@ test("red_light crossing time and note match rules.py on a hand-made crossing (.
 test("final events round like Python round(x, 2)", async () => {
   const { events } = await redLightScene();
   assert.deepEqual(events, [[60.25, 75.17, "red_light"]]);
+});
+
+// tests/test_core.py _crash_scene: two cars meet at t = 5 s (east at 6 m/s, north at 4 m/s, at
+// 0.05 m/px) and stand. Expected: rules.collisions on the same arrays.
+function crashScene(): Trajectory[] {
+  const t = Array.from({ length: 101 }, (_, k) => k * 0.1);
+  const car = (tid: number, foot: number[][], vel: number[][]): Trajectory => ({
+    tid, group: "vehicle", cls: 2, t, box: t.map(() => [0, 0, 0, 0]), foot, vel,
+    height: t.map(() => 40), conf: t.map(() => Math.fround(0.9)),
+  });
+  const tt = t.map((x) => Math.min(x, 5.0));
+  return [
+    car(1000001, tt.map((x) => [100 + 120 * x, 500]), t.map((x) => [x <= 5.0 ? 120 : 0, 0])),
+    car(1000002, tt.map((x) => [740, 900 - 80 * x]), t.map((x) => [0, x <= 5.0 ? -80 : 0])),
+  ];
+}
+
+test("collisions matches rules.py on a hand-made crash and ignores a car joining a queue", async () => {
+  const scene = await loadScene(read);
+  const radius = scene.c.risk.RADIUS_M as Record<string, number>;
+  const ev = collisions(crashScene(), () => 0.05, scene.c.crash, radius);
+  assert.deepEqual(ev.map((e) => [Number(e.start.toFixed(6)), Number(e.end.toFixed(6)), e.actors, e.note]),
+    [[4.8, 6.1, [1000001, 1000002], "met at 7 m/s"]]);
+  const [a, b] = crashScene();
+  const last = b.foot[b.foot.length - 1];
+  const queued: Trajectory = { ...b, foot: b.foot.map(() => [...last]), vel: b.vel.map(() => [0, 0]) };
+  assert.deepEqual(collisions([a, queued], () => 0.05, scene.c.crash, radius), []);
 });

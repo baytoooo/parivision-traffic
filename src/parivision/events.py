@@ -12,10 +12,14 @@ from .segments import finalize
 # on although it never fired on the 18 minutes of sample clips: it made no
 # false alarms there, and if the test set has wrong-way driving, a class we
 # never predict scores zero anyway.
+# accident is on for the same reason: the collision rule (rules.collisions) found nothing
+# in the samples, so it costs nothing if the test set has no crash. We checked it on public
+# CCTV crash clips (tools/crash_check.py).
 # U-turns round the median nose are detected (the website shows them) but not
 # submitted: nothing in view says they are prohibited here, so we cannot tell
 # whether the organisers' annotators count them as illegal_u_turn.
-ENABLED = ("jaywalking", "failure_to_yield", "red_light", "stop_line", "stopped_vehicle", "wrong_way", "congestion")
+ENABLED = ("jaywalking", "failure_to_yield", "red_light", "stop_line", "stopped_vehicle", "wrong_way", "congestion",
+           "accident")
 SHOWN = ENABLED + ("illegal_u_turn",)
 
 # Segments of one class closer than GAP seconds are joined. The task merges only overlapping
@@ -23,9 +27,9 @@ SHOWN = ENABLED + ("illegal_u_turn",)
 # track breaks whenever a bus passes in front of them, so jaywalking bridges 3 s; congestion and
 # stopped vehicles bridge short detection gaps inside one episode.
 GAP = {"jaywalking": 3.0, "failure_to_yield": 0.0, "red_light": 0.0, "stop_line": 0.5,
-       "stopped_vehicle": 1.0, "wrong_way": 1.0, "congestion": 8.0, "illegal_u_turn": 0.0}
+       "stopped_vehicle": 1.0, "wrong_way": 1.0, "congestion": 8.0, "illegal_u_turn": 0.0, "accident": 0.0}
 MIN_LEN = {"jaywalking": 1.0, "failure_to_yield": 0.3, "red_light": 0.5, "stop_line": 1.0,
-           "stopped_vehicle": 10.0, "wrong_way": 1.5, "congestion": 6.0, "illegal_u_turn": 2.0}
+           "stopped_vehicle": 10.0, "wrong_way": 1.5, "congestion": 6.0, "illegal_u_turn": 2.0, "accident": 1.0}
 
 
 def detect_from_context(ctx: R.Context, H_work_to_ref: np.ndarray) -> tuple[list[list], list[R.Evidence]]:
@@ -38,6 +42,7 @@ def detect_from_context(ctx: R.Context, H_work_to_ref: np.ndarray) -> tuple[list
     evidence += R.stopped_vehicle(ctx)
     evidence += R.wrong_way(ctx)
     evidence += R.u_turns(ctx)
+    evidence += R.accident(ctx)
     evidence = [ev for ev in evidence if ev.label in SHOWN]
     per_class: dict[str, list[tuple[float, float]]] = {}
     for ev in evidence:

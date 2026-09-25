@@ -72,3 +72,34 @@ def test_registration_recovers_a_shift():
 
 def test_metres_per_px_shrinks_towards_the_camera():
     assert S.metres_per_px(700, 200) > S.metres_per_px(700, 900)
+
+
+def _crash_scene():
+    """Two cars meet at t = 5 s (one going east at 6 m/s, one north at 4 m/s, 0.05 m/px) and stand."""
+    from parivision.trajectories import Trajectory
+
+    t = np.arange(101) * 0.1
+    moving = t <= 5.0
+    tt = np.minimum(t, 5.0)
+    def car(tid, foot, vel):
+        return Trajectory(tid, "vehicle", 2, t, np.zeros((len(t), 4), np.float32), foot, vel,
+                          np.full(len(t), 40.0), np.full(len(t), 0.9, np.float32))
+    a = car(1000001, np.stack([100 + 120 * tt, np.full_like(t, 500.0)], 1),
+            np.stack([np.where(moving, 120.0, 0.0), np.zeros_like(t)], 1))
+    b = car(1000002, np.stack([np.full_like(t, 740.0), 900 - 80 * tt], 1),
+            np.stack([np.zeros_like(t), np.where(moving, -80.0, 0.0)], 1))
+    return [a, b]
+
+
+def test_collision_rule_finds_a_crash_and_ignores_a_queue():
+    from parivision import rules
+
+    ev = rules.collisions(_crash_scene(), lambda x, y: 0.05)
+    assert [(round(e.start, 6), round(e.end, 6), e.actors, e.note) for e in ev] == \
+        [(4.8, 6.1, [1000001, 1000002], "met at 7 m/s")]
+    # the same approach, but the second car stands still throughout (a car joining a queue):
+    # its velocity does not change at the contact, so there is no impact
+    a, b = _crash_scene()
+    b.foot[:] = b.foot[-1]
+    b.vel[:] = 0.0
+    assert rules.collisions([a, b], lambda x, y: 0.05) == []
