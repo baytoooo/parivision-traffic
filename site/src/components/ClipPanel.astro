@@ -1,7 +1,8 @@
 ---
 // Markup for one synced player: video (with the tracked boxes of a demo result
 // drawn over it), signal lamp, event timeline, risk curve, event table.
-// src/scripts/player.ts fills it in.
+// src/scripts/player.ts fills it in. An optional "key" slot goes right under
+// the video, for a legend of what is drawn on it.
 import "../styles/player.css";
 
 interface Props {
@@ -10,14 +11,16 @@ interface Props {
   title?: string;
 }
 const { name, poster, title = "" } = Astro.props;
+const hasKey = Astro.slots.has("key");
 ---
 <div class="player" data-player={name}>
-  <div class="pl-stage">
+  <div class:list={["pl-stage", { "has-key": hasKey }]}>
     <div class="pl-video frame">
       <video data-el="video" controls muted playsinline preload="none" poster={poster}></video>
       <canvas class="pl-overlay" data-el="overlay" aria-hidden="true" hidden></canvas>
       <p class="pl-video-error" data-el="video-error" hidden>The video did not load. The timeline and table below still work.</p>
     </div>
+    {hasKey && <div class="pl-key"><slot name="key" /></div>}
     <aside class="pl-side" aria-label="State at the playhead">
       <div class="pl-clock">
         <span class="pl-k">Playhead</span>

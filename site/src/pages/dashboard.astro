@@ -91,12 +91,13 @@ const presentClasses = CLASSES.filter((c) => rows.some((r) => r.l === c.key));
         <h2 id="h-clip" class="card-h">Per clip and time of day</h2>
         <div class="table-scroll matrix-wrap"><table class="matrix" id="matrix"></table></div>
         <div class="strips" id="strips" aria-label="Events along each clip"></div>
+        <p class="strip-key" id="strip-key"></p>
       </section>
     </div>
 
     <section class="panel card log" aria-labelledby="h-log">
       <h2 id="h-log" class="card-h">Event log</h2>
-      <div class="table-scroll log-scroll">
+      <div class="table-scroll log-scroll cards-sm">
         <table>
           <thead>
             <tr>
@@ -157,7 +158,7 @@ const presentClasses = CLASSES.filter((c) => rows.some((r) => r.l === c.key));
   .hbar:hover .hb-name { color: var(--zebra); }
   .hb-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--paint-2); }
   .hb-track { height: 14px; background: var(--asphalt-3); border-radius: 1px; overflow: hidden; }
-  .hb-fill { height: 100%; background: var(--paint); }
+  .hb-fill { display: block; height: 100%; background: var(--paint); }
   .hbar.sel .hb-fill { background: var(--zebra); }
   .hb-n { font-family: var(--font-mono); text-align: right; font-size: .82rem; }
   .hb-empty { color: var(--muted); font-size: .85rem; }
@@ -176,6 +177,7 @@ const presentClasses = CLASSES.filter((c) => rows.some((r) => r.l === c.key));
     position: absolute; transform: translate(-50%, 0); white-space: nowrap; pointer-events: none;
     font: 600 .66rem var(--font-mono); color: var(--paint); background: rgba(14,15,17,.8); padding: 1px 5px; border-radius: 2px;
   }
+  .zlab.above { transform: translate(-50%, -100%); }
   @media (max-width: 560px) { .zlab { display: none; } }
 
   .matrix { font-size: .82rem; }
@@ -186,14 +188,28 @@ const presentClasses = CLASSES.filter((c) => rows.some((r) => r.l === c.key));
   .matrix .tot { font-family: var(--font-mono); color: var(--paint); }
   .matrix .rate { font-family: var(--font-mono); color: var(--zebra); }
   .matrix thead th { position: static; }
+  @media (max-width: 640px) {
+    .matrix { font-size: .74rem; }
+    .matrix th, .matrix td { padding: 5px 3px; }
+    .matrix td.cell span { min-width: 20px; padding: 3px 2px; }
+    .matrix tbody th .tab-sub { display: block; }
+    .matrix .m-light { display: none; }
+    .matrix thead th { font-size: .6rem; letter-spacing: 0; }
+  }
 
   .strips { display: grid; gap: 8px; margin-top: 14px; }
   .strip { display: grid; grid-template-columns: 110px 1fr; gap: 10px; align-items: center; }
   .strip-lab { font: 600 .75rem var(--font-mono); color: var(--paint-2); }
   .strip-lab span { color: var(--muted); font-weight: 400; }
   .strip-track { position: relative; height: 22px; background: var(--asphalt-3); border-radius: 1px; }
-  .strip-track a { position: absolute; top: 3px; bottom: 3px; min-width: 3px; background: var(--zebra); border-radius: 1px; }
+  .strip-track a { position: absolute; top: 3px; bottom: 7px; min-width: 3px; background: var(--c); border-radius: 1px; box-shadow: 0 0 0 1px var(--asphalt-3); }
+  /* events that last minutes (stopped vehicles) run as a thin line under the short ones */
+  .strip-track a.long { top: auto; bottom: 1px; height: 4px; box-shadow: none; }
   .strip-track a:hover, .strip-track a:focus-visible { background: var(--paint); }
+  .strip-key { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 10px 0 0; font-size: .78rem; color: var(--paint-2); }
+  .strip-key span { display: inline-flex; align-items: center; gap: 6px; }
+  .strip-key i { width: 14px; height: 9px; border-radius: 1px; background: var(--c); }
+  .strip-key i.long { height: 4px; }
 
   .log-scroll { max-height: 520px; overflow: auto; }
   .log td { font-size: .86rem; }
@@ -202,11 +218,28 @@ const presentClasses = CLASSES.filter((c) => rows.some((r) => r.l === c.key));
   .sort[aria-sort="ascending"]::after { content: " \2191"; color: var(--zebra); }
   .sort[aria-sort="descending"]::after { content: " \2193"; color: var(--zebra); }
   .log a.open { font: 600 .78rem var(--font-mono); white-space: nowrap; }
+  /* phones: the sort buttons stay as a row, each event is a card */
+  @media (max-width: 640px) {
+    .log .cards-sm thead { position: static; width: auto; height: auto; overflow: visible; clip: auto; display: block; }
+    .log .cards-sm thead tr { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 10px 14px; background: var(--asphalt-0); }
+    .log .cards-sm thead tr::before { content: "Sort by"; font: 600 .72rem var(--font-mono); color: var(--paint-2); }
+    .log .cards-sm thead th { padding: 0; border: 0; background: none; position: static; }
+    .log .cards-sm thead th:nth-child(n + 6) { display: none; }
+    .log .cards-sm tbody tr { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .log td.l-cls { grid-column: 1 / 3; grid-row: 1; }
+    .log td.l-open { grid-column: 3; grid-row: 1; justify-self: end; }
+    .log td.l-zone { grid-column: span 2; }
+    .log td.note { grid-column: 1 / -1; min-width: 0; }
+    .log td.note:empty { display: none; }
+  }
 
   body.wall .site-header, body.wall .site-footer { display: none; }
   body.wall .dash { max-width: none; padding-top: 16px; }
   body.wall { font-size: 1.15rem; }
-  body.wall .grid { grid-template-columns: 1fr 1fr 1fr; }
+  body.wall .grid { grid-template-columns: 1fr 1fr 1.25fr; }
+  body.wall .matrix th, body.wall .matrix td { padding: 5px 4px; }
+  body.wall .matrix td.cell span { min-width: 24px; }
+  body.wall .matrix .m-light { display: none; }
   body.wall .grid .wide { grid-column: auto; }
   body.wall .log-scroll { max-height: 38vh; }
 </style>
@@ -229,6 +262,14 @@ const presentClasses = CLASSES.filter((c) => rows.some((r) => r.l === c.key));
     const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = Math.floor(sec % 60);
     return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   };
+  // strip colours by class; red light and congestion (three events) share a neutral colour, and stopped
+  // vehicles, which last minutes, run as a thin line under the rest (checked with the dataviz palette validator)
+  const STRIP_COLOR: Record<string, string> = { failure_to_yield: "#c98500", jaywalking: "#3987e5", stop_line: "#199e70", stopped_vehicle: "#7d828a" };
+  const STRIP_OTHER = "#c7c4bb";
+  const LONG = new Set(["stopped_vehicle"]);
+  const stripColor = (k: string) => STRIP_COLOR[k] ?? STRIP_OTHER;
+  // a zone whose bubble sits just above another one gets its label above the bubble
+  const LABEL_ABOVE = new Set(["sb_approach"]);
   const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
   const openHref = (r: Row) => `/results?clip=${r.clip}&t=${r.s}#player`;
 
@@ -309,9 +350,10 @@ const presentClasses = CLASSES.filter((c) => rows.some((r) => r.l === c.key));
         render();
       });
       const lab = document.createElement("span");
-      lab.className = "zlab";
+      const above = LABEL_ABOVE.has(z.key);
+      lab.className = `zlab${above ? " above" : ""}`;
       lab.style.left = `${z.x}%`;
-      lab.style.top = `calc(${z.y}% + ${size / 2 + 3}px)`;
+      lab.style.top = `calc(${z.y}% ${above ? "-" : "+"} ${size / 2 + 3}px)`;
       lab.textContent = z.name;
       map.append(b, lab);
     }
@@ -326,14 +368,14 @@ const presentClasses = CLASSES.filter((c) => rows.some((r) => r.l === c.key));
       max = Math.max(max, n);
       return n;
     }));
-    const head = `<thead><tr><th scope="col">Clip, start</th>${cls.map((k) => `<th scope="col" title="${esc(k.name)}"><abbr title="${esc(k.name)}">${k.code}</abbr></th>`).join("")}<th scope="col">Total</th><th scope="col">Per min</th></tr></thead>`;
+    const head = `<thead><tr><th scope="col">Clip<span class="m-light">, start</span></th>${cls.map((k) => `<th scope="col" title="${esc(k.name)}"><abbr title="${esc(k.name)}">${k.code}</abbr></th>`).join("")}<th scope="col">Total</th><th scope="col">Per min</th></tr></thead>`;
     const body = clipsShown
       .map((c, i) => {
         const tot = grid[i].reduce((a, b) => a + b, 0);
         const cells = grid[i]
           .map((n) => `<td class="cell"><span style="background:rgba(243,195,22,${n ? 0.12 + 0.7 * (n / max) : 0});color:${n / max > 0.55 ? "#151618" : "inherit"}">${n || "."}</span></td>`)
           .join("");
-        return `<tr><th scope="row"><span class="mono">${c.id}</span> <span class="tab-sub">${c.start.split(" ")[1]}, ${esc(c.light.split(",")[0])}</span></th>${cells}<td class="tot">${tot}</td><td class="rate">${(tot / (c.duration / 60)).toFixed(1)}</td></tr>`;
+        return `<tr><th scope="row"><span class="mono">${c.id}</span> <span class="tab-sub">${c.start.split(" ")[1]}<span class="m-light">, ${esc(c.light.split(",")[0])}</span></span></th>${cells}<td class="tot">${tot}</td><td class="rate">${(tot / (c.duration / 60)).toFixed(1)}</td></tr>`;
       })
       .join("");
     $("matrix").innerHTML = head + `<tbody>${body}</tbody>`;
@@ -342,11 +384,24 @@ const presentClasses = CLASSES.filter((c) => rows.some((r) => r.l === c.key));
       .map((c) => {
         const ticks = rows
           .filter((r) => r.clip === c.id)
-          .map((r) => `<a href="${openHref(r)}" style="left:${(r.s / c.duration) * 100}%;width:${Math.max(0.4, ((r.e - r.s) / c.duration) * 100)}%" aria-label="${esc(cname(r.l))} at ${fmtTime(r.s)} in ${c.id}" title="${esc(cname(r.l))}, ${fmtTime(r.s)}"></a>`)
+          .sort((a, b) => b.e - b.s - (a.e - a.s)) // longest first, so short events are drawn on top
+          .map((r) => `<a href="${openHref(r)}" class="${LONG.has(r.l) ? "long" : ""}" style="--c:${stripColor(r.l)};left:${(r.s / c.duration) * 100}%;width:${Math.max(0.4, ((r.e - r.s) / c.duration) * 100)}%" aria-label="${esc(cname(r.l))} at ${fmtTime(r.s)} in ${c.id}" title="${esc(cname(r.l))}, ${fmtTime(r.s)}"></a>`)
           .join("");
         return `<div class="strip"><span class="strip-lab">${c.id} <span>${c.start.split(" ")[1]}</span></span><div class="strip-track">${ticks}</div></div>`;
       })
       .join("");
+  }
+
+  function stripKey() {
+    const present = new Set(D.rows.map((r) => r.l));
+    const key = (k: string) => `<span><i class="${LONG.has(k) ? "long" : ""}" style="--c:${stripColor(k)}"></i>${esc(cname(k))}</span>`;
+    const named = Object.keys(STRIP_COLOR).filter((k) => present.has(k));
+    const other = D.classes.filter((c) => present.has(c.key) && !STRIP_COLOR[c.key]);
+    $("strip-key").innerHTML = [
+      ...named.filter((k) => !LONG.has(k)).map(key),
+      other.length ? `<span><i style="--c:${STRIP_OTHER}"></i>${other.map((c) => esc(c.name)).join(", ")}</span>` : "",
+      ...named.filter((k) => LONG.has(k)).map(key),
+    ].join("");
   }
 
   function log(rows: Row[]) {
@@ -365,7 +420,7 @@ const presentClasses = CLASSES.filter((c) => rows.some((r) => r.l === c.key));
       ? sorted
           .map(
             (r) =>
-              `<tr><td class="t">${clockStr(clockSec(r.clip, r.s))}</td><td class="mono">${r.clip}</td><td class="t">${fmtTime(r.s)}</td><td class="num">${(r.e - r.s).toFixed(1)} s</td><td><strong>${esc(cname(r.l))}</strong></td><td>${esc(zname(r.z))}</td><td class="note">${esc(r.n)}</td><td><a class="open" href="${openHref(r)}">Open</a></td></tr>`,
+              `<tr><td class="t" data-label="Local time">${clockStr(clockSec(r.clip, r.s))}</td><td class="mono" data-label="Clip">${r.clip}</td><td class="t" data-label="In clip">${fmtTime(r.s)}</td><td class="num" data-label="Length">${(r.e - r.s).toFixed(1)} s</td><td class="l-cls"><strong>${esc(cname(r.l))}</strong></td><td class="l-zone" data-label="Zone">${esc(zname(r.z))}</td><td class="note">${esc(r.n)}</td><td class="l-open"><a class="open" href="${openHref(r)}">Open</a></td></tr>`,
           )
           .join("")
       : `<tr><td colspan="8" class="note">No events match the filters.</td></tr>`;
@@ -437,5 +492,6 @@ const presentClasses = CLASSES.filter((c) => rows.some((r) => r.l === c.key));
     if (!document.fullscreenElement) setWall(false);
   });
 
+  stripKey();
   render();
 </script>

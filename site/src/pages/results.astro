@@ -3,7 +3,7 @@ import Base from "../layouts/Base.astro";
 import ClipPanel from "../components/ClipPanel.astro";
 import SecHead from "../components/SecHead.astro";
 import { CLASSES, CLASS_BY_KEY, className } from "../lib/classes";
-import { loadAblations, loadAllResults, loadClips, loadExamples, loadFailures, loadMetrics } from "../lib/data";
+import { loadAblations, loadAllResults, loadClips, loadErrors, loadExamples, loadFailures, loadMetrics, srcset } from "../lib/data";
 import { fmtInt, fmtNum, fmtTime, isNum } from "../lib/format";
 
 const clips = loadClips();
@@ -44,8 +44,39 @@ const f1Rows = scoredClasses.map((k) => {
   };
 });
 const partB = metrics?.part_b ?? null;
-const exampleHref = (clip: string, t: number) => `/results?clip=${encodeURIComponent(clip)}&t=${t}#player`;
 const statusText = { on: "emitted", off: "rule off", none: "no rule" } as const;
+const code = (k: string) => CLASS_BY_KEY[k]?.code ?? k;
+
+// the U-turn rule runs but is not submitted (src/parivision/events.py); its F1 if it were
+const errors = loadErrors();
+const uturn = errors?.held_back.find((h) => h.label === "illegal_u_turn");
+
+// class confusion on the dev labels: rows are labelled classes, columns the class we predict there
+const conf = errors?.confusion;
+const confPred = order.filter((k) => conf && (Object.values(conf.labels).some((r) => r[k]) || conf.false_alarms[k]));
+// labelled classes we also predict come first, so the matches run down the diagonal
+const labelled = order.filter((k) => conf?.labels[k]);
+const confRows = [...labelled.filter((k) => confPred.includes(k)), ...labelled.filter((k) => !confPred.includes(k))].map((k) => {
+  const cells = conf!.labels[k];
+  return { key: k, n: Object.values(cells).reduce((a, b) => a + b, 0), cells };
+});
+const confFa = conf ? confPred.reduce((a, k) => a + (conf.false_alarms[k] ?? 0), 0) : 0;
+const confEmitted = confRows.filter((r) => confPred.includes(r.key));
+const confSummary = {
+  n: confEmitted.reduce((a, r) => a + r.n, 0),
+  other: confEmitted.reduce((a, r) => a + Object.entries(r.cells).filter(([k]) => k !== r.key && k !== "missed").reduce((x, [, v]) => x + v, 0), 0),
+  missed: confEmitted.reduce((a, r) => a + (r.cells.missed ?? 0), 0),
+};
+// cell tint grows with the share of the row
+const tint = (n: number, of: number) => (n ? `--a:${(0.14 + 0.6 * (n / Math.max(1, of))).toFixed(2)}` : undefined);
+
+// ablations: per-class F1 for every class that some row predicts
+const ablClasses = order.filter((k) => ablations.some((a) => (a.per_class?.[k] ?? 0) > 0));
+const byName = (n: string) => ablations.find((a) => a.name === n);
+const mSame = byName("YOLO26m @1280, 10 fps, same clips");
+const smaller = ablations.filter((a) => a !== mSame && a.clips?.length === mSame?.clips?.length && /^YOLO26[sn] @/.test(a.name) && isNum(a.score_a));
+const smallRange = smaller.length ? [Math.min(...smaller.map((a) => a.score_a as number)), Math.max(...smaller.map((a) => a.score_a as number))] : null;
+const exampleHref = (clip: string, t: number) => `/results?clip=${encodeURIComponent(clip)}&t=${t}#player`;
 ---
 <Base title="Results" description="Annotated sample clips with event timelines, risk curves, per-class F1 on our dev labels, failure cases and ablations." active="results">
   <header class="page-head wrap">
@@ -65,7 +96,16 @@ const statusText = { on: "emitted", off: "rule off", none: "no rule" } as const;
       ))}
     </div>
     <div id="clip-panel" role="tabpanel" aria-labelledby={`tab-${tabs[0]?.id}`}>
-      <ClipPanel name="results" poster={tabs[0]?.poster} />
+      <ClipPanel name="results" poster={tabs[0]?.poster}>
+        <p slot="key" class="box-key">
+          <span><i class="bx thin" style="--c:rgb(120,200,235)"></i>vehicle</span>
+          <span><i class="bx thin" style="--c:rgb(140,235,140)"></i>person</span>
+          <span><i class="bx thin" style="--c:rgb(250,170,230)"></i>bicycle</span>
+          <span><i class="bx" style="--c:rgb(255,190,0)"></i>in an event we submit, coloured by class and named</span>
+          <span><i class="bx" style="--c:rgb(180,120,220)"></i>U-turn we find but do not submit</span>
+          <span class="bk-strip">The strip burned in under the picture shows the submitted events and the risk (red line). Blue outlines are the crossings, the red line across the lanes is the SB stop line.</span>
+        </p>
+      </ClipPanel>
       <p class="load-error" hidden>Could not load the results for this clip.</p>
     </div>
   </section>
@@ -81,7 +121,7 @@ const statusText = { on: "emitted", off: "rule off", none: "no rule" } as const;
       <div class="stat"><span class={`v${partB && isNum(partB.mtta_sec) ? "" : " is-tbd"}`}>{partB ? fmtNum(partB.mtta_sec, 1) : "n/a"}{partB && isNum(partB.mtta_sec) && <small>s</small>}</span><span class="k">Mean time to accident</span><span class="s">how early the alarm fires</span></div>
     </div>
     {!partB && <p class="note-line">Part B is not scored here: evaluate.py returns null when the labels contain no accident, and none of the four sample clips has one.</p>}
-    <div class="table-scroll f1-table">
+    <div class="table-scroll f1-table cards-sm">
       <table>
         <caption class="visually-hidden">Per-class F1 at three IoU thresholds</caption>
         <thead>
@@ -98,31 +138,77 @@ const statusText = { on: "emitted", off: "rule off", none: "no rule" } as const;
           {f1Rows.map((r) => (
             <tr>
               <th scope="row" class="f1-cls"><span>{r.name}</span> <span class={`chip ${r.status}`}>{statusText[r.status]}</span></th>
-              <td class={`num${isNum(r.f03) ? "" : " tbd"}`}>{fmtNum(r.f03, 2)}</td>
-              <td class={`num${isNum(r.f05) ? "" : " tbd"}`}>{fmtNum(r.f05, 2)}</td>
-              <td class={`num${isNum(r.f07) ? "" : " tbd"}`}>{fmtNum(r.f07, 2)}</td>
-              <td class={`num mean${isNum(r.mean) ? "" : " tbd"}`}>
+              <td data-label="@0.3" class={`num${isNum(r.f03) ? "" : " tbd"}`}>{fmtNum(r.f03, 2)}</td>
+              <td data-label="@0.5" class={`num${isNum(r.f05) ? "" : " tbd"}`}>{fmtNum(r.f05, 2)}</td>
+              <td data-label="@0.7" class={`num${isNum(r.f07) ? "" : " tbd"}`}>{fmtNum(r.f07, 2)}</td>
+              <td data-label="Mean" class={`num mean${isNum(r.mean) ? "" : " tbd"}`}>
                 {isNum(r.mean) && <span class="bar" style={`--w:${Math.round(r.mean * 100)}%`} aria-hidden="true"></span>}
                 {fmtNum(r.mean, 2)}
               </td>
-              <td class={`num${isNum(r.tp) ? "" : " tbd"}`}>{fmtInt(r.tp)} / {fmtInt(r.fp)} / {fmtInt(r.fn)}</td>
+              <td data-label="TP / FP / FN" class={`num tpfpfn${isNum(r.tp) ? "" : " tbd"}`}>{fmtInt(r.tp)} / {fmtInt(r.fp)} / {fmtInt(r.fn)}</td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
+    {uturn && (
+      <p class="note-line footnote">
+        Illegal U-turn scores 0.00 because we do not submit it. Our U-turn rule finds them with a mean F1 of {uturn.f1_mean.toFixed(2)} on these labels ({["0.3", "0.5", "0.7"].map((t) => fmtNum(uturn.f1[t], 2)).join(", ")} at IoU 0.3, 0.5 and 0.7), and the annotated videos show them in purple. We leave the class out because nothing in view says a U-turn is prohibited here, so we cannot tell whether the organisers' annotators count them as illegal.
+      </p>
+    )}
   </section>
+
+  {conf && confRows.length > 0 && (
+    <section class="section wrap" id="confusion">
+      <SecHead num="02" title="Which class we predict for each labelled event">
+        <p>For each event in our labels, the class of the predicted event that overlaps it most in time, if their temporal IoU is at least {conf.iou}; otherwise it counts as missed. The last row counts predictions that overlap no label that well. Of the {confSummary.n} labelled events in classes we emit, {confSummary.other} get another class, {confSummary.missed} are missed and {confFa} predictions match no label{confSummary.other < Math.min(confSummary.missed, confFa) ? ": our errors are misses and false alarms, much more than one class read as another" : ""}.</p>
+      </SecHead>
+      <div class="table-scroll conf-scroll">
+        <table class="conf">
+          <caption class="visually-hidden">Labelled class (rows) against the predicted class that overlaps it best (columns)</caption>
+          <thead>
+            <tr>
+              <th scope="col" class="conf-corner">Labelled <span aria-hidden="true">/</span> predicted</th>
+              {confPred.map((k) => <th scope="col" class="num"><abbr title={className(k)}>{code(k)}</abbr></th>)}
+              <th scope="col" class="num">Missed</th>
+            </tr>
+          </thead>
+          <tbody>
+            {confRows.map((r) => (
+              <tr class={confPred.includes(r.key) ? "" : "not-emitted"}>
+                <th scope="row"><span class="conf-name">{className(r.key)}</span><abbr class="conf-code" title={className(r.key)}>{code(r.key)}</abbr> <span class="conf-n">{r.n}</span></th>
+                {confPred.map((k) => {
+                  const n = r.cells[k] ?? 0;
+                  return <td class={`num ${k === r.key ? "hit" : "miss"}`} style={tint(n, r.n)}>{n || <span class="zero">.</span>}</td>;
+                })}
+                <td class="num miss" style={tint(r.cells.missed ?? 0, r.n)}>{r.cells.missed || <span class="zero">.</span>}</td>
+              </tr>
+            ))}
+            <tr class="fa-row">
+              <th scope="row"><span class="conf-name">No label (false alarm)</span><span class="conf-code">None</span> <span class="conf-n">{confFa}</span></th>
+              {confPred.map((k) => {
+                const n = conf.false_alarms[k] ?? 0;
+                return <td class="num miss" style={tint(n, confFa)}>{n || <span class="zero">.</span>}</td>;
+              })}
+              <td class="num"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note-line">Codes: {[...confPred, ...confRows.map((r) => r.key).filter((k) => !confPred.includes(k))].map((k) => `${code(k)} ${className(k).toLowerCase()}`).join(", ")}; None is no label. It checks overlap in time only, so a labelled U-turn that happens while someone jaywalks counts as jaywalking. It is not one-to-one like evaluate.py, so the diagonal can differ a little from the true positives above. U-turns (rule off) and illegal turns (no rule) are in our labels but not in our submission, so theirs are all missed or overlap other events.</p>
+    </section>
+  )}
 
   {examples.length > 0 && (
     <section class="section wrap" id="examples">
-      <SecHead num="02" title="Examples of each class we find">
+      <SecHead num="03" title="Examples of each class we find">
         <p>Up to three per class and clip, the longest ones. Each card opens the clip at that moment in the player above.</p>
       </SecHead>
       <ul class="cards" role="list">
         {examples.map((ex) => (
           <li class="card">
             <a href={exampleHref(ex.clip, ex.t)} data-jump data-clip={ex.clip} data-t={ex.t}>
-              <span class="frame card-img"><img src={ex.thumb} alt="" loading="lazy" decoding="async" width="480" height="270" /></span>
+              <span class="frame card-img"><img src={ex.thumb} srcset={srcset(ex.thumb, 960, [480])} sizes="(max-width: 560px) calc(100vw - 32px), 320px" alt="" loading="lazy" decoding="async" width="480" height="270" /></span>
               <span class="card-body">
                 <span class="card-cls">{className(ex.label)}</span>
                 <span class="card-when mono">{ex.clip} at {fmtTime(ex.t)}</span>
@@ -137,7 +223,7 @@ const statusText = { on: "emitted", off: "rule off", none: "no rule" } as const;
 
   {failures.length > 0 && (
     <section class="section wrap" id="failures">
-      <SecHead num="03" title="Where it goes wrong">
+      <SecHead num="04" title="Where it goes wrong">
         <p>Cases we found by comparing predictions with our labels. They are in the table and on the timeline above too.</p>
       </SecHead>
       <ul class="fails" role="list">
@@ -156,29 +242,46 @@ const statusText = { on: "emitted", off: "rule off", none: "no rule" } as const;
   )}
 
   <section class="section wrap" id="ablations">
-    <SecHead num="04" title="Ablations">
-      <p>Same rules, same dev labels, one change per row. Score A is the official number; it also averages in the zeros for U-turns and illegal turns, which our labels have and no variant predicts. The next column is the mean F1 over the classes we emit. Detector variants could only be scored on the two clips we cached their detections for, so they come with the submitted configuration scored on the same two clips. Cost is detector compute (model size, input pixels and frames) relative to the submitted configuration. The ablations re-track cached detections, so the first row differs slightly from the official run above (0.525 / 0.700).</p>
+    <SecHead num="05" title="Ablations">
+      <p>Same rules, same dev labels, one change per row. Score A is the official number; it also averages in the zeros for U-turns and illegal turns, which our labels have and no variant predicts. "Emitted" is the mean F1 over the classes we emit, and the last columns give each class's mean F1 over IoU 0.3, 0.5 and 0.7. Detector variants could only be scored on the two clips we cached their detections for, so they come with the submitted configuration scored on the same two clips. Cost is detector compute (model size, input pixels and frames) relative to the submitted configuration. The ablations re-track cached detections, so the first row differs slightly from the official run above: Score A {fmtNum(ablations[0]?.score_a, 3)} against {fmtNum(pa?.score_a, 3)}, and jaywalking {fmtNum(ablations[0]?.per_class?.jaywalking, 3)} against {fmtNum(pa?.per_class?.jaywalking?.f1_mean, 3)}.</p>
+      {mSame && smallRange && (
+        <p>On those two clips the smaller detectors score {fmtNum(smallRange[0], 3)} to {fmtNum(smallRange[1], 3)} against {fmtNum(mSame.score_a, 3)} for YOLO26m, a difference within the noise of two clips, so the table gives no measured reason to prefer either. We kept YOLO26m because the rules were tuned on its detections, the only ones we cached for all four clips, and because decoding the 4K files, not the detector, sets our run time (see the <a href="/approach#budget">Approach page</a>).</p>
+      )}
     </SecHead>
-    <div class="table-scroll">
-      <table>
-        <caption class="visually-hidden">Ablations</caption>
+    <div class="table-scroll abl-scroll cards-sm">
+      <table class="abl">
+        <caption class="visually-hidden">Ablations, with the mean F1 of each class</caption>
         <thead>
-          <tr><th scope="col">Configuration</th><th scope="col" class="num">Clips</th><th scope="col" class="num">Score A</th><th scope="col" class="num">Emitted classes</th><th scope="col" class="num">Detector cost</th><th scope="col">Note</th></tr>
+          <tr>
+            <th scope="col">Configuration</th>
+            <th scope="col" class="num">Clips</th>
+            <th scope="col" class="num">Score A</th>
+            <th scope="col" class="num">Emitted</th>
+            <th scope="col" class="num">Cost</th>
+            {ablClasses.map((k) => <th scope="col" class="num cls-col"><abbr title={`${className(k)}, mean F1`}>{code(k)}</abbr></th>)}
+          </tr>
         </thead>
         <tbody>
           {ablations.map((a, i) => (
-            <tr class={a.name.startsWith(ablations[0].name) ? "chosen" : ""}>
-              <th scope="row" class="mono abl-name">{a.name}{i === 0 && <span class="chip on">submitted</span>}</th>
-              <td class="num">{a.clips ? a.clips.length : "-"}</td>
-              <td class={`num${isNum(a.score_a) ? "" : " tbd"}`}>{fmtNum(a.score_a, 3)}</td>
-              <td class={`num${isNum(a.emitted_mean) ? "" : " tbd"}`}>{fmtNum(a.emitted_mean, 3)}</td>
-              <td class={`num${isNum(a.cost_x) ? "" : " tbd"}`}>{isNum(a.cost_x) ? `${a.cost_x.toFixed(2)}x` : fmtNum(a.cost_x)}</td>
-              <td class="abl-note">{a.note}</td>
+            <tr class={i === 0 || a === mSame ? "chosen" : ""}>
+              <th scope="row" class="abl-name">
+                <span class="mono">{a.name}</span>{i === 0 && <span class="chip on">submitted</span>}
+                <span class="abl-note">{a.note}</span>
+              </th>
+              <td data-label="Clips" class="num">{a.clips ? a.clips.length : "-"}</td>
+              <td data-label="Score A" class={`num strong${isNum(a.score_a) ? "" : " tbd"}`}>{fmtNum(a.score_a, 3)}</td>
+              <td data-label="Emitted" class={`num${isNum(a.emitted_mean) ? "" : " tbd"}`}>{fmtNum(a.emitted_mean, 3)}</td>
+              <td data-label="Cost" class={`num${isNum(a.cost_x) ? "" : " tbd"}`}>{isNum(a.cost_x) ? `${a.cost_x.toFixed(2)}x` : fmtNum(a.cost_x)}</td>
+              {ablClasses.map((k) => {
+                const v = a.per_class?.[k];
+                return <td data-label={code(k)} class={`num cls-col${isNum(v) ? "" : " tbd"}`}>{isNum(v) ? v.toFixed(3) : "-"}</td>;
+              })}
             </tr>
           ))}
         </tbody>
       </table>
     </div>
+    <p class="note-line">Class columns: {ablClasses.map((k) => `${code(k)} ${className(k).toLowerCase()}`).join(", ")}. A dash means the class is in neither the labels nor the predictions of those clips.</p>
   </section>
 
   <script type="application/json" id="clips-data" set:html={JSON.stringify(tabs)} />
@@ -207,6 +310,12 @@ const statusText = { on: "emitted", off: "rule off", none: "no rule" } as const;
   .f1-cls .chip { margin-left: 6px; font-weight: 400; }
   td.mean { position: relative; min-width: 110px; }
   td.mean .bar { position: absolute; left: 12px; right: 12px; bottom: 5px; height: 3px; background: linear-gradient(90deg, var(--zebra) var(--w), var(--line) var(--w)); }
+  @media (max-width: 640px) {
+    td.mean { min-width: 0; padding-bottom: 7px; }
+    td.mean .bar { left: 0; right: 20%; bottom: 0; }
+    .f1-table td.tpfpfn { grid-column: span 2; }
+    .abl-scroll tr { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  }
 
   .cards { list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
   .card a { display: grid; text-decoration: none; color: inherit; background: var(--asphalt-2); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; height: 100%; }
@@ -225,9 +334,48 @@ const statusText = { on: "emitted", off: "rule off", none: "no rule" } as const;
   .fail-where { font-size: .76rem; color: var(--muted); }
   .fail .btn { justify-self: start; }
 
-  .abl-name { font-weight: 600; font-size: .85rem; white-space: nowrap; }
+  .table-scroll + .note-line { margin-top: 10px; }
+
+  /* legend under the annotated video */
+  .box-key { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .8rem; color: var(--paint-2); line-height: 1.4; }
+  .box-key span { display: inline-flex; align-items: center; gap: 6px; }
+  .box-key .bx { width: 16px; height: 11px; border: 2.5px solid var(--c); flex: none; }
+  .box-key .bx.thin { border-width: 1px; }
+  .box-key .bk-strip { display: block; flex-basis: 100%; color: var(--muted); }
+
+  /* class confusion */
+  .conf-scroll { width: fit-content; max-width: 100%; }
+  .conf { width: auto; font-size: .86rem; }
+  .conf th, .conf td { padding: 7px 10px; }
+  .conf thead th { text-align: right; }
+  .conf thead th.conf-corner { text-align: left; }
+  .conf abbr { text-decoration: none; cursor: help; }
+  .conf tbody th { white-space: nowrap; font-weight: 700; }
+  .conf-n { font: 400 .75rem var(--font-mono); color: var(--muted); margin-left: 4px; }
+  .conf-code { display: none; font-family: var(--font-mono); }
+  .conf td { min-width: 44px; }
+  .conf td.hit { background: rgba(243,195,22,var(--a, 0)); color: var(--paint); font-weight: 600; }
+  .conf td.miss { background: rgba(255,91,76,var(--a, 0)); }
+  .conf .zero { color: var(--line-2); }
+  .conf tr.not-emitted th { color: var(--paint-2); font-weight: 600; }
+  .conf tr.fa-row th, .conf tr.fa-row td { border-top: 2px solid var(--line-2); }
+  @media (max-width: 640px) {
+    .conf { font-size: .8rem; }
+    .conf th, .conf td { padding: 6px 5px; }
+    .conf td { min-width: 30px; }
+    .conf-name { display: none; }
+    .conf-code { display: inline; }
+    .conf thead th.conf-corner { font-size: 0; }
+  }
+
+  /* ablations */
+  .abl-name { font-weight: 600; font-size: .85rem; min-width: 250px; }
+  .abl-name .mono { white-space: nowrap; }
   .abl-name .chip { margin-left: 8px; font-family: var(--font-mono); }
-  .abl-note { color: var(--paint-2); font-size: .88rem; min-width: 240px; }
+  .abl-note { display: block; margin-top: 3px; color: var(--paint-2); font: 400 .8rem var(--font-text); line-height: 1.4; }
+  .abl td.strong { color: var(--paint); font-weight: 600; }
+  .abl td.cls-col, .abl th.cls-col { color: var(--paint-2); }
+  .abl abbr { text-decoration: none; cursor: help; }
   tr.chosen { background: rgba(243,195,22,.05); }
 </style>
 

@@ -25,6 +25,7 @@
 
   --wrap: 1240px;
   --gutter: 16px;
+  --header-h: 63px; /* sticky .site-header: 4 px zebra edge, 58 px bar, 1 px border */
   --radius: 3px;
 
   --stripes: repeating-linear-gradient(90deg, var(--zebra) 0 16px, transparent 16px 24px, var(--paint) 24px 40px, transparent 40px 48px);
@@ -44,6 +45,8 @@
 [hidden] { display: none !important; }
 
 html {
+  /* anchor jumps and scrollIntoView stop below the sticky header */
+  scroll-padding-top: calc(var(--header-h) + 16px);
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   background: var(--asphalt);
@@ -228,6 +231,24 @@ tbody tr:last-child td { border-bottom: 0; }
 td.num, th.num { text-align: right; font-family: var(--font-mono); font-feature-settings: "tnum" 1; white-space: nowrap; }
 td.t { font-family: var(--font-mono); white-space: nowrap; }
 .tbd { color: var(--muted); font-family: var(--font-mono); }
+
+/* .cards-sm on a .table-scroll: on phones each row becomes a small card, the row header on top
+   and every cell with its column name (data-label) above the value, so nothing needs sideways scrolling */
+@media (max-width: 640px) {
+  .cards-sm table, .cards-sm tbody { display: block; }
+  .cards-sm thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .cards-sm tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 12px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .cards-sm tbody tr:last-child { border-bottom: 0; }
+  .cards-sm th, .cards-sm td { display: block; padding: 0; border: 0; text-align: left; min-width: 0; white-space: normal; }
+  .cards-sm th[scope="row"], .cards-sm td.wide-sm { grid-column: 1 / -1; }
+  .cards-sm td.span2-sm { grid-column: span 2; }
+  .cards-sm td[data-label]::before {
+    content: attr(data-label); display: block; margin-bottom: 1px;
+    font: 600 .62rem var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted);
+  }
+  .cards-sm td.inline-sm::before { display: inline; margin-right: 8px; }
+  .cards-sm td:empty { display: none; }
+}
 
 /* ------------------------------------------------------------ buttons */
 .btn {

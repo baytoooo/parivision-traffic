@@ -46,7 +46,7 @@ const html = await marked.parse(body, { renderer, gfm: true });
 <style>
   .report { display: grid; gap: 28px; padding-bottom: 24px; }
   @media (min-width: 980px) { .report { grid-template-columns: 220px minmax(0, 1fr); align-items: start; } }
-  .toc { position: sticky; top: 84px; border-left: 3px solid var(--line-2); padding-left: 14px; }
+  .toc { position: sticky; top: calc(var(--header-h) + 20px); border-left: 3px solid var(--line-2); padding-left: 14px; }
   @media (max-width: 979px) { .toc { position: static; } }
   .toc-k { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 8px; }
   .toc ol { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
@@ -55,7 +55,7 @@ const html = await marked.parse(body, { renderer, gfm: true });
 
   .md { max-width: 72ch; }
   .md :global(h2) {
-    font-size: clamp(1.4rem, 1.1rem + 1vw, 1.9rem); margin: 40px 0 14px; padding-top: 18px; position: relative; scroll-margin-top: 80px;
+    font-size: clamp(1.4rem, 1.1rem + 1vw, 1.9rem); margin: 40px 0 14px; padding-top: 18px; position: relative;
   }
   .md :global(h2::before) { content: ""; position: absolute; top: 0; left: 0; width: 72px; height: 6px; background: var(--stripes-tight); }
   .md :global(h2:first-child) { margin-top: 0; }
@@ -68,4 +68,27 @@ const html = await marked.parse(body, { renderer, gfm: true });
   .md :global(table) { margin: 1em 0; border: 1px solid var(--line); }
   .md :global(blockquote) { margin: 1em 0; padding: 4px 16px; border-left: 3px solid var(--zebra); color: var(--paint-2); }
   .md :global(pre) { background: var(--asphalt-0); border: 1px solid var(--line); padding: 12px; overflow-x: auto; border-radius: var(--radius); }
+</style>
+
+<style is:global>
+  /* printing: the report alone, black on white, on one A4 page. "body .report" outranks the page's
+     scoped rules above. */
+  @media print {
+    @page { size: A4; margin: 12mm 14mm; }
+    html, body { background: #fff !important; color: #000; font-size: 9.8pt; line-height: 1.34; }
+    body::before, .skip, .site-header, .site-footer, .toc, .page-head .kicker { display: none !important; }
+    body .wrap { max-width: none; padding: 0; }
+    body .page-head { padding: 0 0 4pt; }
+    body .page-head h1 { font-size: 15pt; line-height: 1.15; letter-spacing: 0; color: #000; margin: 0; }
+    body .report { display: block; padding: 0; }
+    body .report .md { max-width: none; }
+    body .report .md h2 { font-size: 11pt; margin: 8pt 0 3pt; padding-top: 0; color: #000; break-after: avoid; }
+    body .report .md h2::before { display: none; }
+    body .report .md :is(p, li, strong, a) { color: #000; }
+    body .report .md p { margin: 0 0 4pt; }
+    body .report .md :is(ul, ol) { gap: 1.5pt; margin: 0 0 4pt; }
+    body .report .md li::marker { color: #000; }
+    body .report .md code { background: none; padding: 0; font-size: 0.92em; color: #000; }
+    body .report .md a { text-decoration: none; }
+  }
 </style>

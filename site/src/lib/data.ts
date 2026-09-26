@@ -2,9 +2,10 @@
 // built, so replacing a file and rebuilding is enough; no code changes.
 import fs from "node:fs";
 import path from "node:path";
-import type { Ablation, Clip, ClipResult, Eda, Example, Failure, Metrics, Runtime, Team } from "./types";
+import type { Ablation, Clip, ClipResult, Eda, ErrorAnalysis, Example, Failure, Metrics, Runtime, Team } from "./types";
 
-const DATA_DIR = path.resolve(process.cwd(), "public", "data");
+const PUBLIC_DIR = path.resolve(process.cwd(), "public");
+const DATA_DIR = path.join(PUBLIC_DIR, "data");
 
 function read<T>(rel: string, fallback: T): T {
   const file = path.join(DATA_DIR, rel);
@@ -24,6 +25,20 @@ export const loadEda = () => read<Eda | null>("eda.json", null);
 export const loadExamples = () => read<Example[]>("examples.json", []);
 export const loadFailures = () => read<Failure[]>("failures.json", []);
 export const loadRuntime = () => read<Runtime | null>("runtime.json", null);
+export const loadErrors = () => read<ErrorAnalysis | null>("errors.json", null);
+
+/**
+ * srcset for an image in public/ with smaller copies next to it (tools/make_site_data.py writes
+ * name_480.jpg and name_960.jpg): "/media/a_480.jpg 480w, /media/a.jpg 960w". Copies that do not
+ * exist are left out, so the page still works before the script has run.
+ */
+export function srcset(src: string, width: number, smaller: number[]): string | undefined {
+  const parts = smaller
+    .map((w) => ({ w, url: src.replace(/(\.[a-z]+)$/i, `_${w}$1`) }))
+    .filter((p) => fs.existsSync(path.join(PUBLIC_DIR, p.url)))
+    .map((p) => `${p.url} ${p.w}w`);
+  return parts.length ? [...parts, `${src} ${width}w`].join(", ") : undefined;
+}
 
 /** Part A + Part B wall time over clip length, pooled over the clips in runtime.json. */
 export function runtimeFactor(rt: Runtime | null): number | null {
