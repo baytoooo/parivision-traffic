@@ -3,8 +3,10 @@
 // Context and detect_from_context), plus what the demo server adds around it in demo/worker.py:
 // the causal risk curve from an Anticipator fed the same detections (on_frame), detections per
 // class per 5 s bin, and the signal as segments. It also keeps the tracker boxes of every frame
-// so the page can draw them over the video. No DOM: worker.ts owns the detector and the frames.
+// so the page can draw them over the video, and places each piece of evidence on the junction as
+// the Results page does. No DOM: worker.ts owns the detector and the frames.
 
+import { evidenceZone } from "../lib/classes.ts";
 import type { AlignResult } from "./align.ts";
 import { diag } from "./geometry.ts";
 import { Anticipator } from "./risk.ts";
@@ -12,7 +14,7 @@ import { Context, detectFromContext } from "./rules.ts";
 import type { Scene, SceneConstants } from "./scene.ts";
 import { fillPhases, phaseFromScores } from "./signal.ts";
 import { collect, MultiTracker, type Track } from "./tracker.ts";
-import { build, COCO, type Classes } from "./trajectories.ts";
+import { at, build, COCO, type Classes } from "./trajectories.ts";
 import type { Detection, Evidence, OverlayFrame, PipelineResult, Seg } from "./types.ts";
 
 const f32 = Math.fround;
@@ -123,6 +125,14 @@ export class Analyser {
     const phases = fillPhases(this.sigRaw, this.sigT);
     const ctx = new Context(trajectories, this.sigT, phases, duration, this.scene);
     const { events, evidence } = detectFromContext(ctx, H);
+    // the zone of each piece of evidence, as tools/make_site_data.py where(): for a note that names
+    // no place, the zone nearest to the first actor's foot at the middle of the evidence
+    const byId = new Map(trajectories.map((tr) => [tr.tid, tr]));
+    const zone = (e: Evidence): string => {
+      const tr = e.actors.length ? byId.get(e.actors[0]) : undefined;
+      const i = tr ? at(tr, (e.start + e.end) / 2) : null;
+      return evidenceZone(e.label, e.note, tr && i !== null ? tr.foot[i] : null);
+    };
 
     // worker.py: runs of one phase, the ends rounded to 0.1 s
     const signal: Seg[] = [];
@@ -141,7 +151,7 @@ export class Analyser {
       clip,
       duration: round(duration, 2),
       events,
-      evidence: evidence.map((e): Evidence => ({ label: e.label, start: round(e.start, 2), end: round(e.end, 2), actors: e.actors, note: e.note })),
+      evidence: evidence.map((e): Evidence => ({ label: e.label, start: round(e.start, 2), end: round(e.end, 2), actors: e.actors, note: e.note, zone: zone(e) })),
       signal,
       risk: this.riskCurve,
       counts,

@@ -330,7 +330,7 @@ function showResult(result: ClipResult, source: string, jobId: string) {
   // the clip's own first frame instead of a stock poster, which the tracked boxes would not fit
   const poster = result.overlay ? undefined : "/media/demo_poster.jpg";
   const src = { result, video, poster, title: `${source}, ${result.duration.toFixed(1)} s` };
-  if (!player) player = new Player(root, src, { theta: RISK_THETA, mergeGap: RISK_MERGE_GAP });
+  if (!player) player = new Player(root, src, { theta: RISK_THETA, mergeGap: RISK_MERGE_GAP, placeInNote: true });
   else player.load(src);
   $("result").scrollIntoView({ block: "start" });
   $("result-heading").focus({ preventScroll: true });

@@ -159,3 +159,57 @@ export function zoneFor(label: string, zone?: string): string {
   if (zone && ZONE_BY_KEY[zone]) return zone;
   return ZONE_FOR_CLASS[label] ?? "junction_box";
 }
+
+/** Evidence notes of the rules that name a place (the zebra of a failure to yield, the lane of a
+ * stopped vehicle, the carriageway of a wrong-way run), with the zone and the note the Results page
+ * shows for them: NOTE_ZONE in tools/make_site_data.py. */
+export const NOTE_ZONE: Record<string, [zone: string, note: string]> = {
+  north_sb: ["north_crossing", "north crossing, SB half"],
+  north_nb: ["north_crossing", "north crossing, NB half"],
+  west: ["west_crossing", "west crossing"],
+  "NB lane": ["nb_carriageway", "NB lane"],
+  "junction box": ["junction_box", "junction box"],
+  sb: ["sb_approach", "SB carriageway"],
+  nb: ["nb_carriageway", "NB carriageway"],
+};
+
+/** Classes whose rule looks in one place, whatever the note (CLASS_ZONE in make_site_data.py). */
+const RULE_ZONE: Record<string, string> = {
+  red_light: "stop_line",
+  stop_line: "stop_line",
+  congestion: "sb_approach",
+  illegal_u_turn: "median_nose",
+};
+
+/** An evidence note as the Results page shows it: a place the rules name by an id gets its name. */
+export function readableNote(note: string): string {
+  return NOTE_ZONE[note]?.[1] ?? note;
+}
+
+/** The zone whose marker is nearest to the point (x, y) of the 1920x1080 reference view. */
+export function nearestZone(x: number, y: number): string {
+  const px = x / 19.2, py = y / 10.8; // percent, as the markers
+  let best = ZONES[0];
+  let bestD = Infinity;
+  for (const z of ZONES) {
+    const d = (z.x - px) ** 2 + (z.y - py) ** 2;
+    if (d < bestD) {
+      best = z;
+      bestD = d;
+    }
+  }
+  return best.key;
+}
+
+/**
+ * Where a piece of evidence happened, as where() in tools/make_site_data.py places it for the
+ * Results page: the place its note names, else the place its class's rule looks at, else the zone
+ * marker nearest to `foot`, the first actor's foot point (reference pixels) at the middle of the
+ * evidence. Without that point it is the junction box.
+ */
+export function evidenceZone(label: string, note: string, foot: readonly number[] | null): string {
+  const named = NOTE_ZONE[note];
+  if (named) return named[0];
+  if (RULE_ZONE[label]) return RULE_ZONE[label];
+  return foot ? nearestZone(foot[0], foot[1]) : "junction_box";
+}

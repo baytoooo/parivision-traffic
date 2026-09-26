@@ -29,7 +29,8 @@ rules.ts         Context and one function per class, detectFromContext (rules.py
 risk.ts          Part B's Anticipator.observe path (risk.py)
 detector.ts      letterbox, ONNX session, output parsing; works with onnxruntime-web and -node
 analyse.ts       Analyser, glue with no DOM: frames in, PipelineResult (events, signal, risk curve,
-                 counts, tracker boxes per frame) out; pipeline.py analyse() + demo/worker.py
+                 counts, tracker boxes per frame, the zone of each piece of evidence) out;
+                 pipeline.py analyse() + demo/worker.py, zones as tools/make_site_data.py
 messages.ts      the messages between the page and the worker
 worker.ts        Web Worker: owns the ONNX session and the running job's Analyser
 ```

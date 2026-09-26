@@ -200,6 +200,10 @@ const maxMin = UPLOAD_MAX_SECONDS / 60;
   .result-top h2:focus { outline: none; }
   .result-mode { margin: 6px 0 0; font-size: .78rem; color: var(--muted); }
   .result-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  /* phones hide the Zone column of the event table (player.css): the note cell then starts with
+     the place, which player.ts adds for this page */
+  [data-player="demo"] .pl-table td.note .place { display: none; }
+  @media (max-width: 640px) { [data-player="demo"] .pl-table td.note .place { display: block; color: var(--paint); } }
 </style>
 
 <script>

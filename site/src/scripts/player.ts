@@ -215,10 +215,14 @@ export class Player {
   private theta: number;
   private lastPhase = "";
   private overlay: BoxOverlay;
+  private placeInNote: boolean;
 
-  constructor(root: HTMLElement, src: PlayerSource, opts: { theta: number; mergeGap: number }) {
+  /** `placeInNote`: the note cell of an event also names its place, for a page whose layout hides
+   * the Zone column (the demo page does so on phones, where player.css hides it). */
+  constructor(root: HTMLElement, src: PlayerSource, opts: { theta: number; mergeGap: number; placeInNote?: boolean }) {
     this.root = root;
     this.theta = opts.theta;
+    this.placeInNote = !!opts.placeInNote;
     this.video = $<HTMLVideoElement>(root, "video")!;
     this.overlay = new BoxOverlay($<HTMLCanvasElement>(root, "overlay")!, this.video, $(root, "boxes-toggle"), $<HTMLInputElement>(root, "boxes"));
     const seek = (t: number) => this.seek(t);
@@ -415,11 +419,14 @@ export class Player {
       cell(`${(b - a).toFixed(1)} s`, "num");
       const tdC = cell("", "cls");
       tdC.innerHTML = `<span class="cls-name">${className(l)}</span>`;
-      cell(ZONE_BY_KEY[row.ev.zone]?.name ?? "", "zone");
+      const zone = ZONE_BY_KEY[row.ev.zone]?.name ?? "";
+      cell(zone, "zone");
       const note = row.ev.notes.join("; ");
       const actors = row.ev.actors.length ? `#${row.ev.actors.join(", #")}` : "";
+      // unless the note names the place already ("north crossing, NB half")
+      const place = this.placeInNote && zone && !note.toLowerCase().includes(zone.toLowerCase()) ? zone : "";
       const tdN = cell("", "note");
-      tdN.innerHTML = `${note ? `<span>${escapeHtml(note)}</span>` : ""}${actors ? `<span class="actors">${actors}</span>` : ""}`;
+      tdN.innerHTML = `${place ? `<span class="place">${escapeHtml(place)}</span>` : ""}${note ? `<span>${escapeHtml(note)}</span>` : ""}${actors ? `<span class="actors">${actors}</span>` : ""}`;
       if (row.match !== null) {
         const td = cell(row.match > 0 ? row.match.toFixed(2) : row.kind === "pred" ? "no label" : "missed", "num match");
         if (row.match < 0.3) td.classList.add("weak");

@@ -9,6 +9,7 @@
 // camera or a shared screen itself.
 
 import { UPLOAD_MAX_SECONDS } from "../config";
+import { readableNote } from "../lib/classes";
 import type { ClipResult, Counts, Job, Sample } from "../lib/types";
 import { ALIGN_DOWNSCALE, rgbaToGray } from "../pipeline/align";
 import { roundHalfEven } from "../pipeline/geometry";
@@ -318,7 +319,8 @@ function toClipResult(r: PipelineResult, groups: string[], video: string): ClipR
     events: r.events,
     risk: r.risk,
     signal: r.signal,
-    evidence: r.evidence,
+    // the notes as the Results page words them ("west crossing", not "west")
+    evidence: r.evidence.map((e) => ({ ...e, note: readableNote(e.note) })),
     counts: r.counts as Counts,
     aligned: r.aligned,
     video,
