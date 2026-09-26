@@ -7,6 +7,11 @@
   .pl-stage { grid-template-columns: minmax(0, 1fr) 260px; align-items: start; }
 }
 .pl-video { aspect-ratio: 16 / 9; }
+/* legend under the video: the side panel spans both rows next to it */
+@media (min-width: 980px) {
+  .pl-stage.has-key > .pl-side { grid-column: 2; grid-row: 1 / span 2; }
+}
+.pl-key > * { margin: 0; }
 .pl-video video { width: 100%; height: 100%; object-fit: contain; background: #000; }
 .pl-video-error {
   position: absolute; left: 12px; right: 12px; bottom: 56px; margin: 0;

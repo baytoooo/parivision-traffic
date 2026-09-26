@@ -106,6 +106,20 @@ export interface Ablation {
   per_class?: Record<string, number>;
 }
 
+/** Error analysis on the dev labels (tools/make_site_data.py, data/errors.json). */
+export interface ErrorAnalysis {
+  confusion: {
+    /** Temporal IoU a prediction needs to count for a label. */
+    iou: number;
+    /** Labelled class -> predicted class that overlaps it best (or "missed") -> count. */
+    labels: Record<string, Record<string, number>>;
+    /** Predicted class -> predictions that overlap no label. */
+    false_alarms: Record<string, number>;
+  };
+  /** Rules we run but do not submit, scored as evaluate.py would. */
+  held_back: { label: string; f1_mean: number; f1: Record<string, number>; tp_fp_fn_05: [number, number, number] }[];
+}
+
 /** Wall-clock times from run_submission.py's log, per clip. */
 export interface Runtime {
   machine: string;
