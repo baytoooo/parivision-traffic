@@ -2,7 +2,7 @@
 
     python tools/export_parity_fixtures.py [--clip C3905] [--tag yolo26m_1280_1920_10fps] [--every 2]
 
-Writes site/tests/fixtures/<clip>/ (gitignored; rebuilt by this script):
+Writes site/tests/fixtures/<clip>/, and a gzip copy (<name>.gz) of every file the site tests read:
 
   detections.json   the cached detector output at the demo's frame rate: frames of [x1,y1,x2,y2,conf,cls]
                     in 1920-wide working pixels
@@ -23,6 +23,10 @@ Writes site/tests/fixtures/<clip>/ (gitignored; rebuilt by this script):
 Images are also written as raw bytes (.gray, .rgb) so the Node tests need no image decoder;
 site/tests/fixtures/refs/ holds the two references as raw grey 480x270.
 
+The .gz copies of the C3905 and refs fixtures (about 7 MB) are committed, so the site tests run on a
+fresh clone (site/tests/fixture.ts reads either form). The plain files and all C3902 fixtures are
+gitignored; the tests that need C3902 are skipped until this script has written them.
+
 Trajectories are written at full precision (event edges are rounded to 0.01 s, and a value cut to a
 few decimals can land on a rounding tie, or move an interpolated crossing time, where the real one does not). Each stage's input is the previous stage's Python output, so a JS module can be checked on its
 own: tracker on detections, build on tracks, rules on trajectories, and so on.
@@ -30,6 +34,7 @@ own: tracker on detections, build on tracks, rules on trajectories, and so on.
 from __future__ import annotations
 
 import argparse
+import gzip
 import json
 import sys
 from pathlib import Path
@@ -56,6 +61,16 @@ from parivision.video import sample_frames  # noqa: E402
 
 def r(x, n=3):
     return np.round(np.asarray(x, np.float64), n).tolist()
+
+
+def gzip_copies(folder: Path) -> None:
+    """<name>.gz next to every .json, .rgb and .gray file in folder (the files the site tests read).
+
+    mtime=0 keeps the bytes unchanged when the content is, so a re-export leaves git clean.
+    """
+    for pattern in ("*.json", "*.rgb", "*.gray"):
+        for f in sorted(folder.glob(pattern)):
+            f.with_name(f.name + ".gz").write_bytes(gzip.compress(f.read_bytes(), 9, mtime=0))
 
 
 def main() -> None:
@@ -195,6 +210,8 @@ def main() -> None:
     (out / "alignment.json").write_text(json.dumps({"H": H.tolist(), "frame": "frame0.png", "frame_size": [480, 270],
                                                     "work_size": [w, h]}))
     (out / "lamps.json").write_text(json.dumps({"boxes": [list(map(int, b)) for b in boxes], "frames": lamps}))
+    gzip_copies(out)
+    gzip_copies(refs)
     print(f"{args.clip}: {len(frames)} frames, {len(trajs)} trajectories, {len(events)} events -> {out}")
 
 

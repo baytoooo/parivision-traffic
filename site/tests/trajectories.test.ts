@@ -13,15 +13,15 @@ import type { Track } from "../src/pipeline/tracker.ts";
 import type { SceneConstants } from "../src/pipeline/scene.ts";
 import type { TrackRow } from "../src/pipeline/types.ts";
 import { at, build, COCO, isPerson, isVehicle, speed } from "../src/pipeline/trajectories.ts";
+import { fixtureJson, needs } from "./fixture.ts";
 
 const PUB = new URL("../public/pipeline/", import.meta.url);
-const fixture = async (clip: string, name: string) =>
-  JSON.parse(await readFile(new URL(`./fixtures/${clip}/${name}`, import.meta.url), "utf8"));
+const fixture = (clip: string, name: string) => fixtureJson(`${clip}/${name}`);
 
 const TOL: Record<string, number> = { t: 1e-9, box: 6e-3, foot: 5e-3, vel: 5e-3, height: 5e-3, conf: 1e-3 };
 
 for (const clip of ["C3905", "C3902"]) {
-  test(`build matches trajectories.json (${clip})`, async () => {
+  test(`build matches trajectories.json (${clip})`, needs(clip), async () => {
     const scene: SceneConstants = JSON.parse(await readFile(new URL("scene.json", PUB), "utf8"));
     const { frames } = await fixture(clip, "tracks.json");
     const { H } = await fixture(clip, "alignment.json");

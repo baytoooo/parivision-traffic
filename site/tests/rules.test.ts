@@ -5,11 +5,11 @@ import { test } from "node:test";
 import { collisions, Context, detectFromContext } from "../src/pipeline/rules.ts";
 import { loadScene } from "../src/pipeline/scene.ts";
 import type { Trajectory } from "../src/pipeline/types.ts";
+import { fixtureJson, needs } from "./fixture.ts";
 
 const PUB = new URL("../public/pipeline/", import.meta.url);
 const read = async (name: string) => (await readFile(new URL(name, PUB))).buffer as ArrayBuffer;
-const fixture = async (clip: string, name: string) =>
-  JSON.parse(await readFile(new URL(`./fixtures/${clip}/${name}`, import.meta.url), "utf8"));
+const fixture = (clip: string, name: string) => fixtureJson(`${clip}/${name}`);
 
 /** trajectories.json as Trajectory objects; box and conf are float32 arrays in Python. */
 const toTrajectory = (d: Trajectory): Trajectory => ({
@@ -21,7 +21,7 @@ const toTrajectory = (d: Trajectory): Trajectory => ({
 const TOL = 0.01; // s
 
 for (const clip of ["C3905", "C3902"]) {
-  test(`rules match rules.json (${clip})`, async () => {
+  test(`rules match rules.json (${clip})`, needs(clip), async () => {
     const scene = await loadScene(read);
     const trajs = (await fixture(clip, "trajectories.json")).map(toTrajectory);
     const signal = await fixture(clip, "signal.json");
@@ -75,7 +75,7 @@ const PERTURBATIONS: Record<string, (trajs: Trajectory[], phases: string[]) => [
 
 for (const clip of ["C3905", "C3902"]) {
   for (const [name, change] of Object.entries(PERTURBATIONS)) {
-    test(`rules.py and the port agree on perturbed input (${clip}, ${name})`, async () => {
+    test(`rules.py and the port agree on perturbed input (${clip}, ${name})`, needs(clip), async () => {
       const want = (await fixture(clip, "rules_perturbed.json"))[name];
       const scene = await loadScene(read);
       const trajs0 = (await fixture(clip, "trajectories.json")).map(toTrajectory);

@@ -7,12 +7,12 @@ import { test } from "node:test";
 import { Analyser } from "../src/pipeline/analyse.ts";
 import { loadScene } from "../src/pipeline/scene.ts";
 import type { Detection, Seg } from "../src/pipeline/types.ts";
+import { fixtureJson, needs } from "./fixture.ts";
 
 const PUB = new URL("../public/pipeline/", import.meta.url);
 const read = async (name: string) => (await readFile(new URL(name, PUB))).buffer as ArrayBuffer;
 const scene = loadScene(read);
-const fixture = async (clip: string, name: string) =>
-  JSON.parse(await readFile(new URL(`./fixtures/${clip}/${name}`, import.meta.url), "utf8"));
+const fixture = (clip: string, name: string) => fixtureJson(`${clip}/${name}`);
 
 // Event and evidence times: rules.json keeps 4 decimals and the result 2 (as worker.py), and
 // segments.round2 can differ from Python's round(x, 2) by 0.01 on a tie (115.115 -> 115.12).
@@ -32,7 +32,7 @@ function segments(times: number[], phases: string[]): Seg[] {
 }
 
 for (const clip of ["C3905", "C3902"]) {
-  test(`${clip}: Analyser gives the events of rules.json and a well-formed result`, async (t) => {
+  test(`${clip}: Analyser gives the events of rules.json and a well-formed result`, needs(clip), async (t) => {
     const det = await fixture(clip, "detections.json");
     const sig = await fixture(clip, "signal.json");
     const { H, work_size } = await fixture(clip, "alignment.json");

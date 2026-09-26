@@ -12,16 +12,16 @@ import { Anticipator, braking, pairHazard } from "../src/pipeline/risk.ts";
 import type { RiskConstants } from "../src/pipeline/risk.ts";
 import { loadScene } from "../src/pipeline/scene.ts";
 import type { Detection } from "../src/pipeline/types.ts";
+import { fixtureJson, needs } from "./fixture.ts";
 
 const PUB = new URL("../public/pipeline/", import.meta.url);
 const read = async (name: string) => (await readFile(new URL(name, PUB))).buffer as ArrayBuffer;
-const fixture = async (clip: string, name: string) =>
-  JSON.parse(await readFile(new URL(`./fixtures/${clip}/${name}`, import.meta.url), "utf8"));
+const fixture = (clip: string, name: string) => fixtureJson(`${clip}/${name}`);
 
 const TOL = 1e-5; // risk.json is rounded to 5 decimals
 
 for (const clip of ["C3905", "C3902"]) {
-  test(`${clip}: Anticipator.observe reproduces risk.json`, async (t: TestContext) => {
+  test(`${clip}: Anticipator.observe reproduces risk.json`, needs(clip), async (t: TestContext) => {
     const scene = await loadScene(read);
     const d: { fps: number; width: number; height: number; frames: { t: number; boxes: number[][] }[] } =
       await fixture(clip, "detections.json");

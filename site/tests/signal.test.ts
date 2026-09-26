@@ -5,20 +5,21 @@ import { test } from "node:test";
 import { matInv, type Mat3 } from "../src/pipeline/geometry.ts";
 import { loadScene } from "../src/pipeline/scene.ts";
 import { fillPhases, lampPatches, lampScores, phaseFromScores, type Box } from "../src/pipeline/signal.ts";
+import { fixtureBytes, needs } from "./fixture.ts";
 
 const PUB = new URL("../public/pipeline/", import.meta.url);
 const scene = loadScene(async (name) => (await readFile(new URL(name, PUB))).buffer as ArrayBuffer);
-const fixture = async (clip: string, name: string) => readFile(new URL(`./fixtures/${clip}/${name}`, import.meta.url));
+const fixture = (clip: string, name: string) => fixtureBytes(`${clip}/${name}`);
 const json = async (clip: string, name: string) => JSON.parse((await fixture(clip, name)).toString("utf8"));
 
 for (const clip of ["C3905", "C3902"]) {
-  test(`${clip}: lamp boxes from the clip's homography`, async () => {
+  test(`${clip}: lamp boxes from the clip's homography`, needs(clip), async () => {
     const H: Mat3 = (await json(clip, "alignment.json")).H.flat();
     const lamps = await json(clip, "lamps.json");
     assert.deepEqual(lampPatches(matInv(H), (await scene).c.signal_lamps), lamps.boxes);
   });
 
-  test(`${clip}: lamp scores on full-size crops`, async () => {
+  test(`${clip}: lamp scores on full-size crops`, needs(clip), async () => {
     const lamps = await json(clip, "lamps.json");
     const boxes: Box[] = lamps.boxes;
     for (const f of lamps.frames) {
@@ -34,7 +35,7 @@ for (const clip of ["C3905", "C3902"]) {
     }
   });
 
-  test(`${clip}: phase per frame and fill_phases`, async () => {
+  test(`${clip}: phase per frame and fill_phases`, needs(clip), async () => {
     const minContrast = (await scene).c.signal_min_contrast;
     const sig = await json(clip, "signal.json");
     const raw = sig.scores.map((s: number[]) => phaseFromScores(s, minContrast));

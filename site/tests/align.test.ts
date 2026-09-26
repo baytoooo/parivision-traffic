@@ -8,12 +8,12 @@ import { alignToReference, MIN_SCORE, rgbaToGray, type AlignResult } from "../sr
 import { matInv, warpPoints, type Mat3 } from "../src/pipeline/geometry.ts";
 import { loadScene } from "../src/pipeline/scene.ts";
 import { lampPatches, lampScores, phaseFromScores } from "../src/pipeline/signal.ts";
+import { fixtureBytes, fixtureJson, needs } from "./fixture.ts";
 
 const PUB = new URL("../public/pipeline/", import.meta.url);
-const FIX = new URL("./fixtures/", import.meta.url);
 const scene = loadScene(async (name) => (await readFile(new URL(name, PUB))).buffer as ArrayBuffer);
-const bytes = async (path: string) => new Uint8Array(await readFile(new URL(path, FIX)));
-const json = async (path: string) => JSON.parse(await readFile(new URL(path, FIX), "utf8"));
+const bytes = async (path: string) => new Uint8Array(await fixtureBytes(path));
+const json = fixtureJson;
 const refs = async () => ({ day: await bytes("refs/reference_day.gray"), dusk: await bytes("refs/reference_dusk.gray") });
 
 // scene.py JUNCTION_BOX's four corners (the polygon is not in scene.json)
@@ -49,7 +49,7 @@ function apart(pts: [number, number][], Ha: Mat3, Hb: Mat3): number {
 }
 
 for (const clip of ["C3905", "C3902"]) {
-  test(`${clip}: reference points land where the Python homography puts them`, async (t) => {
+  test(`${clip}: reference points land where the Python homography puts them`, needs(clip), async (t) => {
     const s = (await scene).c;
     const a = await json(`${clip}/alignment.json`);
     const [r, ms] = await alignClip(clip);
@@ -65,7 +65,7 @@ for (const clip of ["C3905", "C3902"]) {
     assert.ok(d <= 1, `${d.toFixed(2)} px from Python's align_best on the same frame`);
   });
 
-  test(`${clip}: the lamp boxes from the found homography read the same phases`, async () => {
+  test(`${clip}: the lamp boxes from the found homography read the same phases`, needs(clip), async () => {
     const s = (await scene).c;
     const [r] = await alignClip(clip);
     const boxes = lampPatches(matInv(r.H), s.signal_lamps);
