@@ -398,7 +398,7 @@ On a clean clone all 13 `pytest -q` tests pass and need nothing outside the
 repository: most use a 6 s synthetic clip or hand-made scenes, and
 `tests/test_regression.py` runs the rules on C3905's saved trajectories and
 checks they give the submitted events. `pnpm test` needs Node 22.18 or
-newer; on a clean clone it runs 55 tests, of which 40 pass and 15 are skipped.
+newer; on a clean clone it runs 66 tests, of which 51 pass and 15 are skipped.
 Most site tests check the in-browser port of the pipeline
 (`site/src/pipeline/`) against the Python pipeline, stage by stage, on fixtures
 that `tools/export_parity_fixtures.py` writes from the dev caches. The C3905
