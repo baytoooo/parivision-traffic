@@ -148,6 +148,9 @@ class BoxOverlay {
     }
     const i = lo > 0 && Math.abs(ts[lo - 1] - t) <= Math.abs(ts[lo] - t) ? lo - 1 : lo;
     const step = ts.length > 1 ? (ts[ts.length - 1] - ts[0]) / (ts.length - 1) : 0.2;
+    // before the first analysed frame, its boxes: a demo job that skipped a black frame at 0 (see
+    // local_api.ts) starts one step late, and the video's poster is that first frame
+    if (i === 0 && t < ts[0]) return ts[0] - t <= step + 1e-6 ? 0 : -1;
     return Math.abs(ts[i] - t) <= step * 0.75 ? i : -1;
   }
 
