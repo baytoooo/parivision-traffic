@@ -21,10 +21,11 @@ under CC BY 4.0.
 
 `site/src/pipeline/tracker.ts` is a TypeScript port of the ByteTrack tracker in
 Ultralytics 8.4.159 (`trackers/byte_tracker.py`, `basetrack.py`,
-`utils/kalman_filter.py`, `utils/matching.py`; AGPL-3.0), which builds on
-ByteTrack by Zhang et al. (MIT), and of the `lapjv` solver of the lap package
-(BSD-2-Clause; its licence is reproduced at the end of this file). The rest of
-`site/src/pipeline/` is a port of our own Python code in `src/parivision/`.
+`utils/kalman_filter.py`, `utils/matching.py`, `utils/stracks.py`; AGPL-3.0),
+which builds on ByteTrack by Zhang et al. (MIT), and of the `lapjv` solver of
+the lap package (BSD-2-Clause; its licence is reproduced at the end of this
+file). The rest of `site/src/pipeline/` is a port of our own Python code in
+`src/parivision/`.
 
 ## Python packages the submission installs
 
