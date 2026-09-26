@@ -15,6 +15,16 @@ Writes data/clips.json, data/results/<clip>.json, data/metrics.json, data/exampl
 data/eda.json, data/ablations.json, data/runtime.json (with --machine), data/predictions_samples.json,
 data/report.md (a copy of docs/report.md) and media/ (annotated videos, posters, example frames,
 the home-page loop).
+
+The full run needs the analysis caches in out/ (see the commands above). The files that only depend
+on tracked files can be rebuilt without them:
+
+    python tools/make_site_data.py --derived-only
+
+This writes data/errors.json (the class confusion on our dev labels and the F1 of the U-turn rule we
+do not submit, from predictions_samples.json, labels/dev_labels.json and the evidence in
+data/results/), data/report.md, and the smaller copies of the example frames (480 px) and EDA
+images (960 px) that the pages offer through srcset. The full run does this too, at the end.
 """
 from __future__ import annotations
 
@@ -31,9 +41,13 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "tools"))
+sys.path.insert(0, str(ROOT))
 
 from common import SAMPLES  # noqa: E402
+from evaluate import match_segments, prf, tiou  # noqa: E402
+from parivision.events import GAP, MIN_LEN  # noqa: E402
 from parivision.render import render  # noqa: E402
+from parivision.segments import finalize  # noqa: E402
 from parivision.video import sample_frames  # noqa: E402
 
 LOCAL_TIME = {"C3896": ("2026-09-18 11:18", "midday sun, hard shadows"),
@@ -208,6 +222,72 @@ def label_stats(labels: dict) -> dict:
                   "total_sec": round(float(np.sum(d["lengths"])), 1)} for lab, d in sorted(out.items())}
 
 
+def class_confusion(preds: dict, labels: dict, thr: float = 0.3) -> dict:
+    """Which class we predict where our labels have an event, and where we predict one the labels do not have.
+
+    Each labelled segment takes the class of the predicted segment (any class) it overlaps best, if that
+    temporal IoU is at least ``thr``, else "missed". A predicted segment that reaches ``thr`` with no
+    labelled segment is a false alarm. Unlike evaluate.py this is not one-to-one: two labels can share a
+    prediction, so the diagonal can differ from the true positives in metrics.json.
+    """
+    rows: dict[str, dict[str, int]] = {}
+    false_alarms: dict[str, int] = {}
+    for key, v in labels.items():
+        pred = preds["videos"].get(key, {}).get("events", [])
+        for s, e, lab in v["events"]:
+            best, cls = max(((tiou((s, e), (ps, pe)), pl) for ps, pe, pl in pred), default=(0.0, None))
+            row = rows.setdefault(lab, {})
+            got = cls if best >= thr else "missed"
+            row[got] = row.get(got, 0) + 1
+        for ps, pe, pl in pred:
+            if all(tiou((ps, pe), (s, e)) < thr for s, e, _ in v["events"]):
+                false_alarms[pl] = false_alarms.get(pl, 0) + 1
+    return {"iou": thr, "labels": rows, "false_alarms": false_alarms}
+
+
+def held_back_f1(labels: dict, results: Path, label: str = "illegal_u_turn") -> dict:
+    """F1 of a rule we run but do not submit, as evaluate.py would score it: its evidence from data/results/
+    turned into segments the way src/parivision/events.py does for the classes it emits."""
+    counts = {thr: [0, 0, 0] for thr in (0.3, 0.5, 0.7)}
+    for key, v in labels.items():
+        f = results / f"{Path(key).stem}.json"
+        if not f.exists():
+            continue
+        r = json.loads(f.read_text())
+        found = [(e["start"], e["end"]) for e in r["evidence"] if e["label"] == label]
+        pred = [(s, e) for s, e, _ in finalize({label: found}, r["duration"], GAP, MIN_LEN)]
+        gt = [(s, e) for s, e, lab in v["events"] if lab == label]
+        for thr, c in counts.items():
+            for i, n in enumerate(match_segments(gt, pred, thr)):
+                c[i] += n
+    f1 = {str(thr): prf(*c)["f1"] for thr, c in counts.items()}
+    tp, fp, fn = counts[0.5]
+    return {"label": label, "f1_mean": round(sum(f1.values()) / len(f1), 4),
+            "f1": {k: round(v, 4) for k, v in f1.items()}, "tp_fp_fn_05": [tp, fp, fn]}
+
+
+def small_copies(media: Path) -> None:
+    """480 px example frames and 960 px EDA images next to the originals, for srcset."""
+    for folder, width in ((media / "examples", 480), (media / "eda", 960)):
+        for src in sorted(folder.glob("*.jpg")):
+            if src.stem.endswith(("_480", "_960")):
+                continue
+            img = cv2.imread(str(src))
+            if img is None or img.shape[1] <= width:
+                continue
+            small = cv2.resize(img, (width, int(round(img.shape[0] * width / img.shape[1]))), interpolation=cv2.INTER_AREA)
+            cv2.imwrite(str(folder / f"{src.stem}_{width}.jpg"), small, [cv2.IMWRITE_JPEG_QUALITY, 80])
+
+
+def derived(site: Path, preds: dict, labels: dict) -> None:
+    """The site files that depend only on tracked files (see the module docstring)."""
+    data = site / "data"
+    errors = {"confusion": class_confusion(preds, labels), "held_back": [held_back_f1(labels, data / "results")]}
+    (data / "errors.json").write_text(json.dumps(errors, indent=1))
+    shutil.copy(ROOT / "docs/report.md", data / "report.md")  # the site's report page reads this copy
+    small_copies(site / "media")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--site", default=str(ROOT / "site/public"))
@@ -216,6 +296,8 @@ def main() -> None:
     ap.add_argument("--no-video", action="store_true")
     ap.add_argument("--machine", default="", help="where predictions_samples.json was produced, for runtime.json")
     ap.add_argument("--runtime-note", default="")
+    ap.add_argument("--derived-only", action="store_true",
+                    help="rebuild only the files that need no caches in out/ (see the docstring)")
     args = ap.parse_args()
     site = Path(args.site)
     data, media = site / "data", site / "media"
@@ -224,6 +306,9 @@ def main() -> None:
 
     preds = json.loads((ROOT / "predictions_samples.json").read_text())
     labels = json.loads((ROOT / "labels/dev_labels.json").read_text())
+    if args.derived_only:
+        derived(site, preds, labels)
+        return
     clips, examples = [], []
     for pkl in sorted(Path(args.analysis).glob("*.pkl")):
         a = pickle.load(open(pkl, "rb"))
@@ -269,7 +354,6 @@ def main() -> None:
     if examples:
         (data / "examples.json").write_text(json.dumps(examples))
     shutil.copy(ROOT / "predictions_samples.json", data / "predictions_samples.json")
-    shutil.copy(ROOT / "docs/report.md", data / "report.md")  # the site's report page reads this copy
     if args.machine and preds.get("log"):
         rows = [{"clip": Path(k).stem, "duration": v["duration"], "part_a_sec": v.get("part_a_sec"),
                  "part_b_sec": v.get("part_b_sec"), "total_sec": v.get("total_sec")} for k, v in preds["log"].items()]
@@ -288,6 +372,7 @@ def main() -> None:
         (data / "eda.json").write_text(json.dumps(e))
         for img in (ROOT / "out/site_data/media/eda").glob("*.jpg"):
             shutil.copy(img, media / "eda" / img.name)
+    derived(site, preds, labels)
 
 
 if __name__ == "__main__":

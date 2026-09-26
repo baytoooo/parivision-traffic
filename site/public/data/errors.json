@@ -1,0 +1,65 @@
+{
+ "confusion": {
+  "iou": 0.3,
+  "labels": {
+   "failure_to_yield": {
+    "failure_to_yield": 33,
+    "missed": 14,
+    "jaywalking": 1
+   },
+   "stopped_vehicle": {
+    "stopped_vehicle": 7
+   },
+   "illegal_u_turn": {
+    "congestion": 1,
+    "jaywalking": 2,
+    "missed": 3,
+    "stopped_vehicle": 1,
+    "stop_line": 1,
+    "failure_to_yield": 1
+   },
+   "congestion": {
+    "congestion": 2,
+    "jaywalking": 1
+   },
+   "stop_line": {
+    "stop_line": 5
+   },
+   "red_light": {
+    "red_light": 1,
+    "missed": 1
+   },
+   "jaywalking": {
+    "failure_to_yield": 1,
+    "jaywalking": 20,
+    "missed": 6,
+    "stop_line": 1
+   },
+   "illegal_turn": {
+    "missed": 1,
+    "jaywalking": 1
+   }
+  },
+  "false_alarms": {
+   "failure_to_yield": 17,
+   "jaywalking": 3,
+   "stop_line": 1
+  }
+ },
+ "held_back": [
+  {
+   "label": "illegal_u_turn",
+   "f1_mean": 0.2745,
+   "f1": {
+    "0.3": 0.4706,
+    "0.5": 0.2353,
+    "0.7": 0.1176
+   },
+   "tp_fp_fn_05": [
+    2,
+    6,
+    7
+   ]
+  }
+ ]
+}
