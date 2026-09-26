@@ -226,9 +226,9 @@ def class_confusion(preds: dict, labels: dict, thr: float = 0.3) -> dict:
     """Which class we predict where our labels have an event, and where we predict one the labels do not have.
 
     Each labelled segment takes the class of the predicted segment (any class) it overlaps best, if that
-    temporal IoU is at least ``thr``, else "missed". A predicted segment that reaches ``thr`` with no
-    labelled segment is a false alarm. Unlike evaluate.py this is not one-to-one: two labels can share a
-    prediction, so the diagonal can differ from the true positives in metrics.json.
+    temporal IoU is at least ``thr``, else "missed". A predicted segment whose temporal IoU with every
+    labelled segment is below ``thr`` is a false alarm. Unlike evaluate.py this is not one-to-one: two
+    labels can share a prediction, so the diagonal can differ from the true positives in metrics.json.
     """
     rows: dict[str, dict[str, int]] = {}
     false_alarms: dict[str, int] = {}
