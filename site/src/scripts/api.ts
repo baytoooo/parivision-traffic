@@ -1,6 +1,7 @@
 // What the demo page needs from whatever analyses a clip. LocalApi (local_api.ts) runs the
 // pipeline in this browser; MockApi replays a recorded job from /data/demo, for ?mock=1 and for
 // browsers that cannot run the pipeline.
+import { evidenceZone, readableNote } from "../lib/classes";
 import type { ClipResult, Job, Sample } from "../lib/types";
 
 export class ApiError extends Error {
@@ -69,9 +70,14 @@ export class MockApi implements Api {
 
   private loadResult() {
     if (!this.result)
-      this.result = fetch("/data/demo/mock_result.json").then((r) => {
+      this.result = fetch("/data/demo/mock_result.json").then(async (r) => {
         if (!r.ok) throw new ApiError("http", "Could not load the recorded result.");
-        return r.json();
+        const result: ClipResult = await r.json();
+        // The stored job has the rules' raw notes and no zones. Word and place them as a local job
+        // does (local_api.ts, analyse.ts). It has no tracks, so a note that names no place goes to
+        // its rule's zone or else the junction box, as where() in tools/make_site_data.py does.
+        result.evidence = result.evidence?.map((e) => ({ ...e, zone: e.zone ?? evidenceZone(e.label, e.note, null), note: readableNote(e.note) }));
+        return result;
       });
     return this.result;
   }
