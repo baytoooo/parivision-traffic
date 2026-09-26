@@ -36,16 +36,21 @@ lighter CPU profile (Part A: YOLO26s at 960 px, 5 frames per second; Part B:
 YOLO26n at 640 px) that aims to finish inside the time budget, at lower
 accuracy.
 
-To reproduce `predictions_samples.json`, put the four sample clips in
-`samples/` and run
+To check `predictions_samples.json`, put the four sample clips in `samples/`
+(Reproduce everything below shows how to download them), run the harness into
+a new file and compare the two:
 
 ```bash
 PARIVISION_TIME_SHARE=12 PARIVISION_TOTAL_LIMIT=30 PARIVISION_RISK_SHARE=10 \
-  python run_submission.py --videos samples --out predictions_samples.json --team PariVision --time-factor 40
+  python run_submission.py --videos samples --out predictions_samples_rerun.json --team PariVision --time-factor 40
+python tools/compare_predictions.py predictions_samples.json predictions_samples_rerun.json
 ```
 
 The three variables and `--time-factor 40` lift the time guards, so nothing is
-thinned out (see Runtime). We made the file on an Apple M5 laptop with PyTorch
+thinned out (see Runtime). `tools/compare_predictions.py` prints, for each
+clip, the events per class in both files, how many of them pair up at tIoU
+0.3, 0.5 and 0.7 (with `evaluate.py`'s own matching) and the largest
+difference between the two risk curves. We made the file on an Apple M5 laptop with PyTorch
 2.14 on MPS, where the detector runs in fp32. On a CUDA GPU it runs in fp16,
 so boxes and a few event boundaries can differ slightly: the same command on a
 Colab T4 gave 24, 26 and 18 events on C3896, C3902 and C3905, against 25, 26

@@ -16,6 +16,7 @@ site/.astro/
 site/.qa-snap/
 site/.vercel/
 labels/dev_labels_partial.json
+predictions_samples_rerun.json
 demo/samples/
 
 # parity fixtures (tools/export_parity_fixtures.py): only the gzipped C3905 and refs copies are committed
