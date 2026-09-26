@@ -271,9 +271,8 @@ else: the dev caches, EDA, ablations, website data, browser assets, test
 fixtures and the crash check. They need the packages in
 `tools/requirements-dev.txt` and `ffmpeg` and `ffprobe` on `PATH`. Several
 steps decode the 4K clips or run a detector over them; step 9 alone took about
-an hour on our M5 laptop.
-`cache/`, `out/` and `samples/` are gitignored. `tools/README.md` lists every
-tool with what it reads and writes.
+an hour on our M5 laptop. `cache/`, `out/` and `samples/` are gitignored.
+`tools/README.md` lists every tool with what it reads and writes.
 
 ```bash
 pip install -r requirements.txt -r tools/requirements-dev.txt
@@ -391,7 +390,7 @@ that `tools/export_parity_fixtures.py` writes from the dev caches. The C3905
 fixtures are committed, gzipped (6.6 MB); the C3902 ones are not. The 15
 skipped tests are the C3902 ones, and each prints the command that writes their
 fixtures (`python tools/export_parity_fixtures.py --clip C3902`, after steps 1
-to 6 and 12 of Reproduce everything). With both clips' fixtures all 55 pass.
+to 4 and 6 of Reproduce everything). With both clips' fixtures all 55 pass.
 
 ## Repository layout
 
