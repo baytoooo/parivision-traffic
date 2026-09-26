@@ -7,20 +7,20 @@ boundaries), merges same-class segments that overlap (the task's convention
 for simultaneous events), and writes the organisers' ground-truth format.
 Unverified or rejected claims go to labels/dev_labels_rejected.json for review.
 The journals come from tools/workflows/label_dev_set.js and are not in the
-repository. labels/dev_labels_verified.json is what this step gave (107 events
-before adjudication), so the committed labels can be rebuilt from the repository:
+repository.
+
+With --adjudication labels/adjudication.json it folds in the adjudication pass
+(tools/workflows/adjudicate.js, one agent per disagreement between the model and
+these labels): an event the labels missed is added, a label the adjudicator
+found wrong is removed, and a boundary-only disagreement takes the adjudicator's
+times when the labels it touches form one run. Only disagreements get a second
+look, so this favours the model somewhat; the report says so.
+
+labels/dev_labels_verified.json holds what the journals gave (107 events before
+adjudication), so the committed labels can be rebuilt from the repository:
 
     python tools/build_dev_labels.py --verified labels/dev_labels_verified.json \
         --adjudication labels/adjudication.json --out labels/dev_labels.json
-
-    --adjudication labels/adjudication.json
-
-folds in the adjudication pass (tools/workflows/adjudicate.js, one agent per
-disagreement between the model and these labels): an event the labels missed is
-added, a label the adjudicator found wrong is removed, and a boundary-only
-disagreement takes the adjudicator's times when the labels it touches form one run.
-Only disagreements get a second look, so this favours the model somewhat; the
-report says so.
 """
 from __future__ import annotations
 
