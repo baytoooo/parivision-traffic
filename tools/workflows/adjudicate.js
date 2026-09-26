@@ -4,7 +4,12 @@ export const meta = {
   phases: [{ title: 'Adjudicate', detail: 'one agent per disagreement, frames at 0.2-0.5 s' }],
 }
 
-const ROOT = '/Users/bayto/Desktop/claude/traffic-events'
+// A script for Claude Code's workflow runner (it calls agent, parallel and log).
+// args.items: the disagreements tools/disagreements.py writes (out/adjudicate_items.json).
+// args.items_file (optional): that file's path from the repository root, for the verifier notes.
+// args.root: the repository root, which the agents cd into; defaults to the directory the run starts in.
+// The returned list, with a verdict per item, is labels/adjudication.json (tools/build_dev_labels.py).
+const ROOT = args.root || (typeof process !== 'undefined' ? process.cwd() : '.')
 const CLASSES = ['accident', 'near_miss', 'red_light', 'wrong_way', 'illegal_u_turn', 'stopped_vehicle',
   'jaywalking', 'failure_to_yield', 'illegal_turn', 'solid_line_crossing', 'stop_line', 'congestion',
   'road_obstacle', 'fire_smoke']
