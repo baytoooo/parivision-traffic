@@ -57,9 +57,12 @@ A job, message by message (types in `messages.ts`):
    (`src/scripts/transcode.ts`) to 8-bit H.264, 1920 px wide, and opens that. If
    the conversion fails on a clip the browser decodes, only slowly, the page
    reads the original after all. It draws the first frame grey
-   at 480 x 270 and posts `align`. The worker runs `alignToReference`, builds the
+   at 480 x 270 and posts `align`. WebKit draws black at t = 0 for a clip whose
+   first frame comes later (an empty edit at the start), so a black frame is
+   skipped: the page steps 0.2 s at a time, up to 1 s, to the first frame that
+   is not black. The worker runs `alignToReference`, builds the
    lamp patches and an Analyser, and posts `aligned` with H and the lamp crop.
-3. For t = k / 5 s while t < min(duration, 120 s): the page seeks, draws the
+3. For t = k / 5 s from that frame on, while t < min(duration, 120 s): the page seeks, draws the
    frame at 960 px wide and the lamp crop at work scale, and posts `frame` (pixel
    buffers transferred, at most two in flight, so the next seek overlaps the
    current detection). The worker detects, reads the lamps, calls

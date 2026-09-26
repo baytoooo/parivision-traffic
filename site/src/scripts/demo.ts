@@ -327,8 +327,9 @@ function showResult(result: ClipResult, source: string, jobId: string) {
           : "",
       ].join(" ");
   const root = document.querySelector<HTMLElement>('[data-player="demo"]')!;
-  // the clip's own first frame instead of a stock poster, which the tracked boxes would not fit
-  const poster = result.overlay ? undefined : "/media/demo_poster.jpg";
+  // the clip's own first frame instead of a stock poster, which the tracked boxes would not fit; a
+  // still of it, as WebKit shows black until it plays a clip whose first frame comes after 0
+  const poster = result.overlay ? result.poster : "/media/demo_poster.jpg";
   const src = { result, video, poster, title: `${source}, ${result.duration.toFixed(1)} s` };
   if (!player) player = new Player(root, src, { theta: RISK_THETA, mergeGap: RISK_MERGE_GAP, placeInNote: true });
   else player.load(src);
@@ -339,9 +340,10 @@ function showResult(result: ClipResult, source: string, jobId: string) {
 function downloadJson() {
   if (!lastResult) return;
   const { result, source, jobId } = lastResult;
-  // the result as the Python demo server returned it: no object URL, no per-frame boxes
+  // the result as the Python demo server returned it: no object URLs, no per-frame boxes
   const data: Partial<ClipResult> = { ...result };
   delete data.video;
+  delete data.poster;
   delete data.overlay;
   const payload = { job_id: jobId, source, mode: api.mock ? "mock" : `browser, ${local.backend}`, ...data };
   const blob = new Blob([JSON.stringify(payload, null, 1)], { type: "application/json" });
