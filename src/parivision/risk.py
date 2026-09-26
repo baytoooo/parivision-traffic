@@ -116,6 +116,7 @@ class Anticipator:
         self.score = 0.0
         self.busy = 0.0  # seconds spent inside step() doing real work, first frame excepted (the pace)
         self.inside = 0.0  # all seconds spent inside step(): the rest of the pass is the harness decoding
+        self.oneoff = 0.0  # seconds of the first frame and of registration retries: not the pace
         self.n_frames = int(meta.get("n_frames") or 0)
         self.next_align = 0.0
         # wall-clock budget for this whole pass, including the harness decoding frames for us
@@ -135,23 +136,30 @@ class Anticipator:
             self.started = now
         if k % self.stride or self._out_of_time(now):
             return self.score
-        first = self.alignment is None
+        registering = self.alignment is None or (not self.alignment.ok and t_sec >= self.next_align)
         self._process(frame, t_sec)
         spent = time.perf_counter() - now
         self.inside += spent
-        if not first:  # the first frame registers the view: a one-off, not the pace
+        if registering:  # the first frame registers the view (and a retry does again): a one-off, not the pace
+            self.oneoff += spent
+        else:
             self.busy += spent
-        # stay inside our share of the time budget: thin out frames if we fall behind
-        behind = self.busy > OWN_TIME_SHARE * t_sec or self._projected(now, t_sec) > 0.9 * self.budget
-        if t_sec > 5.0 and behind:
-            self.stride = min(self.base_stride * MAX_STRIDE_FACTOR, self.stride + self.base_stride)
+        # stay inside our share of the time budget: thin out frames if we fall behind, and step back
+        # up once there is room again
+        projected = self._projected(now, t_sec)
+        if t_sec > 5.0:
+            if self.busy > OWN_TIME_SHARE * t_sec or projected > 0.9 * self.budget:
+                self.stride = min(self.base_stride * MAX_STRIDE_FACTOR, self.stride + self.base_stride)
+            elif self.stride > self.base_stride and self.busy < 0.7 * OWN_TIME_SHARE * t_sec \
+                    and projected < 0.8 * self.budget:
+                self.stride -= self.base_stride
         return self.score
 
     def _projected(self, now: float, t_sec: float) -> float:
         """Wall time this pass will take at the pace so far (harness decoding included)."""
         if t_sec < 1.0 or not self.duration:
             return 0.0
-        return (now - self.started) / t_sec * self.duration
+        return self.oneoff + (now - self.started - self.oneoff) / t_sec * self.duration
 
     def _out_of_time(self, now: float) -> bool:
         """Stop processing and hold the last score to the end once past 95% of the budget, or as soon

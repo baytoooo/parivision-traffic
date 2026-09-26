@@ -103,6 +103,7 @@ def harness_read_seconds(video_path: str, n_frames: int) -> float | None:
     """Seconds per frame of the harness's decoding loop for Part B (cv2.VideoCapture.read, full-size
     BGR), timed on HARNESS_PROBE frames at the start of the clip; None for a clip too short to tell."""
     skip, timed = HARNESS_PROBE
+    skip, timed = min(skip, n_frames // 10), max(8, min(timed, n_frames // 4))  # short clips: a smaller sample
     if n_frames < 3 * (skip + timed):
         return None
     cap = cv2.VideoCapture(str(video_path))
@@ -158,7 +159,8 @@ def analyse(video_path: str, time_share: float = TIME_SHARE, progress=None,
     pending: list[tuple[float, np.ndarray]] = []
     last_t = 0.0
     thin, n_seen = 1, 0  # analyse every `thin`-th sampled frame; raised if we would miss the deadline
-    mark = (0.0, t_start)  # (video time, wall time) at the last pace check
+    mark = None  # (video time, wall time) at the last pace check, from the first batch on: the probe
+                 # and the first registration are one-offs, not the pace
 
     def flush() -> None:
         results = det([img for _, img in pending])
@@ -200,10 +202,15 @@ def analyse(video_path: str, time_share: float = TIME_SHARE, progress=None,
                 deadline = min(deadline, t_start + (TOTAL_LIMIT - B_RESERVE) * info.duration - part_b_decode - reserve)
             if now > deadline:
                 break
-            # projected finish at the recent pace; thin out frames rather than stop early
-            if t - mark[0] >= 10.0:
+            # projected finish at the recent pace; thin out frames rather than stop early, but only when
+            # the detector is what holds us up: when decoding is, fewer frames analysed gain nothing
+            if mark is None:
+                mark = (t, now)
+            elif t - mark[0] >= 10.0:
                 pace = (now - mark[1]) / (t - mark[0])  # wall seconds per video second
-                if thin < MAX_THIN and now + pace * (limit - t) > t_start + 0.95 * (deadline - t_start):
+                decode_pace = info.fps * decode.get("seconds", 0.0) / max(1, decode.get("frames", 0))
+                if thin < MAX_THIN and decode_pace < 0.85 * pace and \
+                        now + pace * (limit - t) > t_start + 0.95 * (deadline - t_start):
                     thin += 1
                 mark = (t, now)
     if pending:
