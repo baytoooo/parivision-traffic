@@ -54,13 +54,12 @@ const uturn = errors?.held_back.find((h) => h.label === "illegal_u_turn");
 // class confusion on the dev labels: rows are labelled classes, columns the class we predict there
 const conf = errors?.confusion;
 const confPred = order.filter((k) => conf && (Object.values(conf.labels).some((r) => r[k]) || conf.false_alarms[k]));
-const confRows = conf
-  ? [...order.filter((k) => confPred.includes(k) && conf.labels[k]), ...order.filter((k) => !confPred.includes(k) && conf.labels[k])].map((k) => {
-      const cells = conf.labels[k];
-      const n = Object.values(cells).reduce((a, b) => a + b, 0);
-      return { key: k, n, cells };
-    })
-  : [];
+// labelled classes we also predict come first, so the matches run down the diagonal
+const labelled = order.filter((k) => conf?.labels[k]);
+const confRows = [...labelled.filter((k) => confPred.includes(k)), ...labelled.filter((k) => !confPred.includes(k))].map((k) => {
+  const cells = conf!.labels[k];
+  return { key: k, n: Object.values(cells).reduce((a, b) => a + b, 0), cells };
+});
 const confFa = conf ? confPred.reduce((a, k) => a + (conf.false_alarms[k] ?? 0), 0) : 0;
 const confEmitted = confRows.filter((r) => confPred.includes(r.key));
 const confSummary = {
@@ -162,7 +161,7 @@ const exampleHref = (clip: string, t: number) => `/results?clip=${encodeURICompo
   {conf && confRows.length > 0 && (
     <section class="section wrap" id="confusion">
       <SecHead num="02" title="Which class we predict for each labelled event">
-        <p>For each event in our labels, the class of the predicted event that overlaps it most in time, if their temporal IoU is at least {conf.iou}; otherwise it counts as missed. The last row counts predictions that overlap no label that well. Of the {confSummary.n} labelled events in classes we emit, {confSummary.other} get another class, {confSummary.missed} are missed and {confFa} predictions match no label: our errors are misses and false alarms, not one class read as another.</p>
+        <p>For each event in our labels, the class of the predicted event that overlaps it most in time, if their temporal IoU is at least {conf.iou}; otherwise it counts as missed. The last row counts predictions that overlap no label that well. Of the {confSummary.n} labelled events in classes we emit, {confSummary.other} get another class, {confSummary.missed} are missed and {confFa} predictions match no label{confSummary.other < Math.min(confSummary.missed, confFa) ? ": our errors are misses and false alarms, much more than one class read as another" : ""}.</p>
       </SecHead>
       <div class="table-scroll conf-scroll">
         <table class="conf">
