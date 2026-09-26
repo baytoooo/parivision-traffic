@@ -42,12 +42,14 @@ TOTAL_LIMIT = float(os.environ.get("PARIVISION_TOTAL_LIMIT", 2.8))  # Part A + P
 # less than about its own length this never binds.
 HARNESS_DECODE = 1.3
 B_RESERVE = 0.4
+# Kept free after the frame loop for the final registration, trajectories and rules: about 0.01x
+# the clip on the M5, more on a loaded CPU (seconds + x clip duration).
+POST_RESERVE = (2.0, 0.03)
 DETECTOR_CONF = 0.1    # ByteTrack's track_low_thresh: its second pass uses the weak boxes to keep tracks alive
 
 # Wall time Part A spent on the last clip. The harness runs Part B on the same clip
 # right after Part A in the same process, so the risk model can budget the rest of
 # the 3x limit. This is timing only: no Part A result ever reaches Part B.
-# processed_until is the last analysed second, short of the clip's end if the deadline hit.
 LAST_RUN: dict = {}
 MAX_THIN = 3            # on a slow machine analyse at most every 3rd sampled frame (10 -> 3.3 fps)
 ASSETS = Path(__file__).resolve().parent / "assets"
@@ -107,10 +109,13 @@ def analyse(video_path: str, time_share: float = TIME_SHARE, progress=None,
     t_start = time.perf_counter()
     info = probe(video_path)
     limit = min(info.duration, max_seconds) if max_seconds else info.duration
-    # Short clips get up to 60 s for the fixed costs (loading the model, registering the view),
-    # but never more than 1.8x the clip, so Part A and Part B stay under 3x together (a 10 s
-    # clip gets 18 s). From about 33 s up the floor is a flat 60 s, and above 46 s the 1.3x share is larger.
-    deadline = t_start + max(time_share * info.duration, min(60.0, 1.8 * info.duration))
+    # Short clips get up to 60 s for the fixed costs (registering the view; solution.py loads and
+    # warms up the models at import, before the harness starts the clock), but never more than 1.8x
+    # the clip, so Part A and Part B stay under 3x together (a 10 s clip gets 18 s). From about 33 s
+    # up the floor is a flat 60 s, and above 46 s the 1.3x share is larger. The post-loop reserve
+    # comes off either way.
+    reserve = POST_RESERVE[0] + POST_RESERVE[1] * info.duration
+    deadline = t_start + max(time_share * info.duration, min(60.0, 1.8 * info.duration)) - reserve
     det = detector()
     sample_fps = profile()[2]
     tracker = MultiTracker(fps=sample_fps)
@@ -141,7 +146,7 @@ def analyse(video_path: str, time_share: float = TIME_SHARE, progress=None,
     if progress is not None:
         progress("aligning the view", 0.0)
     for _, t, img in sample_frames(video_path, sample_fps, WORK_WIDTH, stats=decode):
-        if t > limit:
+        if t > limit or time.perf_counter() > deadline:
             break
         if t >= next_align:
             if alignment is None or not alignment.ok:
@@ -165,7 +170,7 @@ def analyse(video_path: str, time_share: float = TIME_SHARE, progress=None,
             now = time.perf_counter()
             if decode.get("frames", 0) >= 5 * info.fps:  # the rate is steady after a few seconds of video
                 part_b_decode = HARNESS_DECODE * info.n_frames * decode["seconds"] / decode["frames"]
-                deadline = min(deadline, t_start + (TOTAL_LIMIT - B_RESERVE) * info.duration - part_b_decode)
+                deadline = min(deadline, t_start + (TOTAL_LIMIT - B_RESERVE) * info.duration - part_b_decode - reserve)
             if now > deadline:
                 break
             # projected finish at the recent pace; thin out frames rather than stop early
@@ -192,8 +197,7 @@ def analyse(video_path: str, time_share: float = TIME_SHARE, progress=None,
     events, evidence = detect_from_context(ctx, alignment.H)
     result = Analysis(info, events, evidence, trajectories, np.asarray(sig_t), np.asarray(phases),
                       alignment, (WORK_WIDTH, work_h), time.perf_counter() - t_start)
-    LAST_RUN.update(video=Path(video_path).name, seconds=result.seconds, duration=info.duration,
-                    processed_until=last_t)
+    LAST_RUN.update(video=Path(video_path).name, seconds=result.seconds, duration=info.duration)
     if last_t < limit - 1.0:  # otherwise a deadline stop leaves no trace: the tail simply has no events
         print(f"{Path(video_path).name}: Part A analysed only {last_t:.1f} s of {limit:.1f} s", file=sys.stderr)
     _keep(result)

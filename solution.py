@@ -19,7 +19,9 @@ import numpy as np
 os.environ.setdefault("YOLO_OFFLINE", "1")  # the evaluation machine has no internet; skip ultralytics' online checks
 sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
 
+from parivision import pipeline, risk  # noqa: E402
 from parivision.pipeline import analyse  # noqa: E402
+from parivision.registration import align_best  # noqa: E402
 from parivision.risk import Anticipator  # noqa: E402
 from parivision.seed import fix_seeds  # noqa: E402
 
@@ -32,6 +34,22 @@ CLASSES: list[str] = [
 RISK_HORIZON_SEC = 5.0
 
 fix_seeds()
+
+
+def _warm_up() -> None:
+    """Pay the one-off costs now, at import, before the harness starts timing the first clip: loading
+    both detectors, their first inference (up to 10 s on a cold GPU), and the reference views' features.
+    Otherwise they come out of the first clip's 3x budget, which on a short clip is a few seconds."""
+    try:
+        pipeline.detector()([np.zeros((1080, pipeline.WORK_WIDTH, 3), np.uint8)] * pipeline.BATCH)
+        risk._detector()([np.zeros((720, risk.WORK_WIDTH, 3), np.uint8)])
+        refs = list(pipeline.references())
+        align_best(refs[0], refs)
+    except Exception as exc:  # the clips still run, only slower on the first one
+        print(f"warm-up skipped: {exc}", file=sys.stderr)
+
+
+_warm_up()
 
 
 def detect_events(video_path: str) -> list[list]:

@@ -30,8 +30,9 @@ from .tracking import MultiTracker
 WORK_WIDTH = 1280
 TARGET_HZ = 10.0
 MAX_STRIDE_FACTOR = 10  # on a slow machine fall back to 1 Hz, and skip processing entirely if even that is late
-# defaults chosen for the official T4 run (not timed on a T4 yet, see tools/t4_check.sh); the environment
-# overrides are for slower machines such as our M5 laptop
+REALIGN_SEC = 2.0       # while the view is not registered (a dark or blank first frame), try again this often
+# defaults chosen for the official T4 run (timed on a Colab T4, see README and tools/t4_check.sh); the
+# environment override is for slower machines such as our M5 laptop
 OWN_TIME_SHARE = float(os.environ.get("PARIVISION_RISK_SHARE", 0.4))  # our processing, x video time (decode on top)
 HISTORY = 8            # samples used for the velocity estimate (0.8 s)
 HORIZON = 3.0          # s of constant-velocity look-ahead
@@ -113,13 +114,15 @@ class Anticipator:
         self.base_stride = self.stride
         self.calls = 0
         self.score = 0.0
-        self.busy = 0.0  # seconds spent inside step() doing real work
+        self.busy = 0.0  # seconds spent inside step() doing real work, first frame excepted (the pace)
+        self.inside = 0.0  # all seconds spent inside step(): the rest of the pass is the harness decoding
+        self.n_frames = int(meta.get("n_frames") or 0)
+        self.next_align = 0.0
         # wall-clock budget for this whole pass, including the harness decoding frames for us
         duration = float(meta.get("n_frames") or 0) / self.fps if meta.get("n_frames") else 0.0
         spent_a = LAST_RUN.get("seconds", 0.0) if LAST_RUN.get("video") == meta.get("video_id") else 0.0
-        # if Part A overran, still take 10 s, or half the clip when that is shorter: a flat 10 s
-        # would take a clip under 20 s past the 3x limit
-        self.budget = max(min(10.0, 0.5 * duration), TOTAL_LIMIT * duration - spent_a) if duration else float("inf")
+        # what Part A left of the limit; if it overran, nothing: a clip over 3x loses Part A's events too
+        self.budget = max(0.0, TOTAL_LIMIT * duration - spent_a) if duration else float("inf")
         self.duration = duration
         self.started: float | None = None
         self.streaks: dict[tuple[int, int], float] = {}
@@ -134,8 +137,10 @@ class Anticipator:
             return self.score
         first = self.alignment is None
         self._process(frame, t_sec)
-        if not first:  # the first frame loads the model and registers the view: a one-off, not the pace
-            self.busy += time.perf_counter() - now
+        spent = time.perf_counter() - now
+        self.inside += spent
+        if not first:  # the first frame registers the view: a one-off, not the pace
+            self.busy += spent
         # stay inside our share of the time budget: thin out frames if we fall behind
         behind = self.busy > OWN_TIME_SHARE * t_sec or self._projected(now, t_sec) > 0.9 * self.budget
         if t_sec > 5.0 and behind:
@@ -149,14 +154,26 @@ class Anticipator:
         return (now - self.started) / t_sec * self.duration
 
     def _out_of_time(self, now: float) -> bool:
-        """Past 95% of the budget: stop processing and hold the last score to the end."""
-        return (now - self.started) > 0.95 * self.budget
+        """Stop processing and hold the last score to the end once past 95% of the budget, or as soon
+        as the harness's own decoding of the frames still to come (at its pace between our calls so
+        far) would take the pass there: we cannot skip that part, only our own work."""
+        elapsed = now - self.started
+        if elapsed > 0.95 * self.budget:
+            return True
+        if self.calls < 20 or not self.n_frames:
+            return False
+        harness = max(0.0, elapsed - self.inside) / (self.calls - 1)  # seconds per frame outside step()
+        return elapsed + (self.n_frames - self.calls) * harness > 0.95 * self.budget
 
     def _process(self, frame: np.ndarray, t_sec: float) -> None:
         step = max(1, int(round(frame.shape[1] / WORK_WIDTH)))
         small = np.ascontiguousarray(frame[::step, ::step])  # 4K -> 1280: plain decimation, ~1 ms
-        if self.alignment is None:
+        if self.alignment is None or (not self.alignment.ok and t_sec >= self.next_align):
+            if self.alignment is not None:  # registered at last: tracks so far were in the wrong frame
+                self.history.clear()
+                self.streaks.clear()
             self.alignment = align_best(small, list(references()))
+            self.next_align = t_sec + REALIGN_SEC
         self.observe(_detector()([small])[0], small.shape[:2], t_sec)
 
     def observe(self, dets, shape: tuple[int, int], t_sec: float) -> float:
@@ -170,7 +187,7 @@ class Anticipator:
     def _remember(self, rows: np.ndarray, t: float) -> None:
         live = set()
         if len(rows):
-            x1, y1, x2, y2 = rows[:, 0], rows[:, 1], rows[:, 2], rows[:, 3]
+            x1, x2, y2 = rows[:, 0], rows[:, 2], rows[:, 3]
             foot = warp_points(np.stack([(x1 + x2) / 2, y2], axis=1), self.alignment.H)
             for i, row in enumerate(rows):
                 tid, cls = int(row[4]), int(row[6])

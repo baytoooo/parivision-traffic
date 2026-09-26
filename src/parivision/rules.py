@@ -41,7 +41,8 @@ PARAMS = {
     "fty_walk": 0.25,              # body heights per second: the pedestrian is walking, not standing
     "fty_pad_start": 0.3,          # s
     "fty_pad_end": 0.1,            # s
-    "fty_moto_speed": float("inf"),  # px/s: scooters count only when ridden faster than this
+    "fty_moto_speed": float("inf"),  # px/s: a scooter counts only when ridden faster than this; off,
+                                     # since on our clips the ones near the zebras were walked across
     # signal
     "red_settle": 1.0,             # s of red before a crossing counts as red-light running
     "red_before_green": 1.5,       # s of red still to go: jumping the light by a fraction of a second is noise
@@ -532,6 +533,8 @@ def collisions(trajectories: list[Trajectory], mpp, p: dict = CRASH) -> list[Evi
             B, kb, fb = tracks[j]
             if not (A.is_vehicle or B.is_vehicle):
                 continue
+            if min(A.t[-1], B.t[-1]) - max(A.t[0], B.t[0]) < 0.7:  # cannot share the 10 grid samples below
+                continue
             common, ia, ib = np.intersect1d(ka, kb, assume_unique=True, return_indices=True)
             if len(common) < 10:
                 continue
@@ -539,7 +542,8 @@ def collisions(trajectories: list[Trajectory], mpp, p: dict = CRASH) -> list[Evi
             pa, pb = A.foot[ia], B.foot[ib]
             if np.min(np.abs(pa - pb).max(axis=1)) > 400:  # never within 400 px of each other
                 continue
-            m = np.array([mpp(*q) for q in (pa + pb) / 2])
+            mid = (pa + pb) / 2
+            m = np.broadcast_to(np.asarray(mpp(mid[:, 0], mid[:, 1]), float), len(mid))  # mpp may be a constant
             d = np.linalg.norm(pa - pb, axis=1) * m
             sa = np.linalg.norm(A.vel[ia], axis=1) * m
             sb = np.linalg.norm(B.vel[ib], axis=1) * m

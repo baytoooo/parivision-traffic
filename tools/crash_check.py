@@ -125,7 +125,7 @@ def vehicle_scale(rows: np.ndarray):
     A = np.stack([np.ones_like(x), x, y], axis=1)
     coef = np.linalg.lstsq(A, size, rcond=None)[0]
     lo = np.percentile(size, 5)
-    return lambda px, py: vehicle_metres() / max(lo, coef[0] + coef[1] * px + coef[2] * py)
+    return lambda px, py: vehicle_metres() / np.maximum(lo, coef[0] + coef[1] * px + coef[2] * py)
 
 
 def detections(rows: np.ndarray, k: int) -> Detections:

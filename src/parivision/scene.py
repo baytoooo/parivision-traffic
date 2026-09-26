@@ -86,9 +86,10 @@ def signed_side(points: np.ndarray, line) -> np.ndarray:
 PERSON_HEIGHT_PX = (25.07, -0.00444, 0.11707)  # c0 + cx * x + cy * y
 
 
-def metres_per_px(x: float, y: float) -> float:
+def metres_per_px(x, y):
+    """Metres per reference pixel at (x, y); x and y may be arrays."""
     c0, cx, cy = PERSON_HEIGHT_PX
-    return 1.7 / max(15.0, c0 + cx * x + cy * y)
+    return 1.7 / np.maximum(15.0, c0 + cx * x + cy * y)
 
 
 DRIVABLE = Path(__file__).resolve().parent / "assets" / "drivable.png"
