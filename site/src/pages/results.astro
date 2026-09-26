@@ -209,7 +209,7 @@ const exampleHref = (clip: string, t: number) => `/results?clip=${encodeURICompo
         {examples.map((ex) => (
           <li class="card">
             <a href={exampleHref(ex.clip, ex.t)} data-jump data-clip={ex.clip} data-t={ex.t}>
-              <span class="frame card-img"><img src={ex.thumb} alt="" loading="lazy" decoding="async" width="480" height="270" /></span>
+              <span class="frame card-img"><img src={ex.thumb} srcset={srcset(ex.thumb, 960, [480])} sizes="(max-width: 560px) calc(100vw - 32px), 320px" alt="" loading="lazy" decoding="async" width="480" height="270" /></span>
               <span class="card-body">
                 <span class="card-cls">{className(ex.label)}</span>
                 <span class="card-when mono">{ex.clip} at {fmtTime(ex.t)}</span>

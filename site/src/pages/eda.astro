@@ -2,7 +2,7 @@
 import Base from "../layouts/Base.astro";
 import SecHead from "../components/SecHead.astro";
 import { className } from "../lib/classes";
-import { loadAblations, loadAllResults, loadClips, loadEda } from "../lib/data";
+import { loadAblations, loadAllResults, loadClips, loadEda, srcset } from "../lib/data";
 import { fmtTime } from "../lib/format";
 import type { SignalStat } from "../lib/types";
 
@@ -259,7 +259,7 @@ const images = eda
       {images.map((im) => (
         <figure>
           <div class="frame">
-            <img src={im.src} alt={im.t} width="960" height="540" loading="lazy" decoding="async" />
+            <img src={im.src} srcset={srcset(im.src, 1920, [960])} sizes="(max-width: 1000px) calc(100vw - 32px), 600px" alt={im.t} width="960" height="540" loading="lazy" decoding="async" />
           </div>
           <figcaption><strong>{im.t}.</strong> {im.c}</figcaption>
         </figure>
