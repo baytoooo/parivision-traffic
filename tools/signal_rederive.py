@@ -1,4 +1,9 @@
-"""Re-derive phases from the lamp scores stored by signal_timeline.py (after changing thresholds)."""
+"""Re-derive phases from the lamp scores stored by signal_timeline.py (after changing thresholds).
+
+    python tools/signal_rederive.py C3896 C3897 C3902 C3905
+
+Rewrites the phases and segments in cache/signal/<clip>.json without decoding the video again.
+"""
 from __future__ import annotations
 
 import json
@@ -18,9 +23,6 @@ from parivision.signal import fill_phases, phase_from_scores  # noqa: E402
 for clip in sys.argv[1:]:
     path = ROOT / "cache/signal" / f"{clip}.json"
     d = json.loads(path.read_text())
-    if "scores" not in d:
-        print(clip, "has no lamp scores (old format), rerun signal_timeline.py")
-        continue
     raw = [phase_from_scores(np.array(s)) for s in d["scores"]]
     d["raw"], d["phases"] = raw, fill_phases(raw, np.array(d["times"]))
     d["segments"] = segments(d["times"], d["phases"])

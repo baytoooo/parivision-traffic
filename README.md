@@ -251,22 +251,126 @@ at speed (see Runtime). On a slower machine `PARIVISION_TIME_SHARE` (Part A,
 `PARIVISION_CACHE_DIR` makes Part A save its full analysis for the website; it
 is unset in the official run.
 
+## Reproduce everything
+
+The official run needs only the Run it section. These steps rebuild everything
+else: the dev caches, EDA, ablations, website data, browser assets, test
+fixtures and the crash check. They need the packages in
+`tools/requirements-dev.txt` and `ffmpeg` and `ffprobe` on `PATH`. Several
+steps decode the 4K clips or run a detector over them; step 9 alone took about
+an hour on our M5 laptop.
+`cache/`, `out/` and `samples/` are gitignored. `tools/README.md` lists every
+tool with what it reads and writes.
+
+```bash
+pip install -r requirements.txt -r tools/requirements-dev.txt
+
+# 1. The four sample clips, from the organisers' public Google Drive (the ids tools/t4_check.sh uses)
+mkdir -p samples && cd samples
+for id in 10cHEReCWzO3u-Vk1CnNgHAx6egGy5MwJ 1aJ-QsAZVYJtLKHiRvKKeBq1D3GWNobRd \
+          1hp8DYeqtYHSwfM6qAo9FPSRHlpMFrIN_ 1kR9jODA2Wotw4gwkvpRKdqFADNJNc1nS; do
+  gdown --continue "$id"
+done
+cd ..
+
+# 2. 960x540, 10 fps proxies, which the alignment, EDA and labelling tools read
+mkdir -p cache/proxy
+for c in C3896 C3897 C3902 C3905; do
+  ffmpeg -i samples/$c.MP4 -vf fps=10,scale=960:540 -an -c:v libx264 -preset veryfast -crf 22 -g 20 cache/proxy/$c.mp4
+done
+
+# 3. Detector caches: the submitted detector on every clip, the ablation detectors on C3897 and C3905
+python tools/cache_detections.py samples/*.MP4 --fps 10 --width 1920
+python tools/cache_detections.py samples/C3897.MP4 samples/C3905.MP4 --weights yolo26s.pt --imgsz 1280
+python tools/cache_detections.py samples/C3897.MP4 samples/C3905.MP4 --weights yolo26m.pt --imgsz 960
+python tools/cache_detections.py samples/C3897.MP4 samples/C3905.MP4 --weights yolo26n.pt --imgsz 960
+python tools/cache_detections.py samples/C3897.MP4 samples/C3905.MP4 --weights yolo26s.pt --imgsz 960
+
+# 4. Each clip's homography to the reference view
+python tools/align_cache.py C3896 C3897 C3902 C3905
+
+# 5. Trajectories from the submitted detector's cache
+python tools/tracks_from_cache.py cache/det/*__yolo26m_1280_1920_10fps.npz --out cache/tracks
+
+# 6. Signal phase timelines
+python tools/signal_timeline.py C3896 C3897 C3902 C3905 --fps 5
+
+# 7. EDA figures and numbers
+python tools/eda.py --out out/site_data
+
+# 8. Ablations
+python tools/ablation.py --gt labels/dev_labels.json --out out/ablations.json
+
+# 9. The sample run with the time guards lifted, saving Part A's full analysis to out/analysis
+PARIVISION_CACHE_DIR=out/analysis PARIVISION_TIME_SHARE=12 PARIVISION_TOTAL_LIMIT=30 PARIVISION_RISK_SHARE=10 \
+  python run_submission.py --videos samples --out predictions_samples_rerun.json --team PariVision --time-factor 40
+python tools/compare_predictions.py predictions_samples.json predictions_samples_rerun.json
+
+# 10. Scores on the dev labels
+python evaluate.py --pred predictions_samples_rerun.json --gt labels/dev_labels.json --json out/metrics.json --per-video
+
+# 11. Website data, annotated videos, posters and example frames
+python tools/make_site_data.py --pred predictions_samples_rerun.json --site site/public \
+  --machine "<the machine that made the run>" --runtime-note "<how it was made>"
+
+# 12. The browser pipeline's model and scene files, then the site tests' parity fixtures
+python tools/export_browser_assets.py
+python tools/export_parity_fixtures.py --clip C3905
+python tools/export_parity_fixtures.py --clip C3902
+
+# 13. The crash check on the ACCIDENT benchmark (downloads from Kaggle)
+for set in real synthetic; do
+  python tools/crash_check.py fetch --set $set
+  python tools/crash_check.py cache --set $set
+  python tools/crash_check.py eval --set $set --ours
+done
+```
+
+Two optional checks: `python tools/drivable_mask.py --check` compares the
+drivable-area mask rebuilt from `cache/tracks` with the committed one, and
+
+```bash
+python tools/build_dev_labels.py --verified labels/dev_labels_verified.json \
+  --adjudication labels/adjudication.json --out labels/dev_labels.json
+```
+
+rebuilds `labels/dev_labels.json` byte for byte from the 107 verified labels
+and the adjudication verdicts (the agent runs behind them are not in the
+repository, see `docs/labeling.md`).
+
+The three 30 s clips of the live demo (`site/public/media/demo/`, gitignored)
+are cuts of the samples. The commands were not recorded, so we found the start
+times by matching frames against the samples. These commands rebuild them:
+
+```bash
+mkdir -p site/public/media/demo
+ffmpeg -ss 10 -i samples/C3896.MP4 -t 30 -vf scale=1920:-2 -pix_fmt yuv420p -c:v libx264 -an site/public/media/demo/north_crossing_midday.mp4
+ffmpeg -ss 195 -i samples/C3897.MP4 -t 30 -vf scale=1920:-2 -pix_fmt yuv420p -c:v libx264 -an site/public/media/demo/west_crossing_turns.mp4
+ffmpeg -ss 75 -i samples/C3905.MP4 -t 30 -vf scale=1920:-2 -pix_fmt yuv420p -c:v libx264 -an site/public/media/demo/dusk_queue.mp4
+```
+
+With ffmpeg 9.0.2 the north crossing and dusk clips come out pixel for pixel
+the same as ours. The west crossing clip comes out one frame shorter (899
+frames against 900) and its last frames differ slightly. The annotated videos
+and the home-page loop come from step 11.
+
 ## Tests
 
 ```bash
 pip install pytest && pytest -q
-cd site && pnpm install && pnpm test
+cd site && pnpm install --frozen-lockfile && pnpm test
 ```
 
-The Python tests use a 6 s synthetic clip and need nothing outside the
-repository. Most site tests check the in-browser port against the Python
-pipeline on fixtures in `site/tests/fixtures`, which are not committed:
-`python tools/export_parity_fixtures.py --clip C3905` and `--clip C3902`
-write them from the detection, registration and signal caches (`cache/det`,
-`cache/align`, `cache/signal`) that the other tools build from the sample
-clips. The dev tools in `tools/` also need `ffmpeg` and `ffprobe` on `PATH`;
-the docstring of `tools/align_cache.py` has the ffmpeg command for the 10 fps
-proxies the other tools read.
+On a clean clone `pytest -q` passes all 12 tests. They use a 6 s synthetic
+clip and need nothing outside the repository. `pnpm test` needs Node 22.18 or
+newer; on a clean clone it runs 55 tests, of which 40 pass and 15 are skipped.
+Most site tests check the in-browser port of the pipeline
+(`site/src/pipeline/`) against the Python pipeline, stage by stage, on fixtures
+that `tools/export_parity_fixtures.py` writes from the dev caches. The C3905
+fixtures are committed, gzipped (6.6 MB); the C3902 ones are not. The 15
+skipped tests are the C3902 ones, and each prints the command that writes their
+fixtures (`python tools/export_parity_fixtures.py --clip C3902`, after steps 1
+to 6 and 12 of Reproduce everything). With both clips' fixtures all 55 pass.
 
 ## Repository layout
 
@@ -276,8 +380,8 @@ run_submission.py      organisers' harness (unchanged)
 evaluate.py            organisers' metric (unchanged)
 src/parivision/        pipeline: video, detector, tracking, registration, signal, rules, risk, render
 weights/               YOLO26 n/s/m COCO weights
-labels/dev_labels.json our labels of the four sample clips (dev set)
-tools/                 caching, EDA, dev-set labelling, tuning and site-data scripts; t4_check.sh times a run on a T4
+labels/                dev set (dev_labels.json = dev_labels_verified.json + adjudication.json), crash clip lists
+tools/                 dev tools: caches, EDA, ablations, dev-set labelling, tuning, site data, crash check (index in tools/README.md)
 tests/                 pytest checks for the core pieces and the solution interface
 demo/                  FastAPI server that runs the full Python pipeline on a clip, for trying it locally (the website demo runs site/src/pipeline/ in the browser)
 site/                  the team website (Astro)

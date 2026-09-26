@@ -6,6 +6,12 @@ Keeps claims a verifier confirmed or relabelled (with the verifier's class and
 boundaries), merges same-class segments that overlap (the task's convention
 for simultaneous events), and writes the organisers' ground-truth format.
 Unverified or rejected claims go to labels/dev_labels_rejected.json for review.
+The journals come from tools/workflows/label_dev_set.js and are not in the
+repository. labels/dev_labels_verified.json is what this step gave (107 events
+before adjudication), so the committed labels can be rebuilt from the repository:
+
+    python tools/build_dev_labels.py --verified labels/dev_labels_verified.json \
+        --adjudication labels/adjudication.json --out labels/dev_labels.json
 
     --adjudication labels/adjudication.json
 
@@ -70,13 +76,19 @@ def adjudicate(kept: dict[str, list], items: list[dict]) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("journals", nargs="+")
+    ap.add_argument("journals", nargs="*", help="journals of tools/workflows/label_dev_set.js runs")
+    ap.add_argument("--verified", help="start from labels in the ground-truth format instead (labels/dev_labels_verified.json)")
     ap.add_argument("--out", default="labels/dev_labels.json")
     ap.add_argument("--adjudication", help="result of the adjudication workflow (list of items with verdicts)")
     args = ap.parse_args()
+    if not args.journals and not args.verified:
+        ap.error("give workflow journals or --verified")
 
     kept: dict[str, list] = {}
     dropped: dict[str, list] = {}
+    if args.verified:
+        for key, v in json.loads(Path(args.verified).read_text()).items():
+            kept.setdefault(Path(key).stem, []).extend(list(e) for e in v["events"])
     for jpath in args.journals:
         started = {}
         for line in open(jpath):
@@ -106,7 +118,8 @@ def main() -> None:
         print(clip, len(events), {lab: sum(1 for x in events if x[2] == lab) for lab in sorted(per_class)})
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     Path(args.out).write_text(json.dumps(gt, indent=1))
-    Path(args.out).with_name("dev_labels_rejected.json").write_text(json.dumps(dropped, indent=1))
+    if args.journals:
+        Path(args.out).with_name("dev_labels_rejected.json").write_text(json.dumps(dropped, indent=1))
 
 
 if __name__ == "__main__":
