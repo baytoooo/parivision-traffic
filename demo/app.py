@@ -4,12 +4,12 @@
     cd demo && uvicorn app:app --port 7860
 
 The website's demo runs the TypeScript port in the browser instead
-(site/src/pipeline/); this server is for trying the submission's own code on a clip.
+(site/src/pipeline/) and does not call this server; it is for trying the
+submission's own code on a clip, for example one of the demo cuts that
+README.md (Reproduce everything) shows how to make.
 
   GET  /api/health
-  GET  /api/samples
   POST /api/jobs                 multipart "file" (mp4, up to 500 MB, first 120 s analysed)
-  POST /api/jobs/sample/{name}
   GET  /api/jobs/{id}
   GET  /api/jobs/{id}/video
   GET  /api/jobs/{id}/result.json
@@ -34,12 +34,6 @@ from worker import Job, run
 MAX_BYTES = 500 * 1024 * 1024
 KEEP_JOBS = 40
 WORK = Path(os.environ.get("DEMO_WORKDIR", "/tmp/parivision-demo"))
-SAMPLES = Path(__file__).resolve().parent / "samples"
-SAMPLE_LIST = [
-    {"name": "north_crossing_midday", "label": "Midday, pedestrians on the north crossing", "file": "north_crossing_midday.mp4"},
-    {"name": "west_crossing_turns", "label": "Right turns over the west crossing", "file": "west_crossing_turns.mp4"},
-    {"name": "dusk_queue", "label": "Dusk, red-light queue and U-turn", "file": "dusk_queue.mp4"},
-]
 
 app = FastAPI(title="PariVision traffic events demo")
 
@@ -72,26 +66,6 @@ def health() -> dict:
     return {"ok": True, "queued": queue.qsize()}
 
 
-@app.get("/api/samples")
-def samples() -> list[dict]:
-    out = []
-    for s in SAMPLE_LIST:
-        p = SAMPLES / s["file"]
-        if p.exists():
-            out.append({"name": s["name"], "label": s["label"], "seconds": _seconds(p)})
-    return out
-
-
-def _seconds(path: Path) -> float:
-    import cv2
-
-    cap = cv2.VideoCapture(str(path))
-    fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
-    n = cap.get(cv2.CAP_PROP_FRAME_COUNT)
-    cap.release()
-    return round(n / fps, 1)
-
-
 @app.post("/api/jobs")
 async def create_job(request: Request, file: UploadFile = File(...)) -> dict:
     length = int(request.headers.get("content-length") or 0)
@@ -112,16 +86,6 @@ async def create_job(request: Request, file: UploadFile = File(...)) -> dict:
                 raise HTTPException(413, "File too large: the demo accepts up to 500 MB.")
             fh.write(chunk)
     return _submit(target, workdir)
-
-
-@app.post("/api/jobs/sample/{name}")
-def sample_job(name: str) -> dict:
-    match = next((s for s in SAMPLE_LIST if s["name"] == name), None)
-    if match is None or not (SAMPLES / match["file"]).exists():
-        raise HTTPException(404, "Unknown sample.")
-    workdir = WORK / uuid.uuid4().hex[:12]
-    workdir.mkdir(parents=True, exist_ok=True)
-    return _submit(SAMPLES / match["file"], workdir)
 
 
 def _job(job_id: str) -> Job:
