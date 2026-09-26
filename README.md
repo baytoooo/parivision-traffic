@@ -22,7 +22,8 @@ python evaluate.py --pred predictions.json --validate-only
 
 The model weights are in `weights/` (70 MB, committed to the repository), so
 nothing is downloaded at run time. `weights/download.sh` only exists to
-re-fetch the same files from Ultralytics if they ever go missing.
+re-fetch the same files from Ultralytics if they ever go missing; it then
+checks all three against `weights/SHA256SUMS`.
 
 `run_submission.py` and `evaluate.py` are the organisers' files, unchanged
 (sha256 in `docs/starter_kit.sha256`).
@@ -379,7 +380,7 @@ solution.py            the interface: detect_events, RiskEstimator
 run_submission.py      organisers' harness (unchanged)
 evaluate.py            organisers' metric (unchanged)
 src/parivision/        pipeline: video, detector, tracking, registration, signal, rules, risk, render
-weights/               YOLO26 n/s/m COCO weights
+weights/               YOLO26 n/s/m COCO weights, their SHA256SUMS and download.sh
 labels/                dev set (dev_labels.json = dev_labels_verified.json + adjudication.json), crash clip lists
 tools/                 dev tools: caches, EDA, ablations, dev-set labelling, tuning, site data, crash check (index in tools/README.md)
 tests/                 pytest checks for the core pieces and the solution interface
@@ -388,6 +389,7 @@ site/                  the team website (Astro)
 docs/                  scene description, labelling guide, figures
 predictions_samples.json  our output on the sample clips
 LICENSE                AGPL-3.0
+THIRD_PARTY_NOTICES.md licences of the models, packages and data we use
 ```
 
 ## Datasets, models and licences
@@ -419,7 +421,11 @@ which are GPL), NumPy, SciPy (BSD), and for the website demo only
 onnxruntime-web (MIT) and ffmpeg.wasm (MIT wrapper around an FFmpeg core under
 GPL-2.0-or-later, which converts clips the browser cannot play). Because we
 ship Ultralytics weights and call its code, this repository is released under
-AGPL-3.0 (`LICENSE`).
+AGPL-3.0 (`LICENSE`). That includes `site/public/pipeline/model.onnx`, which
+`tools/export_browser_assets.py` exports from `yolo26n.pt`.
+`THIRD_PARTY_NOTICES.md` lists every third-party model, package and dataset
+with its licence, and `weights/SHA256SUMS` holds the checksums of the weights,
+which `weights/download.sh` checks.
 
 ## Team
 
@@ -436,3 +442,14 @@ Links: Amal Karimov, [GitHub](https://github.com/Shen-de-Dia) and
 [portfolio](https://bayto.uz); Aziza Adizova,
 [LinkedIn](https://www.linkedin.com/in/aziza-adizova-033a712a0/). More on the
 [team page](https://parivision-traffic.vercel.app/team).
+
+## Licence
+
+Copyright (C) 2026 Team PariVision: Amal Karimov, Komronbek Qodirov, Aziza
+Adizova.
+
+This program is free software: you can redistribute it and modify it under the
+terms of the GNU Affero General Public License, version 3, as published by the
+Free Software Foundation (`LICENSE`, SPDX `AGPL-3.0-only`). It comes with no
+warranty; see sections 15 and 16 of the licence. Third-party models, code and
+data keep their own licences, listed in `THIRD_PARTY_NOTICES.md`.
