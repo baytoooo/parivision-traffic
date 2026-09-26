@@ -356,15 +356,17 @@ times by matching frames against the samples. These commands rebuild them:
 
 ```bash
 mkdir -p site/public/media/demo
-ffmpeg -ss 10 -i samples/C3896.MP4 -t 30 -vf scale=1920:-2 -pix_fmt yuv420p -c:v libx264 -an site/public/media/demo/north_crossing_midday.mp4
-ffmpeg -ss 195 -i samples/C3897.MP4 -t 30 -vf scale=1920:-2 -pix_fmt yuv420p -c:v libx264 -an site/public/media/demo/west_crossing_turns.mp4
-ffmpeg -ss 75 -i samples/C3905.MP4 -t 30 -vf scale=1920:-2 -pix_fmt yuv420p -c:v libx264 -an site/public/media/demo/dusk_queue.mp4
+ffmpeg -ss 10 -i samples/C3896.MP4 -t 30 -vf scale=1920:-2 -pix_fmt yuv420p -c:v libx264 -an -movflags +faststart site/public/media/demo/north_crossing_midday.mp4
+ffmpeg -ss 195 -i samples/C3897.MP4 -t 30 -vf scale=1920:-2 -pix_fmt yuv420p -c:v libx264 -an -movflags +faststart site/public/media/demo/west_crossing_turns.mp4
+ffmpeg -ss 75 -i samples/C3905.MP4 -t 30 -vf scale=1920:-2 -pix_fmt yuv420p -c:v libx264 -an -movflags +faststart site/public/media/demo/dusk_queue.mp4
 ```
 
-With ffmpeg 9.0.2 the north crossing and dusk clips come out pixel for pixel
-the same as ours. The west crossing clip comes out one frame shorter (899
-frames against 900) and its last frames differ slightly. The annotated videos
-and the home-page loop come from step 11.
+`-movflags +faststart` puts the index at the start of the file, so the browser
+can start playing a clip before all of it has arrived. With ffmpeg 9.0.2 the
+north crossing and dusk clips come out pixel for pixel the same as ours. The
+west crossing clip comes out one frame shorter (899 frames against 900) and
+its last frames differ slightly. The annotated videos and the home-page loop
+come from step 11.
 
 The stored result the demo replays (with `?mock=1`, and in browsers without
 WebAssembly) is the browser pipeline's own output on the dusk clip, made from
