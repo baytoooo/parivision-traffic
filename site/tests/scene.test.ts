@@ -3,14 +3,14 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { test } from "node:test";
 import { loadScene } from "../src/pipeline/scene.ts";
+import { fixtureJson } from "./fixture.ts";
 
 const PUB = new URL("../public/pipeline/", import.meta.url);
-const FIX = new URL("./fixtures/C3905/", import.meta.url);
 const read = async (name: string) => (await readFile(new URL(name, PUB))).buffer as ArrayBuffer;
 
 test("scene lookups match rules.Context.sample", async () => {
   const scene = await loadScene(read);
-  const s = JSON.parse(await readFile(new URL("scene_samples.json", FIX), "utf8"));
+  const s = await fixtureJson("C3905/scene_samples.json");
   const pts: [number, number][] = s.points;
   for (const [key, vals] of Object.entries(s) as [string, number[]][]) {
     if (key === "points") continue;

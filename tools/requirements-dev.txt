@@ -1,0 +1,16 @@
+# Packages the tests and the dev tools in tools/ use on top of the root requirements.txt.
+# solution.py needs none of them.
+#
+#   pip install -r requirements.txt -r tools/requirements-dev.txt
+#
+# The dev tools also call ffmpeg and ffprobe, which pip does not install (Homebrew and apt ship them).
+# We ran the tools on Python 3.11 with pandas 3.0.6, kagglehub 1.0.2, pytest 9.1.1, gdown 6.4.0,
+# onnx 1.23.0, onnxslim 0.1.96 and onnxruntime 1.30.0.
+# The local demo server has its own list: demo/requirements.txt.
+pytest        # tests/
+pandas        # tools/crash_check.py reads labels/accident_*.csv
+kagglehub     # tools/crash_check.py fetch: the ACCIDENT benchmark clips
+gdown         # tools/t4_check.sh and README.md: the sample clips from Google Drive
+onnx          # tools/export_browser_assets.py: Ultralytics' ONNX export
+onnxslim      # the same export, with simplify=True
+onnxruntime   # tools/export_parity_fixtures.py runs site/public/pipeline/model.onnx through Ultralytics

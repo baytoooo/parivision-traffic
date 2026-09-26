@@ -69,7 +69,8 @@ def render(video_path: str, out_path: str, trajectories, events, evidence, signa
     duration = duration or max([e[1] for e in events], default=0.0)
 
     Path(out_path).parent.mkdir(parents=True, exist_ok=True)
-    container = av.open(out_path, mode="w")
+    # movflags is a muxer option: set on the stream, it would be ignored and the index would go last.
+    container = av.open(out_path, mode="w", options={"movflags": "+faststart"})
     stream = None
     overlay = None
     panel_h = 70
@@ -82,7 +83,7 @@ def render(video_path: str, out_path: str, trajectories, events, evidence, signa
             stream = container.add_stream("libx264", rate=int(round(fps)))
             stream.width, stream.height = w, h + panel_h
             stream.pix_fmt = "yuv420p"
-            stream.options = {"crf": "26", "preset": "veryfast", "movflags": "+faststart"}
+            stream.options = {"crf": "26", "preset": "veryfast"}
             overlay = _scene_overlay(frame.shape, H_ref_to_out)
             duration = max(duration, 1.0)
         img = cv2.addWeighted(frame, 1.0, overlay, 0.55, 0)

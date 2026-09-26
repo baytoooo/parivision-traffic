@@ -5,11 +5,15 @@
     python tools/crash_check.py eval --set real --ours  # rule recall and Score B (--ours: our samples as negatives)
 
 --set synthetic does the same for the benchmark's CARLA clips (labels/accident_synthetic.csv).
+`eval` scores only the clips that `cache` has processed and prints the ones it skips. It also needs
+out/analysis/C3896.pkl (the sample run with PARIVISION_CACHE_DIR=out/analysis, see README.md) for the
+size of a car in metres, and --ours reads predictions_samples.json. Writes out/crash_check_<set>.json.
 
 The clips are real crashes filmed by fixed traffic cameras, from the ACCIDENT benchmark
 (CVPR 2026, https://github.com/accidentbench/ACCIDENT, Kaggle picekl/accident, CC BY-NC-SA 4.0;
 annotations CC BY 4.0). They are not redistributed here: `fetch` downloads the selection with
-kagglehub (pip install kagglehub; not needed by the submission). Each clip comes from another camera, so nothing drawn for our junction applies: the
+kagglehub, and `eval` reads the CSVs with pandas (both in tools/requirements-dev.txt; the submission
+needs neither). Each clip comes from another camera, so nothing drawn for our junction applies: the
 view is not registered, the whole frame counts as road, and metres per pixel come from the size of
 the vehicles in the clip, calibrated against our own scale map (vehicle_scale).
 """
@@ -73,7 +77,10 @@ def cache(clips: pd.DataFrame) -> None:
     for path in clips.path:
         out = CACHE / (Path(path).stem + ".npz")
         video = EXT / "videos" / Path(path).name
-        if out.exists() or not video.exists():
+        if out.exists():
+            continue
+        if not video.exists():
+            print(Path(path).stem, "not downloaded, skipped (run fetch first)", flush=True)
             continue
         rows_a, rows_b, batch, height = [], [], [], 0
         def flush():
@@ -104,7 +111,10 @@ def _resize(img: np.ndarray, width: int) -> np.ndarray:
 @lru_cache(maxsize=1)
 def vehicle_metres() -> float:
     """sqrt(box area) of a car in metres, from our own clips where the scale map is known."""
-    a = pickle.load(open(ROOT / "out/analysis/C3896.pkl", "rb"))
+    path = ROOT / "out/analysis/C3896.pkl"
+    if not path.exists():
+        sys.exit(f"{path} is missing: run the samples with PARIVISION_CACHE_DIR=out/analysis first (README.md)")
+    a = pickle.load(open(path, "rb"))
     vals = []
     for tr in a.trajectories:
         if tr.cls != 2:
@@ -172,10 +182,11 @@ def main() -> None:
         cache(clips)
         return
 
-    gt, pred, hits, rows = {}, {}, 0, []
+    gt, pred, hits, rows, skipped = {}, {}, 0, [], []
     for c in clips.itertuples():
         stem = Path(c.path).stem
         if not (CACHE / f"{stem}.npz").exists():
+            skipped.append(stem)
             continue
         s = float(c.accident_time)
         evidence, curve = replay(stem, float(c.duration))
@@ -194,14 +205,18 @@ def main() -> None:
             gt[p.stem] = {"events": []}
             pred[p.stem] = {"risk": full["risk"]}
     n = len(rows)
+    if skipped:
+        print(f"skipped {len(skipped)} of {len(clips)} clips in accident_{args.set}.csv, no detection cache in "
+              f"{CACHE.relative_to(ROOT)} (run cache first): {' '.join(skipped)}")
     b = evaluate_part_b(gt, pred) or {}
     report = {"clips": n, "rule_recall": round(hits / max(1, n), 3),
               "rule_early_clips": sum(r["early"] > 0 for r in rows),
               "score_b": round(b.get("score_b", 0.0), 3), "ap": round(b.get("ap", 0.0), 3),
               "f1_alarm": round(b.get("f1_alarm", 0.0), 3), "mtta_sec": round(b.get("mtta_sec", 0.0), 2),
-              "alarms": b.get("n_alarms"), "matched": b.get("n_matched"), "per_clip": rows}
+              "alarms": b.get("n_alarms"), "matched": b.get("n_matched"), "skipped_no_cache": skipped,
+              "per_clip": rows}
     Path(args.out or ROOT / f"out/crash_check_{args.set}.json").write_text(json.dumps(report, indent=1))
-    print({k: v for k, v in report.items() if k != "per_clip"})
+    print({k: v for k, v in report.items() if k not in ("per_clip", "skipped_no_cache")})
 
 
 if __name__ == "__main__":

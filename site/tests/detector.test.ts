@@ -6,6 +6,7 @@ import * as ort from "onnxruntime-node";
 import { letterbox, OnnxDetector, parseOutput } from "../src/pipeline/detector.ts";
 import { loadScene } from "../src/pipeline/scene.ts";
 import type { Detection } from "../src/pipeline/types.ts";
+import { fixtureBytes, fixtureJson, needs } from "./fixture.ts";
 
 const PUB = new URL("../public/pipeline/", import.meta.url);
 const read = async (name: string) => (await readFile(new URL(name, PUB))).buffer as ArrayBuffer;
@@ -73,10 +74,9 @@ test("parseOutput: threshold, class filter, unpad, clip, work scale", () => {
 });
 
 for (const clip of ["C3905", "C3902"]) {
-  test(`${clip}: boxes match Ultralytics on the same ONNX model`, async (t) => {
-    const FIX = new URL(`./fixtures/${clip}/`, import.meta.url);
-    const rgb = new Uint8Array(await readFile(new URL("det_frame.rgb", FIX)));
-    const expected = JSON.parse(await readFile(new URL("det_expected.json", FIX), "utf8"));
+  test(`${clip}: boxes match Ultralytics on the same ONNX model`, needs(clip), async (t) => {
+    const rgb = new Uint8Array(await fixtureBytes(`${clip}/det_frame.rgb`));
+    const expected = await fixtureJson(`${clip}/det_expected.json`);
     const [w, h]: [number, number] = expected.size;
     const want: Box[] = expected.boxes;
     assert.equal(rgb.length, w * h * 3);

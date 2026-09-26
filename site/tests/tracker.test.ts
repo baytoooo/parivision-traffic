@@ -10,11 +10,11 @@ import { loadScene } from "../src/pipeline/scene.ts";
 import { collect, groupOf, linearAssignment, MultiTracker, trackLabel } from "../src/pipeline/tracker.ts";
 import type { Track } from "../src/pipeline/tracker.ts";
 import type { Detection, TrackRow } from "../src/pipeline/types.ts";
+import { fixtureJson, needs } from "./fixture.ts";
 
 const PUB = new URL("../public/pipeline/", import.meta.url);
 const read = async (name: string) => (await readFile(new URL(name, PUB))).buffer as ArrayBuffer;
-const fixture = async (clip: string, name: string) =>
-  JSON.parse(await readFile(new URL(`./fixtures/${clip}/${name}`, import.meta.url), "utf8"));
+const fixture = (clip: string, name: string) => fixtureJson(`${clip}/${name}`);
 
 /** risk.py: Anticipator builds MultiTracker(fps=self.fps / self.stride, buffer_sec=1.5); stride is 1 at 5 fps. */
 const RISK_BUFFER_SEC = 1.5;
@@ -69,7 +69,7 @@ function compare(got: TrackRow[][], expected: number[][][]) {
 const fullPrecision = (d: DetFile) => d.frames.some((f) => f.boxes.some((b) => Number(b[4].toFixed(3)) !== b[4]));
 
 for (const clip of ["C3905", "C3902"]) {
-  test(`${clip}: MultiTracker reproduces tracks.json`, async (t: TestContext) => {
+  test(`${clip}: MultiTracker reproduces tracks.json`, needs(clip), async (t: TestContext) => {
     const scene = await loadScene(read);
     const cfg = scene.c.tracking;
     const d: DetFile = await fixture(clip, "detections.json");
@@ -133,11 +133,9 @@ test("ByteTrack edge cases match Ultralytics: thresholds, degenerate boxes, lost
   }
 });
 
-test("collect, groupOf and trackLabel rebuild the tracks trajectories.json was made from", async () => {
-  const scene = await loadScene(read);
-  const cfg = scene.c.tracking;
-  assert.deepEqual(Object.keys(cfg.GROUPS), ["vehicle", "person", "bicycle", "animal"]);
-  for (const clip of ["C3905", "C3902"]) {
+for (const clip of ["C3905", "C3902"]) {
+  test(`${clip}: collect, groupOf and trackLabel rebuild the tracks trajectories.json was made from`, needs(clip), async () => {
+    const cfg = (await loadScene(read)).c.tracking;
     const ref = await fixture(clip, "tracks.json");
     const trajs: { tid: number; group: string; cls: number; t: number[] }[] = await fixture(clip, "trajectories.json");
     const tracks = new Map<number, Track>();
@@ -150,7 +148,12 @@ test("collect, groupOf and trackLabel rebuild the tracks trajectories.json was m
       assert.equal(trackLabel(tr), tj.cls, `${clip}: label of ${tj.tid}`);
       assert.equal(tr.t.length, tj.t.length);
     }
-  }
+  });
+}
+
+test("groupOf and trackLabel on hand-made ids and classes", async () => {
+  const cfg = (await loadScene(read)).c.tracking;
+  assert.deepEqual(Object.keys(cfg.GROUPS), ["vehicle", "person", "bicycle", "animal"]);
   const tr: Track = { tid: 1000001, group: "vehicle", t: [], box: [], conf: [], cls: [7, 2, 7, 2, 5] };
   assert.equal(trackLabel(tr), 2); // tie between 2 and 7: np.unique + argmax takes the smaller class
   assert.equal(groupOf(2000017, cfg), "person");

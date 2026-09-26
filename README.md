@@ -12,7 +12,7 @@ For a 4K clip of the Tashkent junction the organisers filmed, `solution.py` retu
 
 ## Run it
 
-Python 3.10 to 3.13. On the evaluation machine (NVIDIA GPU, no internet):
+Use Python 3.11 or 3.12. On the evaluation machine (NVIDIA GPU, no internet):
 
 ```bash
 pip install -r requirements.txt
@@ -22,37 +22,54 @@ python evaluate.py --pred predictions.json --validate-only
 
 The model weights are in `weights/` (70 MB, committed to the repository), so
 nothing is downloaded at run time. `weights/download.sh` only exists to
-re-fetch the same files from Ultralytics if they ever go missing.
+re-fetch the same files from Ultralytics if they ever go missing; it then
+checks all three against `weights/SHA256SUMS`.
 
 `run_submission.py` and `evaluate.py` are the organisers' files, unchanged
 (sha256 in `docs/starter_kit.sha256`).
 
-`requirements.txt` pins `torch==2.6.0`, whose PyPI wheel carries CUDA 12.4
-kernels. They run on a T4 with any NVIDIA driver from 525 on. Ultralytics comes
-as `ultralytics-opencv-headless`, the same package built against
-`opencv-python-headless`, so only one OpenCV gets installed and it needs no
-libGL. If neither CUDA nor Apple MPS is available the pipeline switches to a
-lighter CPU profile (Part A: YOLO26s at 960 px, 5 frames per second; Part B:
-YOLO26n at 640 px) that aims to finish inside the time budget, at lower
-accuracy.
+On Python 3.10 to 3.13, where we tested it, `requirements.txt` installs
+`torch==2.6.0` and `torchvision==0.21.0`. The torch wheel carries CUDA 12.4
+kernels, which run on a T4 with any NVIDIA driver from 525 on, and the T4
+timings under Runtime were measured with it on Colab. torch 2.6.0 has no wheel
+for Python 3.14, so there `requirements.txt` installs torch 2.9.1 and
+torchvision 0.24.1 instead. We only smoke-tested that combination on a Mac; it
+has not been timed on a T4. Ultralytics comes as `ultralytics-opencv-headless`,
+the same package built against `opencv-python-headless`, so only one OpenCV
+gets installed and it needs no libGL. If neither CUDA nor Apple MPS is
+available the pipeline switches to a lighter CPU profile (Part A: YOLO26s at
+960 px, 5 frames per second; Part B: YOLO26n at 640 px) that aims to finish
+inside the time budget, at lower accuracy.
 
-To reproduce `predictions_samples.json`, put the four sample clips in
-`samples/` and run
+To check `predictions_samples.json`, put the four sample clips in `samples/`
+(Reproduce everything below shows how to download them), run the harness into
+a new file and compare the two:
 
 ```bash
 PARIVISION_TIME_SHARE=12 PARIVISION_TOTAL_LIMIT=30 PARIVISION_RISK_SHARE=10 \
-  python run_submission.py --videos samples --out predictions_samples.json --team PariVision --time-factor 40
+  python run_submission.py --videos samples --out predictions_samples_rerun.json --team PariVision --time-factor 40
+python tools/compare_predictions.py predictions_samples.json predictions_samples_rerun.json
 ```
 
 The three variables and `--time-factor 40` lift the time guards, so nothing is
-thinned out (see Runtime). We made the file on an Apple M5 laptop with PyTorch
-2.14 on MPS, where the detector runs in fp32. On a CUDA GPU it runs in fp16,
-so boxes and a few event boundaries can differ slightly: the same command on a
-Colab T4 gave 24, 26 and 18 events on C3896, C3902 and C3905, against 25, 26
-and 18 in this file (C3897 could not be downloaded there because of a Google
-Drive quota). (The pinned torch 2.6.0 is for CUDA. On MPS it is several times
-slower, slow enough that Ultralytics' NMS time limit drops some boxes, so on a
-Mac use a newer torch.)
+thinned out (see Runtime). `tools/compare_predictions.py` prints, for each
+clip, the events per class in both files, how many of them pair up at tIoU 0.3,
+0.5 and 0.7 (with `evaluate.py`'s own matching) and the largest difference
+between the two risk curves. We made `predictions_samples.json` on an Apple M5
+laptop with PyTorch 2.14 on MPS, where the detector runs in fp32. On a CUDA GPU
+it runs in fp16, so boxes and a few event boundaries can differ slightly: the
+same command on a Colab T4 gave 24, 26 and 18 events on C3896, C3902 and C3905,
+against 25, 26 and 18 in this file (C3897 could not be downloaded there because
+of a Google Drive quota). (The pinned torch 2.6.0 is for CUDA. On MPS it is
+several times slower, slow enough that Ultralytics' NMS time limit drops some
+boxes, so on a Mac use a newer torch.)
+
+`predictions_samples.json` was made at commit 98be7bd. Later commits changed
+the code in `src/` (among other things the accident rule and the time guards)
+and `requirements.txt`, but not the events on the four samples: running the
+current rules on the analyses that run saved (`out/analysis`, not in the
+repository) gives the same events on all four clips, and the accident rule
+fires on none of them.
 
 ## How it works
 
@@ -167,19 +184,25 @@ prints the full report.
 ## Checking on crash footage
 
 The samples have no crash, so we checked the accident rule and the Part B risk
-model on the public ACCIDENT benchmark (CVPR 2026): 95 of its CARLA crash
-clips and 34 real CCTV crash clips from intersections, each with the moment of
-impact annotated (`labels/accident_*.csv` lists them; `tools/crash_check.py`
-downloads, runs and scores them). These are other cameras, so the check runs
-without our scene layout and takes metres per pixel from the size of the
-vehicles. The rule finds 24 of the 95 synthetic crashes within 2 s of the
-impact and 1 of the 34 real ones, most of which are low-resolution videos where
-the detector misses the striking car, and it never fires before an impact. It
-fires nowhere in our 18 minutes of normal traffic, which is why we submit the
-class: if the test set has no crash, a class we never predict costs nothing.
-Part B raises an alarm in the 10 s before 11 of the synthetic and 4 of the real
-impacts. Raising its gain catches more crashes but also sets off many alarms in
-normal traffic, so we left it as it was.
+model on the public ACCIDENT benchmark (CVPR 2026), whose clips come with the
+moment of impact annotated. `labels/accident_real.csv` lists the 130 real CCTV
+crash clips we picked (118 of them at intersections) and
+`labels/accident_synthetic.csv` 100 of its CARLA crash clips;
+`tools/crash_check.py` downloads, runs and scores them. The numbers below cover
+the clips we had run the detectors on: 34 of the 130 real ones and 95 of the
+100 synthetic ones (`crash_check.py eval` skips clips without a detection cache
+and prints which). These are other cameras, so the check runs without our scene
+layout and takes metres per pixel from the size of the vehicles. The rule finds
+24 of the 95 synthetic crashes and 1 of the 34 real ones, starting between 1.5
+s before and 2 s after the impact. The benchmark rates 25 of these 34 real
+clips as poor quality, and in most of them the detector misses the striking
+car. The rule fired early, more than 1.5 s before the impact, on 1 of the 34
+real clips (8uCJX3Qp78g_00, a t-bone crash it then missed) and on none of the
+synthetic ones. It fires nowhere in our 18 minutes of normal traffic, which is
+why we submit the class: if the test set has no crash, a class we never predict
+costs nothing. Part B raises an alarm in the 10 s before 11 of the synthetic
+and 4 of the real impacts. Raising its gain catches more crashes but also sets
+off many alarms in normal traffic, so we left it as it was.
 
 ## Runtime
 
@@ -240,22 +263,136 @@ at speed (see Runtime). On a slower machine `PARIVISION_TIME_SHARE` (Part A,
 `PARIVISION_CACHE_DIR` makes Part A save its full analysis for the website; it
 is unset in the official run.
 
+## Reproduce everything
+
+The official run needs only the Run it section. These steps rebuild everything
+else: the dev caches, EDA, ablations, website data, browser assets, test
+fixtures and the crash check. They need the packages in
+`tools/requirements-dev.txt` and `ffmpeg` and `ffprobe` on `PATH`. Several
+steps decode the 4K clips or run a detector over them; step 9 alone took about
+an hour on our M5 laptop. `cache/`, `out/` and `samples/` are gitignored.
+`tools/README.md` lists every tool with what it reads and writes.
+
+```bash
+pip install -r requirements.txt -r tools/requirements-dev.txt
+
+# 1. The four sample clips, from the organisers' public Google Drive (the ids tools/t4_check.sh uses)
+mkdir -p samples && cd samples
+for id in 10cHEReCWzO3u-Vk1CnNgHAx6egGy5MwJ 1aJ-QsAZVYJtLKHiRvKKeBq1D3GWNobRd \
+          1hp8DYeqtYHSwfM6qAo9FPSRHlpMFrIN_ 1kR9jODA2Wotw4gwkvpRKdqFADNJNc1nS; do
+  gdown --continue "$id"
+done
+cd ..
+
+# 2. 960x540, 10 fps proxies, which the alignment, EDA and labelling tools read
+mkdir -p cache/proxy
+for c in C3896 C3897 C3902 C3905; do
+  ffmpeg -i samples/$c.MP4 -vf fps=10,scale=960:540 -an -c:v libx264 -preset veryfast -crf 22 -g 20 cache/proxy/$c.mp4
+done
+
+# 3. Detector caches: the submitted detector on every clip, the ablation detectors on C3897 and C3905
+python tools/cache_detections.py samples/*.MP4 --fps 10 --width 1920
+python tools/cache_detections.py samples/C3897.MP4 samples/C3905.MP4 --weights yolo26s.pt --imgsz 1280
+python tools/cache_detections.py samples/C3897.MP4 samples/C3905.MP4 --weights yolo26m.pt --imgsz 960
+python tools/cache_detections.py samples/C3897.MP4 samples/C3905.MP4 --weights yolo26n.pt --imgsz 960
+python tools/cache_detections.py samples/C3897.MP4 samples/C3905.MP4 --weights yolo26s.pt --imgsz 960
+
+# 4. Each clip's homography to the reference view
+python tools/align_cache.py C3896 C3897 C3902 C3905
+
+# 5. Trajectories from the submitted detector's cache
+python tools/tracks_from_cache.py cache/det/*__yolo26m_1280_1920_10fps.npz --out cache/tracks
+
+# 6. Signal phase timelines
+python tools/signal_timeline.py C3896 C3897 C3902 C3905 --fps 5
+
+# 7. EDA figures and numbers
+python tools/eda.py --out out/site_data
+
+# 8. Ablations
+python tools/ablation.py --gt labels/dev_labels.json --out out/ablations.json
+
+# 9. The sample run with the time guards lifted, saving Part A's full analysis to out/analysis
+PARIVISION_CACHE_DIR=out/analysis PARIVISION_TIME_SHARE=12 PARIVISION_TOTAL_LIMIT=30 PARIVISION_RISK_SHARE=10 \
+  python run_submission.py --videos samples --out predictions_samples_rerun.json --team PariVision --time-factor 40
+python tools/compare_predictions.py predictions_samples.json predictions_samples_rerun.json
+
+# 10. Scores on the dev labels
+python evaluate.py --pred predictions_samples_rerun.json --gt labels/dev_labels.json --json out/metrics.json --per-video
+
+# 11. Website data, annotated videos, posters and example frames
+python tools/make_site_data.py --pred predictions_samples_rerun.json --site site/public \
+  --machine "<the machine that made the run>" --runtime-note "<how it was made>"
+
+# 12. The browser pipeline's model and scene files, then the site tests' parity fixtures
+python tools/export_browser_assets.py
+python tools/export_parity_fixtures.py --clip C3905
+python tools/export_parity_fixtures.py --clip C3902
+
+# 13. The crash check on the ACCIDENT benchmark (downloads from Kaggle)
+for set in real synthetic; do
+  python tools/crash_check.py fetch --set $set
+  python tools/crash_check.py cache --set $set
+  python tools/crash_check.py eval --set $set --ours
+done
+```
+
+Two optional checks: `python tools/drivable_mask.py --check` compares the
+drivable-area mask rebuilt from `cache/tracks` with the committed one, and
+
+```bash
+python tools/build_dev_labels.py --verified labels/dev_labels_verified.json \
+  --adjudication labels/adjudication.json --out labels/dev_labels.json
+```
+
+rebuilds `labels/dev_labels.json` byte for byte from the 107 verified labels
+and the adjudication verdicts (the agent runs behind them are not in the
+repository, see `docs/labeling.md`).
+
+The three 30 s clips of the live demo (`site/public/media/demo/`, gitignored)
+are cuts of the samples. The commands were not recorded, so we found the start
+times by matching frames against the samples. These commands rebuild them:
+
+```bash
+mkdir -p site/public/media/demo
+ffmpeg -ss 10 -i samples/C3896.MP4 -t 30 -vf scale=1920:-2 -pix_fmt yuv420p -c:v libx264 -an -movflags +faststart site/public/media/demo/north_crossing_midday.mp4
+ffmpeg -ss 195 -i samples/C3897.MP4 -t 30 -vf scale=1920:-2 -pix_fmt yuv420p -c:v libx264 -an -movflags +faststart site/public/media/demo/west_crossing_turns.mp4
+ffmpeg -ss 75 -i samples/C3905.MP4 -t 30 -vf scale=1920:-2 -pix_fmt yuv420p -c:v libx264 -an -movflags +faststart site/public/media/demo/dusk_queue.mp4
+```
+
+`-movflags +faststart` puts the index at the start of the file, so the browser
+can start playing a clip before all of it has arrived. With ffmpeg 9.0.2 the
+north crossing and dusk clips come out pixel for pixel the same as ours. The
+west crossing clip comes out one frame shorter (899 frames against 900) and
+its last frames differ slightly. The annotated videos and the home-page loop
+come from step 11.
+
+The stored result the demo replays (with `?mock=1`, and in browsers without
+WebAssembly) is the browser pipeline's own output on the dusk clip, made from
+the command line with ffmpeg and onnxruntime-node:
+
+```bash
+cd site && pnpm replay public/media/demo/dusk_queue.mp4 public/data/demo/mock_result.json --video /media/demo/dusk_queue.mp4
+```
+
 ## Tests
 
 ```bash
 pip install pytest && pytest -q
-cd site && pnpm install && pnpm test
+cd site && pnpm install --frozen-lockfile && pnpm test
 ```
 
-The Python tests use a 6 s synthetic clip and need nothing outside the
-repository. Most site tests check the in-browser port against the Python
-pipeline on fixtures in `site/tests/fixtures`, which are not committed:
-`python tools/export_parity_fixtures.py --clip C3905` and `--clip C3902`
-write them from the detection, registration and signal caches (`cache/det`,
-`cache/align`, `cache/signal`) that the other tools build from the sample
-clips. The dev tools in `tools/` also need `ffmpeg` and `ffprobe` on `PATH`;
-the docstring of `tools/align_cache.py` has the ffmpeg command for the 10 fps
-proxies the other tools read.
+On a clean clone every `pytest -q` test passes. They use a 6 s synthetic
+clip and need nothing outside the repository. `pnpm test` needs Node 22.18 or
+newer; on a clean clone it runs 55 tests, of which 40 pass and 15 are skipped.
+Most site tests check the in-browser port of the pipeline
+(`site/src/pipeline/`) against the Python pipeline, stage by stage, on fixtures
+that `tools/export_parity_fixtures.py` writes from the dev caches. The C3905
+fixtures and the two reference frames are committed, gzipped (6.9 MB
+together); the C3902 fixtures are not. The 15 skipped tests are the C3902
+ones, and each prints the command that writes their fixtures
+(`python tools/export_parity_fixtures.py --clip C3902`, after steps 1 to 4 and
+6 of Reproduce everything). With both clips' fixtures all 55 pass.
 
 ## Repository layout
 
@@ -264,15 +401,16 @@ solution.py            the interface: detect_events, RiskEstimator
 run_submission.py      organisers' harness (unchanged)
 evaluate.py            organisers' metric (unchanged)
 src/parivision/        pipeline: video, detector, tracking, registration, signal, rules, risk, render
-weights/               YOLO26 n/s/m COCO weights
-labels/dev_labels.json our labels of the four sample clips (dev set)
-tools/                 caching, EDA, dev-set labelling, tuning and site-data scripts; t4_check.sh times a run on a T4
+weights/               YOLO26 n/s/m COCO weights, their SHA256SUMS and download.sh
+labels/                dev set (dev_labels.json = dev_labels_verified.json + adjudication.json), crash clip lists
+tools/                 dev tools: caches, EDA, ablations, dev-set labelling, tuning, site data, crash check (index in tools/README.md)
 tests/                 pytest checks for the core pieces and the solution interface
 demo/                  FastAPI server that runs the full Python pipeline on a clip, for trying it locally (the website demo runs site/src/pipeline/ in the browser)
 site/                  the team website (Astro)
 docs/                  scene description, labelling guide, figures
 predictions_samples.json  our output on the sample clips
 LICENSE                AGPL-3.0
+THIRD_PARTY_NOTICES.md licences of the models, packages and data we use
 ```
 
 ## Datasets, models and licences
@@ -304,7 +442,11 @@ which are GPL), NumPy, SciPy (BSD), and for the website demo only
 onnxruntime-web (MIT) and ffmpeg.wasm (MIT wrapper around an FFmpeg core under
 GPL-2.0-or-later, which converts clips the browser cannot play). Because we
 ship Ultralytics weights and call its code, this repository is released under
-AGPL-3.0 (`LICENSE`).
+AGPL-3.0 (`LICENSE`). That includes `site/public/pipeline/model.onnx`, which
+`tools/export_browser_assets.py` exports from `yolo26n.pt`.
+`THIRD_PARTY_NOTICES.md` lists every third-party model, package and dataset
+with its licence, and `weights/SHA256SUMS` holds the checksums of the weights,
+which `weights/download.sh` checks.
 
 ## Team
 
@@ -321,3 +463,14 @@ Links: Amal Karimov, [GitHub](https://github.com/Shen-de-Dia) and
 [portfolio](https://bayto.uz); Aziza Adizova,
 [LinkedIn](https://www.linkedin.com/in/aziza-adizova-033a712a0/). More on the
 [team page](https://parivision-traffic.vercel.app/team).
+
+## Licence
+
+Copyright (C) 2026 Team PariVision: Amal Karimov, Komronbek Qodirov, Aziza
+Adizova.
+
+This program is free software: you can redistribute it and modify it under the
+terms of the GNU Affero General Public License, version 3, as published by the
+Free Software Foundation (`LICENSE`, SPDX `AGPL-3.0-only`). It comes with no
+warranty; see sections 15 and 16 of the licence. Third-party models, code and
+data keep their own licences, listed in `THIRD_PARTY_NOTICES.md`.

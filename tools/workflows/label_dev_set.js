@@ -7,7 +7,12 @@ export const meta = {
   ],
 }
 
-const ROOT = '/Users/bayto/Desktop/claude/traffic-events'
+// A script for Claude Code's workflow runner (it calls agent, parallel, pipeline and log).
+// args.videos: [{id, duration}] of the clips to label.
+// args.signals: {clip: [[start, end, phase], ...]}, the "segments" of cache/signal/<clip>.json.
+// args.root: the repository root, which the agents cd into; defaults to the directory the run starts in.
+// Its journal is the input of tools/build_dev_labels.py.
+const ROOT = args.root || (typeof process !== 'undefined' ? process.cwd() : '.')
 const CLASSES = ['accident', 'near_miss', 'red_light', 'wrong_way', 'illegal_u_turn', 'stopped_vehicle',
   'jaywalking', 'failure_to_yield', 'illegal_turn', 'solid_line_crossing', 'stop_line', 'congestion',
   'road_obstacle', 'fire_smoke']

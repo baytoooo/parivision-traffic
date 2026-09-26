@@ -1,18 +1,23 @@
 r"""Build the website's data files and media from the official sample run.
 
     PARIVISION_CACHE_DIR=out/analysis PARIVISION_TIME_SHARE=12 PARIVISION_TOTAL_LIMIT=30 PARIVISION_RISK_SHARE=10 \
-        python run_submission.py --videos samples --out predictions_samples.json --team PariVision --time-factor 40
-    python evaluate.py --pred predictions_samples.json --gt labels/dev_labels.json --json out/metrics.json --per-video
+        python run_submission.py --videos samples --out predictions_samples_rerun.json --team PariVision --time-factor 40
+    python evaluate.py --pred predictions_samples_rerun.json --gt labels/dev_labels.json --json out/metrics.json --per-video
     python tools/eda.py --out out/site_data
-    python tools/make_site_data.py --site site/public --machine "Apple M5 laptop on MPS, time guards off" \
-        --runtime-note "<where and how predictions_samples.json was made; site/public/data/runtime.json has ours>"
+    python tools/ablation.py --gt labels/dev_labels.json --out out/ablations.json
+    python tools/make_site_data.py --pred predictions_samples_rerun.json --site site/public \
+        --machine "<the machine that made the run>" --runtime-note "<how it was made>"
 
-The first command is how we made predictions_samples.json on our laptop (Apple M5, MPS): the
-environment variables and --time-factor lift the time guards, so nothing is thinned.
-The clips are read from samples/ (tools/common.py); PARIVISION_SAMPLES or --samples point elsewhere.
+The first command is how we made predictions_samples.json on our laptop (Apple M5, MPS), with
+--out predictions_samples.json: the environment variables and --time-factor lift the time guards,
+so nothing is thinned. --pred must be the run that wrote out/analysis (default: the committed
+predictions_samples.json). README.md, Reproduce everything, lists the steps that build the caches
+eda.py and ablation.py read. The clips are read from samples/ (tools/common.py); PARIVISION_SAMPLES
+or --samples point elsewhere.
 
 Writes data/clips.json, data/results/<clip>.json, data/metrics.json, data/examples.json,
-data/eda.json, data/ablations.json, data/runtime.json (with --machine), data/predictions_samples.json,
+data/eda.json, data/ablations.json, data/runtime.json (with --machine), data/predictions_samples.json
+(a copy of --pred),
 data/report.md (a copy of docs/report.md) and media/ (annotated videos, posters, example frames,
 the home-page loop).
 """
@@ -131,7 +136,7 @@ def hero_loop(annotated: Path, start: float, seconds: float, out: Path, poster: 
     """Cut a silent loop from an annotated render, without its timeline panel."""
     import av
 
-    with av.open(str(annotated)) as src, av.open(str(out), "w") as dst:
+    with av.open(str(annotated)) as src, av.open(str(out), "w", options={"movflags": "+faststart"}) as dst:
         vin = src.streams.video[0]
         rate = int(round(float(vin.average_rate)))
         stream = None
@@ -146,7 +151,7 @@ def hero_loop(annotated: Path, start: float, seconds: float, out: Path, poster: 
                 stream = dst.add_stream("libx264", rate=rate)
                 stream.width, stream.height = img.shape[1], img.shape[0]
                 stream.pix_fmt = "yuv420p"
-                stream.options = {"crf": "28", "preset": "slow", "movflags": "+faststart"}
+                stream.options = {"crf": "28", "preset": "slow"}
                 cv2.imwrite(str(poster), img, [cv2.IMWRITE_JPEG_QUALITY, 80])
             for packet in stream.encode(av.VideoFrame.from_ndarray(img, format="bgr24")):
                 dst.mux(packet)
@@ -212,6 +217,8 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--site", default=str(ROOT / "site/public"))
     ap.add_argument("--analysis", default=str(ROOT / "out/analysis"))
+    ap.add_argument("--pred", default=str(ROOT / "predictions_samples.json"),
+                    help="predictions of the run that wrote --analysis (default: the committed predictions_samples.json)")
     ap.add_argument("--samples", default=str(SAMPLES), help="folder with the sample clips (default samples/)")
     ap.add_argument("--no-video", action="store_true")
     ap.add_argument("--machine", default="", help="where predictions_samples.json was produced, for runtime.json")
@@ -222,7 +229,7 @@ def main() -> None:
     for d in (data / "results", media / "examples", media / "eda"):
         d.mkdir(parents=True, exist_ok=True)
 
-    preds = json.loads((ROOT / "predictions_samples.json").read_text())
+    preds = json.loads(Path(args.pred).read_text())
     labels = json.loads((ROOT / "labels/dev_labels.json").read_text())
     clips, examples = [], []
     for pkl in sorted(Path(args.analysis).glob("*.pkl")):
@@ -268,7 +275,7 @@ def main() -> None:
     (data / "clips.json").write_text(json.dumps(clips))
     if examples:
         (data / "examples.json").write_text(json.dumps(examples))
-    shutil.copy(ROOT / "predictions_samples.json", data / "predictions_samples.json")
+    shutil.copy(args.pred, data / "predictions_samples.json")
     shutil.copy(ROOT / "docs/report.md", data / "report.md")  # the site's report page reads this copy
     if args.machine and preds.get("log"):
         rows = [{"clip": Path(k).stem, "duration": v["duration"], "part_a_sec": v.get("part_a_sec"),
