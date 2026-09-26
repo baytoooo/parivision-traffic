@@ -202,8 +202,14 @@ async function chooseFile(f: File | null) {
 function fileNote() {
   const meta = fileMeta;
   const seconds = uploadSeconds();
+  // Chrome on our Apple M5 laptop converted 2 minutes of a camera file in 75 to 80 s and 30 s of
+  // one in 21 s: about 40 s per minute of the camera's 4K (demo.astro quotes the same)
   if (!meta)
-    fileMsg(`This browser cannot play the file, so we first convert it here, in the browser. In Chrome that takes about 40 to 80 s for ${UPLOAD_MAX_SECONDS / 60} minutes of 4K.`, "warn");
+    fileMsg(
+      `This browser cannot play the file, so we first convert it here, in the browser, up to its first ${fmtTime(seconds, 0)}. ` +
+        `How long that takes depends on the browser and the computer. For ${fmtTime(seconds, 0)} of the camera's 4K, Chrome on our laptop takes about ${Math.round((seconds * 40) / 60)} s.`,
+      "warn",
+    );
   else if (local.alwaysConvert && !api.mock) fileMsg("Started with ?transcode=1: we convert the clip in this browser first, although this browser can play it.", "warn");
   else if (meta.duration > seconds + 0.5) fileMsg(`This clip is ${fmtTime(meta.duration, 0)} long. Only the first ${fmtTime(seconds, 0)} is analysed.`, "warn");
   else if (meta.width >= 3000) fileMsg("4K works but is slower. If this browser decodes the clip slowly, as Chrome does with the camera's own 10-bit files, we convert it here first.", "warn");

@@ -33,7 +33,7 @@ const maxMin = UPLOAD_MAX_SECONDS / 60;
         <span class="drop-main">Choose an .mp4 or drop it here</span>
         <span class="drop-sub">Any file size. The file is read on this device and not uploaded. We analyse the first {maxMin} minutes. 1080p is recommended; 4K works but is slower.</span>
       </label>
-      <p class="codec-note">Any .mp4 works. The camera's own files are 10-bit 4:2:2 H.264: most browsers on Windows and Linux cannot play them, and Chrome on a Mac decodes them slowly, in software. In both cases we first convert the file here, in the browser, which in Chrome takes about 40 to 80 s for {maxMin} minutes of 4K. 8-bit H.264 at 1080p, the format of our sample clips, needs no conversion.</p>
+      <p class="codec-note">Any .mp4 works. The camera's own files are 10-bit 4:2:2 H.264: most browsers on Windows and Linux cannot play them, and Chrome on a Mac decodes them slowly, in software. In both cases we first convert the file here, in the browser, which in Chrome on our laptop takes about 40 s per minute of 4K. 8-bit H.264 at 1080p, the format of our sample clips, needs no conversion.</p>
       <div class="file-info" id="file-info" hidden>
         <dl>
           <div><dt>File</dt><dd id="file-name" class="mono"></dd></div>
