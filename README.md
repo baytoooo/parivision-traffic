@@ -69,8 +69,7 @@ the code in `src/` (among other things the accident rule and the time guards)
 and `requirements.txt`, but not the events on the four samples: running the
 current rules on the analyses that run saved (`out/analysis`, not in the
 repository) gives the same events on all four clips, and the accident rule
-fires on none of them. `tests/test_regression.py` repeats this check for C3905
-on every `pytest` run.
+fires on none of them.
 
 ## How it works
 
@@ -383,16 +382,17 @@ pip install pytest && pytest -q
 cd site && pnpm install --frozen-lockfile && pnpm test
 ```
 
-On a clean clone `pytest -q` passes all 12 tests. They use a 6 s synthetic
+On a clean clone every `pytest -q` test passes. They use a 6 s synthetic
 clip and need nothing outside the repository. `pnpm test` needs Node 22.18 or
 newer; on a clean clone it runs 55 tests, of which 40 pass and 15 are skipped.
 Most site tests check the in-browser port of the pipeline
 (`site/src/pipeline/`) against the Python pipeline, stage by stage, on fixtures
 that `tools/export_parity_fixtures.py` writes from the dev caches. The C3905
-fixtures are committed, gzipped (6.6 MB); the C3902 ones are not. The 15
-skipped tests are the C3902 ones, and each prints the command that writes their
-fixtures (`python tools/export_parity_fixtures.py --clip C3902`, after steps 1
-to 4 and 6 of Reproduce everything). With both clips' fixtures all 55 pass.
+fixtures and the two reference frames are committed, gzipped (6.9 MB
+together); the C3902 fixtures are not. The 15 skipped tests are the C3902
+ones, and each prints the command that writes their fixtures
+(`python tools/export_parity_fixtures.py --clip C3902`, after steps 1 to 4 and
+6 of Reproduce everything). With both clips' fixtures all 55 pass.
 
 ## Repository layout
 
