@@ -25,6 +25,7 @@
 
   --wrap: 1240px;
   --gutter: 16px;
+  --header-h: 63px; /* sticky .site-header: 4 px zebra edge, 58 px bar, 1 px border */
   --radius: 3px;
 
   --stripes: repeating-linear-gradient(90deg, var(--zebra) 0 16px, transparent 16px 24px, var(--paint) 24px 40px, transparent 40px 48px);
@@ -44,6 +45,8 @@
 [hidden] { display: none !important; }
 
 html {
+  /* anchor jumps and scrollIntoView stop below the sticky header */
+  scroll-padding-top: calc(var(--header-h) + 16px);
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   background: var(--asphalt);

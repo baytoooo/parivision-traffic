@@ -46,7 +46,7 @@ const html = await marked.parse(body, { renderer, gfm: true });
 <style>
   .report { display: grid; gap: 28px; padding-bottom: 24px; }
   @media (min-width: 980px) { .report { grid-template-columns: 220px minmax(0, 1fr); align-items: start; } }
-  .toc { position: sticky; top: 84px; border-left: 3px solid var(--line-2); padding-left: 14px; }
+  .toc { position: sticky; top: calc(var(--header-h) + 20px); border-left: 3px solid var(--line-2); padding-left: 14px; }
   @media (max-width: 979px) { .toc { position: static; } }
   .toc-k { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 8px; }
   .toc ol { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
@@ -55,7 +55,7 @@ const html = await marked.parse(body, { renderer, gfm: true });
 
   .md { max-width: 72ch; }
   .md :global(h2) {
-    font-size: clamp(1.4rem, 1.1rem + 1vw, 1.9rem); margin: 40px 0 14px; padding-top: 18px; position: relative; scroll-margin-top: 80px;
+    font-size: clamp(1.4rem, 1.1rem + 1vw, 1.9rem); margin: 40px 0 14px; padding-top: 18px; position: relative;
   }
   .md :global(h2::before) { content: ""; position: absolute; top: 0; left: 0; width: 72px; height: 6px; background: var(--stripes-tight); }
   .md :global(h2:first-child) { margin-top: 0; }
