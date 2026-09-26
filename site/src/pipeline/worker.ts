@@ -8,7 +8,7 @@
 
 import webgpuWasm from "onnxruntime-web/ort-wasm-simd-threaded.asyncify.wasm?url";
 import cpuWasm from "onnxruntime-web/ort-wasm-simd-threaded.wasm?url";
-import { alignToReference } from "./align.ts";
+import { alignToReference, halfGray, medianGray } from "./align.ts";
 import { Analyser } from "./analyse.ts";
 import { OnnxDetector, type OrtModule } from "./detector.ts";
 import { matInv } from "./geometry.ts";
@@ -34,10 +34,24 @@ interface Engine {
 interface RunningJob {
   id: string;
   analyser: Analyser;
-  /** The three lamp patches in work pixels. */
+  /** The three lamp patches in work pixels, from the latest registration. */
   boxes: Box[];
-  workWidth: number;
+  workSize: [number, number];
+  /** Video time of the next keyframe registration. */
+  nextAlign: number;
+  /** Grey keyframes (work size / 4), for the median registration at finish. */
+  keyframes: Uint8Array[];
 }
+
+// pipeline.py: the camera can still be settling when a recording starts (C3896 moves 9 px over its
+// first 40 s, enough to take the lamp patches off the lamps within seconds), so the view is
+// registered again every 2 s for the first 30 s, then every 10 s; the lamps are read with the
+// latest registration and the rules use one registration of the keyframes' median.
+const REALIGN_EARLY: [number, number] = [2, 30];
+const REALIGN_EVERY = 10;
+// work pixels around the first frame's lamp patches that the page crops for every frame: room for
+// the patches to follow the camera as it settles
+const LAMP_MARGIN = 24;
 
 let engine: Engine | null = null;
 let job: RunningJob | null = null;
@@ -131,21 +145,23 @@ function align(m: Extract<ToWorker, { type: "align" }>): void {
   const boxes = lampPatches(matInv(a.H), e.scene.c.signal_lamps);
   const analyser = new Analyser(e.scene, m.fps, m.workSize);
   analyser.setAlignment(a);
-  job = { id: m.job, analyser, boxes, workWidth: m.workSize[0] };
+  job = { id: m.job, analyser, boxes, workSize: m.workSize, nextAlign: REALIGN_EARLY[0], keyframes: [m.gray] };
   // the crop the page reads the lamps from: the patches and a small margin, inside the frame
   const [w, h] = m.workSize;
   const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
-  const x0 = clamp(Math.min(...boxes.map((b) => b[0])) - 2, 0, w - 1);
-  const y0 = clamp(Math.min(...boxes.map((b) => b[1])) - 2, 0, h - 1);
-  const x1 = clamp(Math.max(...boxes.map((b) => b[2])) + 2, x0 + 1, w);
-  const y1 = clamp(Math.max(...boxes.map((b) => b[3])) + 2, y0 + 1, h);
+  const x0 = clamp(Math.min(...boxes.map((b) => b[0])) - LAMP_MARGIN, 0, w - 1);
+  const y0 = clamp(Math.min(...boxes.map((b) => b[1])) - LAMP_MARGIN, 0, h - 1);
+  const x1 = clamp(Math.max(...boxes.map((b) => b[2])) + LAMP_MARGIN, x0 + 1, w);
+  const y1 = clamp(Math.max(...boxes.map((b) => b[3])) + LAMP_MARGIN, y0 + 1, h);
   post({ type: "aligned", job: m.job, ok: a.ok, score: a.score, reference: a.reference, H: a.H, lampCrop: [x0, y0, x1, y1] });
 }
 
 async function frame(m: Extract<ToWorker, { type: "frame" }>): Promise<void> {
   const j = job;
   if (!j || j.id !== m.job) return; // cancelled: skip what is left in the queue
-  const dets = await need().detector.detect(new Uint8ClampedArray(m.det.data), m.det.width, m.det.height, 4, j.workWidth);
+  const rgba = new Uint8ClampedArray(m.det.data);
+  if (m.t >= j.nextAlign) realign(j, halfGray(rgba, m.det.width, m.det.height), m.t);
+  const dets = await need().detector.detect(rgba, m.det.width, m.det.height, 4, j.workSize[0]);
   if (job !== j) return;
   const scores = m.lamp
     ? (lampScores(new Uint8ClampedArray(m.lamp.data), m.lamp.width, m.lamp.height, 4, j.boxes, m.lamp.origin) as [number, number, number])
@@ -161,9 +177,23 @@ async function frame(m: Extract<ToWorker, { type: "frame" }>): Promise<void> {
   }
 }
 
+/** A keyframe (pipeline.py analyse()): register it and, if that works, read the lamps where it puts them. */
+function realign(j: RunningJob, gray: Uint8Array, t: number): void {
+  const e = need();
+  const a = alignToReference(gray, e.refs, j.workSize, e.scene.c.ref_size);
+  if (a.ok) j.boxes = lampPatches(matInv(a.H), e.scene.c.signal_lamps);
+  if (gray.length === j.keyframes[0].length) j.keyframes.push(gray);
+  j.nextAlign = t + (t < REALIGN_EARLY[1] ? REALIGN_EARLY[0] : REALIGN_EVERY);
+}
+
 function finish(m: Extract<ToWorker, { type: "finish" }>): void {
   const j = job;
   if (!j || j.id !== m.job) return;
+  if (j.keyframes.length > 2) {
+    const e = need();
+    const settled = alignToReference(medianGray(j.keyframes), e.refs, j.workSize, e.scene.c.ref_size);
+    if (settled.ok) j.analyser.settle(settled);
+  }
   const result = j.analyser.finish(m.duration, m.clip);
   job = null;
   post({ type: "result", job: m.job, result, groups: Object.keys(need().scene.c.tracking.GROUPS) });

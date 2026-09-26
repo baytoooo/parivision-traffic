@@ -71,6 +71,12 @@ export class Analyser {
     this.risk.setAlignment(a.H);
   }
 
+  /** The registration the trajectories and rules use at finish() (pipeline.py: the keyframes' median
+   * background, registered once more at the end). The risk model keeps the first frame's, as Part B. */
+  settle(a: AlignResult): void {
+    this.alignment = a;
+  }
+
   /**
    * One analysed frame, in time order: its detections in work pixels and the lamp scores read
    * with the lamp patches of the alignment (null when the lamps were not read: the phase is unknown).

@@ -518,3 +518,32 @@ export function rgbaToGray(rgba: Uint8Array | Uint8ClampedArray): Uint8Array {
     out[i] = (rgba[4 * i] * 19595 + rgba[4 * i + 1] * 38470 + rgba[4 * i + 2] * 7471 + 32768) >>> 16;
   return out;
 }
+
+/** An RGBA frame in grey at half its size (means of 2 x 2 pixels): the detector's 960 px frame
+ * gives the 480 px grey frame that alignToReference reads. */
+export function halfGray(rgba: Uint8Array | Uint8ClampedArray, width: number, height: number): Uint8Array {
+  const g = rgbaToGray(rgba);
+  const w = width >> 1, h = height >> 1;
+  const out = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = 2 * y * width + 2 * x;
+      out[y * w + x] = (g[i] + g[i + 1] + g[i + width] + g[i + width + 1] + 2) >> 2;
+    }
+  }
+  return out;
+}
+
+/** Per-pixel median of grey frames of one size, floored like registration.py background()
+ * (np.median then uint8): most of the moving traffic washes out. */
+export function medianGray(frames: Uint8Array[]): Uint8Array {
+  const n = frames.length;
+  const out = new Uint8Array(frames[0].length);
+  const v = new Uint8Array(n);
+  for (let i = 0; i < out.length; i++) {
+    for (let k = 0; k < n; k++) v[k] = frames[k][i];
+    v.sort();
+    out[i] = n % 2 ? v[n >> 1] : (v[(n >> 1) - 1] + v[n >> 1]) >> 1;
+  }
+  return out;
+}

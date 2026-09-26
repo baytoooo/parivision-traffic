@@ -63,6 +63,14 @@ A job, message by message (types in `messages.ts`):
    skipped: the page steps 0.2 s at a time, up to 1 s, to the first frame that
    is not black. The worker runs `alignToReference`, builds the
    lamp patches and an Analyser, and posts `aligned` with H and the lamp crop.
+   As in `pipeline.py`, the view is registered again on keyframes (every 2 s for
+   the first 30 s, then every 10 s): the worker takes the detector frame in grey
+   at half size, and when it registers, the lamp patches move with it. The
+   camera can still be settling when a recording starts (C3896 moves 9 px in its
+   first 40 s), and with the first frame's patches alone the lamps read as off
+   within seconds. The lamp crop has a 24 px margin, so the patches stay inside
+   it. At `finish` the keyframes' median is registered once more and, if that
+   works, the rules use it.
 3. For t = k / 5 s from that frame on, while t < min(duration, 600 s) (30 s
    when the model runs on WebAssembly and the visitor keeps the quick run the
    page offers there): the page seeks, draws the

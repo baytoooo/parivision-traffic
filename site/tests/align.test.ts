@@ -4,7 +4,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { test } from "node:test";
-import { alignToReference, MIN_SCORE, rgbaToGray, type AlignResult } from "../src/pipeline/align.ts";
+import { alignToReference, halfGray, medianGray, MIN_SCORE, rgbaToGray, type AlignResult } from "../src/pipeline/align.ts";
 import { matInv, warpPoints, type Mat3 } from "../src/pipeline/geometry.ts";
 import { loadScene } from "../src/pipeline/scene.ts";
 import { lampPatches, lampScores, phaseFromScores } from "../src/pipeline/signal.ts";
@@ -118,4 +118,17 @@ test("frames that are not this junction are not ok", async () => {
 test("rgbaToGray: BT.601 weights, grey stays grey", () => {
   const rgba = new Uint8Array([10, 10, 10, 255, 200, 200, 200, 0, 255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255]);
   assert.deepEqual([...rgbaToGray(rgba)], [10, 200, 76, 150, 29]);
+});
+
+test("halfGray averages 2 x 2 blocks of the grey frame", () => {
+  // 4 x 2 RGBA: grey 0, 4, 8, 12 on the first row and 100, 104, 108, 112 on the second
+  const grey = [0, 4, 8, 12, 100, 104, 108, 112];
+  const rgba = new Uint8ClampedArray(grey.flatMap((g) => [g, g, g, 255]));
+  assert.deepEqual([...halfGray(rgba, 4, 2)], [52, 60]);
+});
+
+test("medianGray takes the per-pixel median, floored for an even count", () => {
+  const frames = [[10, 200], [30, 0], [20, 100]].map((v) => Uint8Array.from(v));
+  assert.deepEqual([...medianGray(frames)], [20, 100]);
+  assert.deepEqual([...medianGray([Uint8Array.from([10]), Uint8Array.from([21])])], [15]);
 });
