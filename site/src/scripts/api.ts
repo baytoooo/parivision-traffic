@@ -18,8 +18,9 @@ export interface Api {
   readonly mock: boolean;
   health(): Promise<Health>;
   samples(): Promise<Sample[]>;
-  /** Starts a job and resolves with its id; aborting `signal` stops the job. */
-  submitFile(file: File, signal: AbortSignal): Promise<string>;
+  /** Starts a job and resolves with its id; aborting `signal` stops the job. The job analyses the
+   * first `maxSeconds` of the file (UPLOAD_MAX_SECONDS when not given). */
+  submitFile(file: File, signal: AbortSignal, maxSeconds?: number): Promise<string>;
   submitSample(name: string, signal: AbortSignal): Promise<string>;
   job(id: string): Promise<Job>;
 }

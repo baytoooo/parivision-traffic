@@ -64,6 +64,8 @@ interface LocalJob {
   framesTotal: number;
   error: string | null;
   result: ClipResult | null;
+  /** The job analyses the clip up to this time, at most. */
+  maxSeconds: number;
   /** Object URL of the clip; the result's video. */
   url: string | null;
   /** Object URL of a still of the first frame analysed; the result's poster. */
@@ -393,8 +395,8 @@ export class LocalApi implements Api {
     return this.sampleList;
   }
 
-  async submitFile(file: File, signal: AbortSignal): Promise<string> {
-    return this.start(file.name, signal, async () => file);
+  async submitFile(file: File, signal: AbortSignal, maxSeconds = UPLOAD_MAX_SECONDS): Promise<string> {
+    return this.start(file.name, signal, async () => file, Math.min(maxSeconds, UPLOAD_MAX_SECONDS));
   }
 
   async submitSample(name: string, signal: AbortSignal): Promise<string> {
@@ -421,12 +423,18 @@ export class LocalApi implements Api {
 
   // ---------------------------------------------------------------- jobs
 
-  private start(clip: string, signal: AbortSignal, getClip: (job: LocalJob, onProgress: (f: number) => void) => Promise<Blob>): string {
+  private start(
+    clip: string,
+    signal: AbortSignal,
+    getClip: (job: LocalJob, onProgress: (f: number) => void) => Promise<Blob>,
+    maxSeconds = UPLOAD_MAX_SECONDS,
+  ): string {
     if (signal.aborted) throw new ApiError("aborted", "Cancelled.");
     // The page shows one result at a time and a new job hides the last one: free the old clips.
     for (const old of this.jobs.values()) for (const url of [old.url, old.poster]) if (url) URL.revokeObjectURL(url);
     this.jobs.clear();
     const job = this.newJob(signal);
+    job.maxSeconds = maxSeconds;
     void this.run(job, clip, getClip);
     return job.id;
   }
@@ -449,6 +457,7 @@ export class LocalApi implements Api {
       framesTotal: 0,
       error: null,
       result: null,
+      maxSeconds: UPLOAD_MAX_SECONDS,
       url: null,
       poster: null,
       on: {},
@@ -538,7 +547,7 @@ export class LocalApi implements Api {
         let playable: Blob = blob;
         try {
           const { transcode } = await wait(job, import("./transcode"));
-          playable = await wait(job, transcode(blob, UPLOAD_MAX_SECONDS, (f) => this.advance(job, f), halt.signal));
+          playable = await wait(job, transcode(blob, job.maxSeconds, (f) => this.advance(job, f), halt.signal));
         } catch (e) {
           // a clip this browser decodes, if slowly, is analysed as it is when the conversion fails
           if (slow !== true || (e instanceof ApiError && e.kind === "aborted")) throw e;
@@ -547,7 +556,7 @@ export class LocalApi implements Api {
         job.url = URL.createObjectURL(playable);
         video = await openFor(job, job.url);
       }
-      const limit = Math.min(video.duration, UPLOAD_MAX_SECONDS);
+      const limit = Math.min(video.duration, job.maxSeconds);
       const work: [number, number] = [WORK_WIDTH, roundHalfEven((video.videoHeight * WORK_WIDTH) / video.videoWidth)];
 
       this.setStage(job, LOAD);

@@ -53,7 +53,8 @@ A job, message by message (types in `messages.ts`):
    browser shows no frame of it (the camera's 10-bit 4:2:2 files in most
    browsers on Windows and Linux), seeks slowly because it decodes in software
    (the same files in Chrome on a Mac), fails a seek, or the page has
-   `?transcode=1`, the page first converts the first 120 s with ffmpeg.wasm
+   `?transcode=1`, the page first converts the part it analyses (the first
+   120 s, or 30 s for a quick run on the CPU, see step 3) with ffmpeg.wasm
    (`src/scripts/transcode.ts`) to 8-bit H.264, 1920 px wide, and opens that. If
    the conversion fails on a clip the browser decodes, only slowly, the page
    reads the original after all. It draws the first frame grey
@@ -62,7 +63,9 @@ A job, message by message (types in `messages.ts`):
    skipped: the page steps 0.2 s at a time, up to 1 s, to the first frame that
    is not black. The worker runs `alignToReference`, builds the
    lamp patches and an Analyser, and posts `aligned` with H and the lamp crop.
-3. For t = k / 5 s from that frame on, while t < min(duration, 120 s): the page seeks, draws the
+3. For t = k / 5 s from that frame on, while t < min(duration, 120 s) (30 s
+   when the model runs on WebAssembly and the visitor keeps the quick run the
+   page offers there): the page seeks, draws the
    frame at 960 px wide and the lamp crop at work scale, and posts `frame` (pixel
    buffers transferred, at most two in flight, so the next seek overlaps the
    current detection). The worker detects, reads the lamps, calls

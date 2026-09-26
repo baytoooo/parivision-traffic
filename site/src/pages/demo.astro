@@ -1,7 +1,7 @@
 ---
 import Base from "../layouts/Base.astro";
 import ClipPanel from "../components/ClipPanel.astro";
-import { UPLOAD_MAX_SECONDS } from "../config";
+import { QUICK_SECONDS, UPLOAD_MAX_SECONDS } from "../config";
 
 const maxMin = UPLOAD_MAX_SECONDS / 60;
 ---
@@ -18,6 +18,7 @@ const maxMin = UPLOAD_MAX_SECONDS / 60;
       <div class="srv-body">
         <strong id="server-text">Checking what this browser can run</strong>
         <span id="server-detail" class="srv-detail"></span>
+        <span id="server-time" class="srv-time" hidden></span>
       </div>
     </div>
     <p class="replay-note" id="replay-note" hidden>Replay mode: the page plays back a stored example job for a 30 s clip instead of analysing anything. Your file, if you pick one, stays on this device.</p>
@@ -32,7 +33,7 @@ const maxMin = UPLOAD_MAX_SECONDS / 60;
         <span class="drop-main">Choose an .mp4 or drop it here</span>
         <span class="drop-sub">Any file size. The file is read on this device and not uploaded. We analyse the first {maxMin} minutes. 1080p is recommended; 4K works but is slower.</span>
       </label>
-      <p class="codec-note">Any .mp4 works. The camera's own files are 10-bit 4:2:2 H.264: most browsers on Windows and Linux cannot play them, and Chrome on a Mac decodes them slowly, in software. In both cases we first convert the file here, in the browser, which takes a few minutes for {maxMin} minutes of 4K. 8-bit H.264 at 1080p, the format of our sample clips, needs no conversion.</p>
+      <p class="codec-note">Any .mp4 works. The camera's own files are 10-bit 4:2:2 H.264: most browsers on Windows and Linux cannot play them, and Chrome on a Mac decodes them slowly, in software. In both cases we first convert the file here, in the browser, which in Chrome takes about 40 to 80 s for {maxMin} minutes of 4K. 8-bit H.264 at 1080p, the format of our sample clips, needs no conversion.</p>
       <div class="file-info" id="file-info" hidden>
         <dl>
           <div><dt>File</dt><dd id="file-name" class="mono"></dd></div>
@@ -42,6 +43,7 @@ const maxMin = UPLOAD_MAX_SECONDS / 60;
         <button type="button" class="btn small ghost" id="btn-clear">Remove</button>
       </div>
       <p class="file-msg" id="file-msg" role="status" hidden></p>
+      <label class="check quick" id="quick-row" hidden><input type="checkbox" id="quick" /> Analyse only the first {QUICK_SECONDS} s</label>
       <button type="button" class="btn primary wide" id="btn-analyse" disabled>Analyse this clip</button>
     </div>
 
@@ -105,7 +107,7 @@ const maxMin = UPLOAD_MAX_SECONDS / 60;
       <ul class="facts-list">
         <li>The first run downloads the detector (10 MB) and the ONNX Runtime engine (14 MB for WebAssembly, 27 MB for WebGPU, less when the server compresses it). The browser keeps both in its cache for the next runs.</li>
         <li>A file this browser cannot play, or decodes too slowly, is converted first by ffmpeg.wasm (a 33 MB download the first time): the first {maxMin} minutes, 1920 px wide, 8-bit H.264 at CRF 23. The pipeline then reads that copy. On our Apple M5 Mac, Chrome converts the first 2 minutes of a camera file in 75 to 80 s. The converter is ffmpeg.wasm (MIT) around an FFmpeg core licensed GPL-2.0-or-later; its source is at <a href="https://github.com/ffmpegwasm/ffmpeg.wasm">github.com/ffmpegwasm/ffmpeg.wasm</a>.</li>
-        <li>The detector runs on WebGPU where the browser offers it. Elsewhere it runs on the CPU through WebAssembly, which is slower.</li>
+        <li>The detector runs on WebGPU where the browser offers it. Elsewhere it runs on the CPU through WebAssembly, which is slower. On our Apple M5 laptop a 30 s sample took 11 to 21 s on WebGPU. On the CPU it took 16 to 32 s with the machine idle and 76 s or more with it busy, and a slower laptop takes longer. So on the CPU the page offers to analyse only the first {QUICK_SECONDS} s of your clip.</li>
         <li>It reads the first {maxMin} minutes of a clip at 5 frames per second. The submission reads 10 frames per second.</li>
         <li>The detector is the small YOLO26n at 960 px wide, about a thirtieth of the compute of the submission's YOLO26m at 1280 px and 10 frames per second. On the two clips we could compare, it scores within 0.01 mean F1 of it (see the <a href="/results#ablations">ablations</a>).</li>
         <li>To line the camera view up with our reference view, the page searches edge maps for the scale and shift that fit best and then refines them. The submission matches SIFT features.</li>
@@ -124,6 +126,7 @@ const maxMin = UPLOAD_MAX_SECONDS / 60;
   .server[data-state="mock"] .srv-dot { background: var(--paint-2); }
   .srv-body { display: grid; gap: 2px; flex: 1; min-width: 200px; }
   .srv-detail { font-size: .85rem; color: var(--paint-2); }
+  .srv-time { font-size: .85rem; }
   .replay-note { margin: 10px 0 0; font-size: .88rem; color: var(--zebra); font-family: var(--font-mono); }
 
   .inputs { display: grid; gap: 14px; margin-top: 18px; }
@@ -153,6 +156,8 @@ const maxMin = UPLOAD_MAX_SECONDS / 60;
   .file-msg[data-kind="warn"] { border-left-color: var(--sig-amber); }
   .file-msg[data-kind="ok"] { border-left-color: var(--sig-green); }
   .btn.wide { width: 100%; margin-top: 14px; }
+  .quick { display: flex; margin-top: 12px; }
+  .quick[hidden] { display: none; }
 
   .samples-note { font-size: .85rem; color: var(--paint-2); }
   .samples { display: grid; gap: 8px; }
