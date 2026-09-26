@@ -243,9 +243,13 @@ no longer come out of the first clip's budget. Part A thins its frames and stops
 at 1.3x the clip length, checked on every frame, and keeps 2 s plus 0.03x the
 clip free for the rules after the frame loop; and
 Part B thins its own work to keep both parts under 2.8x. Because a clip that
-goes over the budget scores nothing, Part A also measures how fast the machine
-decodes and stops early enough to leave the harness 1.3 times that decode time
-for Part B, plus 0.4x the clip for Part B's own work. On a machine that decodes
+goes over the budget scores nothing, Part A first times the harness's own
+decoding loop (`cv2.VideoCapture.read`) on 40 frames of the clip, about a
+second, and stops early enough to leave the harness 1.2 times that for all the
+frames of Part B, plus 0.4x the clip for Part B's own work. (Timing our own
+decoder while the detector runs overstated the harness's time about twice on
+the M5: a 60 s 4K cut stopped at 31 s with 75 s of budget unused. With the
+direct timing it analyses all 60 s and the harness finishes at 2.0x.) On a machine that decodes
 a clip in less than about its own length this never binds; on a slow one it
 trades the end of the clip for a result that is not empty. On short clips
 there is a floor, set so that both parts still fit in 3x: Part A may take up

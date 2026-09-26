@@ -36,11 +36,15 @@ TOTAL_LIMIT = float(os.environ.get("PARIVISION_TOTAL_LIMIT", 2.8))  # Part A + P
 # outside our control, and a clip that goes over the budget scores nothing at all. Decoding these
 # 10-bit 4:2:2 files is CPU work: on a Colab T4 with 2 vCPUs our decoder manages about 12 frames
 # per second and the harness's loop about 9, so there the harness alone needs about 3x. So Part A
-# measures how fast this machine decodes and stops early enough to leave the harness its decode
-# time (HARNESS_DECODE times ours, measured on that Colab machine) plus B_RESERVE x the clip for
-# Part B's own work (the risk model caps that at 0.4x). On a machine that decodes the clip in
-# less than about its own length this never binds.
+# first times the harness's own loop (cv2.VideoCapture.read) on a few frames of the clip and stops
+# early enough to leave the harness HARNESS_MARGIN times that for all its frames, plus B_RESERVE x
+# the clip for Part B's own work (the risk model caps that at 0.4x). Timing our own decoder while
+# the detector runs is no substitute: on the M5 that overstated the harness's time about twice, so
+# it is only the fallback, times HARNESS_DECODE (the ratio on the Colab machine). On a machine that
+# decodes the clip in less than about its own length this never binds.
+HARNESS_MARGIN = 1.2
 HARNESS_DECODE = 1.3
+HARNESS_PROBE = (8, 40)  # frames skipped, then frames timed
 B_RESERVE = 0.4
 # Kept free after the frame loop for the final registration, trajectories and rules: about 0.01x
 # the clip on the M5, more on a loaded CPU (seconds + x clip duration).
@@ -95,6 +99,25 @@ def references() -> tuple[np.ndarray, ...]:
     return imgs
 
 
+def harness_read_seconds(video_path: str, n_frames: int) -> float | None:
+    """Seconds per frame of the harness's decoding loop for Part B (cv2.VideoCapture.read, full-size
+    BGR), timed on HARNESS_PROBE frames at the start of the clip; None for a clip too short to tell."""
+    skip, timed = HARNESS_PROBE
+    if n_frames < 3 * (skip + timed):
+        return None
+    cap = cv2.VideoCapture(str(video_path))
+    try:
+        for _ in range(skip):  # the decoder's threads start up
+            if not cap.read()[0]:
+                return None
+        t0, n = time.perf_counter(), 0
+        while n < timed and cap.read()[0]:
+            n += 1
+        return (time.perf_counter() - t0) / n if n >= timed // 2 else None
+    finally:
+        cap.release()
+
+
 def analyse(video_path: str, time_share: float = TIME_SHARE, progress=None,
             max_seconds: float | None = None, on_frame=None) -> Analysis:
     """Detect events in one clip.
@@ -120,6 +143,10 @@ def analyse(video_path: str, time_share: float = TIME_SHARE, progress=None,
     sample_fps = profile()[2]
     tracker = MultiTracker(fps=sample_fps)
     decode: dict = {}  # frames decoded so far and the seconds it took (video.sample_frames)
+    harness = harness_read_seconds(video_path, info.n_frames)
+    if harness is not None:
+        part_b_decode = HARNESS_MARGIN * info.n_frames * harness
+        deadline = min(deadline, t_start + (TOTAL_LIMIT - B_RESERVE) * info.duration - part_b_decode - reserve)
     tracks: dict = {}
     alignment: Alignment | None = None
     boxes = None
@@ -168,7 +195,7 @@ def analyse(video_path: str, time_share: float = TIME_SHARE, progress=None,
         if len(pending) == BATCH:
             flush()
             now = time.perf_counter()
-            if decode.get("frames", 0) >= 5 * info.fps:  # the rate is steady after a few seconds of video
+            if harness is None and decode.get("frames", 0) >= 5 * info.fps:  # steady after a few seconds
                 part_b_decode = HARNESS_DECODE * info.n_frames * decode["seconds"] / decode["frames"]
                 deadline = min(deadline, t_start + (TOTAL_LIMIT - B_RESERVE) * info.duration - part_b_decode - reserve)
             if now > deadline:
