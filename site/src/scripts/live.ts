@@ -33,6 +33,7 @@ const NEW_FRAME_MS = 250; // how long to wait for a picture the worker has not s
 // checked once the picture has kept its size this long, or after STEADY_MAX_MS whatever it does.
 const STEADY_MS = 1000;
 const STEADY_MAX_MS = 5000;
+const TAG_MIN_WIDTH = 600; // CSS px: on a smaller picture the boxes go without their text tags
 
 interface Run {
   source: Source;
@@ -92,7 +93,7 @@ function readyText(): string {
   return `Ready. The detector runs on this device, on ${backendName()}.`;
 }
 
-function say(text: string, kind: "err" | "warn" | "ok" = "err") {
+function say(text: string, kind: "err" | "warn" = "err") {
   const el = $("live-msg");
   el.textContent = text;
   el.dataset.kind = kind;
@@ -101,6 +102,11 @@ function say(text: string, kind: "err" | "warn" | "ok" = "err") {
 
 function errorText(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
+}
+
+/** `text` with a single final period, to be followed by another sentence. */
+function sentence(text: string): string {
+  return `${text.trim().replace(/[.\s]+$/, "")}.`;
 }
 
 /** A readable reason for a source that did not start (getUserMedia and getDisplayMedia errors). */
@@ -314,10 +320,10 @@ async function start(source: Source) {
       const text = errorText(e);
       say(
         step === "picture"
-          ? `${text} Check that the camera or the shared tab shows something, then try again.`
+          ? `${sentence(text)} Check that the camera or the shared tab shows something, then try again.`
           : step === "load"
-            ? `The pipeline did not load: ${text.replace(/^Could not load the pipeline: /, "")} Check the connection and try again.`
-            : `The analysis stopped: ${text}`,
+            ? `The pipeline did not load: ${sentence(text.replace(/^Could not load the pipeline: /, ""))} Check the connection and try again.`
+            : `The analysis stopped: ${sentence(text)} Press a button above to start again.`,
       );
     }
   }
@@ -360,6 +366,7 @@ async function analyse(r: Run, job: LiveJob, v: HTMLVideoElement) {
     r.started = performance.now();
     const gray = frames.grayFrame();
     const aligned = await job.align(gray, shape.work);
+    if (r.end) return; // stopped while the view was checked: no "Running" in between
     r.aligned = aligned.ok;
     showAlignment(aligned.ok);
     startClock(r);
@@ -440,7 +447,7 @@ async function wrapUp(r: Run) {
     $("final").textContent = `Stopped after ${summary}.`;
     showEvents(done.result.events, summary);
   } catch (e) {
-    say(`The event rules did not finish: ${errorText(e)}`);
+    say(`The event rules did not finish: ${sentence(errorText(e))} Press a button above to start again.`);
   }
 }
 
@@ -535,7 +542,8 @@ function stopClock() {
   clearInterval(clock);
 }
 
-/** The tracked boxes of the last frame analysed, over the video, each tagged with its track id and class. */
+/** The tracked boxes of the last frame analysed, over the video, each tagged with its track id and
+ * class where the picture is at least TAG_MIN_WIDTH wide. */
 function drawBoxes() {
   const c = $<HTMLCanvasElement>("overlay");
   const dpr = window.devicePixelRatio || 1;
@@ -557,7 +565,8 @@ function drawBoxes() {
     g.strokeStyle = `rgba(${GROUP_RGB[b.group] ?? OTHER_RGB}, 0.9)`;
     g.strokeRect(ox + x1 * sx, oy + y1 * sy, (x2 - x1) * sx, (y2 - y1) * sy);
   }
-  // tags last, so that no box crosses one
+  // tags last, so that no box crosses one; on a small picture they would hide the boxes
+  if ((sx * work[0]) / dpr < TAG_MIN_WIDTH) return;
   g.font = tagFont(dpr);
   g.textBaseline = "bottom";
   for (const b of boxes) {
@@ -571,7 +580,7 @@ function showEvents(events: Seg[], summary: string) {
   rows.textContent = "";
   $("events-sum").textContent = events.length
     ? `${plural(events.length, "event")} in ${summary}. Times are from the start of the run.`
-    : `No events in ${summary}. Most rules need a road user to do the same thing for a few seconds, and the signal rules need the lamps in view.`;
+    : `No events in ${summary}. Most rules need a road user to do the same thing for a few seconds, so a short run often finds none.`;
   $("events-table").hidden = !events.length;
   for (const [s, e, label] of [...events].sort((a, b) => a[0] - b[0])) {
     const tr = document.createElement("tr");
