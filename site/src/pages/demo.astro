@@ -51,6 +51,7 @@ const maxMin = UPLOAD_MAX_SECONDS / 60;
       <div class="samples" id="samples"></div>
     </div>
   </section>
+  <p class="wrap live-link"><a href="/live">Or run it live on a camera or a shared stream</a></p>
 
   <section class="wrap" id="job" hidden aria-labelledby="job-heading">
     <div class="panel panel-pad jobpanel">
@@ -163,6 +164,8 @@ const maxMin = UPLOAD_MAX_SECONDS / 60;
   .sample[disabled] { opacity: .45; cursor: not-allowed; }
   .s-label { font-weight: 700; }
   .s-meta { font-size: .72rem; color: var(--muted); }
+  .live-link { margin-top: 12px; margin-bottom: 0; font-size: .92rem; color: var(--paint-2); }
+  .live-link a::after { content: " \2192"; }
   .notes { margin-top: 18px; }
   .facts-list { margin: 0; padding-left: 1.1em; font-size: .88rem; color: var(--paint-2); display: grid; gap: 4px; max-width: 78ch; }
 

@@ -102,6 +102,17 @@ export class Analyser {
     return this.sigT.length;
   }
 
+  /** The tracker boxes of the last frame pushed, as finish() lists them in `overlay`; null before
+   * the first. The live page draws them while the stream runs. */
+  get lastFrame(): OverlayFrame | null {
+    return this.frames.at(-1) ?? null;
+  }
+
+  /** The risk score after the last frame pushed, as in finish()'s `risk`; null before the first. */
+  get lastRisk(): number | null {
+    return this.riskCurve.at(-1)?.[1] ?? null;
+  }
+
   /** Events and everything the page draws. `duration` is the analysed length (pipeline.py `limit`). */
   finish(duration: number, clip: string): PipelineResult {
     const [w, h] = this.workSize;

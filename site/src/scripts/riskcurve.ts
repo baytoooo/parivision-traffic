@@ -1,4 +1,5 @@
-// Part B risk curve under the timeline, same x scale, synced playhead.
+// Part B risk curve under the timeline, same x scale, synced playhead. The live page draws the
+// last minute of a stream with it: a window that starts at `start` instead of 0.
 import { alarmRuns, fmtTime } from "../lib/format";
 import { clear, s, tickStep, uid } from "./svg";
 import { gutterFor } from "./timeline";
@@ -6,6 +7,8 @@ import { gutterFor } from "./timeline";
 export interface RiskData {
   duration: number;
   risk: [number, number][];
+  /** Where the x axis starts, in s (default 0); it spans `duration` from there. */
+  start?: number;
 }
 
 export class RiskCurve {
@@ -51,8 +54,12 @@ export class RiskCurve {
     return alarmRuns(this.data.risk, this.theta, this.mergeGap);
   }
 
+  private get start() {
+    return this.data.start ?? 0;
+  }
+
   private x(t: number) {
-    return this.g.gutter + (Math.max(0, Math.min(this.data.duration, t)) / this.data.duration) * this.g.trackW;
+    return this.g.gutter + (Math.max(0, Math.min(this.data.duration, t - this.start)) / this.data.duration) * this.g.trackW;
   }
 
   private y(v: number) {
@@ -111,11 +118,12 @@ export class RiskCurve {
     }
 
     // axis
+    const t0 = this.start;
     const step = tickStep(this.data.duration, trackW, narrow ? 56 : 70);
-    for (let t = 0; t <= this.data.duration + 1e-6; t += step) {
+    for (let t = Math.ceil(t0 / step) * step; t <= t0 + this.data.duration + 1e-6; t += step) {
       const x = this.x(t);
       s("line", { x1: x, x2: x, y1: top + plotH, y2: top + plotH + 4, class: "risk-grid" }, svg);
-      s("text", { x, y: top + plotH + 16, "text-anchor": t === 0 ? "start" : "middle" }, svg).textContent = fmtTime(t, 0);
+      s("text", { x, y: top + plotH + 16, "text-anchor": t === t0 ? "start" : "middle" }, svg).textContent = fmtTime(t, 0);
     }
 
     if (risk.length) {
@@ -123,7 +131,8 @@ export class RiskCurve {
       const cols = Math.max(1, Math.floor(trackW));
       const colMax = new Float32Array(cols).fill(-1);
       for (const [t, v] of risk) {
-        const c = Math.min(cols - 1, Math.max(0, Math.floor((t / this.data.duration) * cols)));
+        if (t < t0) continue;
+        const c = Math.min(cols - 1, Math.max(0, Math.floor(((t - t0) / this.data.duration) * cols)));
         if (v > colMax[c]) colMax[c] = v;
       }
       let line = "";
@@ -172,7 +181,7 @@ export class RiskCurve {
 
   private tAt(clientX: number) {
     const r = this.svg.getBoundingClientRect();
-    return Math.max(0, Math.min(this.data.duration, ((clientX - r.left - this.g.gutter) / this.g.trackW) * this.data.duration));
+    return this.start + Math.max(0, Math.min(this.data.duration, ((clientX - r.left - this.g.gutter) / this.g.trackW) * this.data.duration));
   }
 
   private bind() {

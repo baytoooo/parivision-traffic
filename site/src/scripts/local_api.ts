@@ -5,7 +5,8 @@
 // Analyser. A clip the <video> cannot decode (the camera's own 10-bit 4:2:2 files in most browsers
 // on Windows and Linux), or decodes only slowly, is first converted in the page by ffmpeg.wasm
 // (transcode.ts). The page polls job() as it polled the Python demo server; nothing leaves the
-// device.
+// device. The live page (live.ts) uses the same worker through live(), with frames it grabs from a
+// camera or a shared screen itself.
 
 import { UPLOAD_MAX_SECONDS } from "../config";
 import type { ClipResult, Counts, Job, Sample } from "../lib/types";
@@ -16,7 +17,7 @@ import type { PipelineResult } from "../pipeline/types";
 import { ApiError, CONVERT, STAGES, type Api, type Health } from "./api";
 
 const FPS = 5; // pipeline.py PROFILES["cpu"]: analysed frames per second
-const WORK_WIDTH = 1920; // pipeline.py WORK_WIDTH: the work frame, whose pixels the pipeline's boxes are in
+export const WORK_WIDTH = 1920; // pipeline.py WORK_WIDTH: the work frame, whose pixels the pipeline's boxes are in
 const IN_FLIGHT = 2; // frames posted to the worker and not yet done
 const SEEK_TIMEOUT_MS = 20000;
 const OPEN_TIMEOUT_MS = 30000;
@@ -66,9 +67,26 @@ interface LocalJob {
   stop: (e: Error) => void;
 }
 
-interface Engine {
+export interface Engine {
   backend: Backend;
+  /** The detector's input [h, w]. */
   input: [number, number];
+}
+
+type Reply<T extends FromWorker["type"]> = Extract<FromWorker, { type: T }>;
+
+/** A live run (LocalApi.live): the page sends the frames, one at a time, and gets each one's
+ * tracked boxes back. Every call rejects once the run has stopped or failed. */
+export interface LiveJob {
+  readonly engine: Engine;
+  /** Registers the first frame (grey, work size / 4) and starts the Analyser. */
+  align(gray: Uint8Array<ArrayBuffer>, workSize: [number, number]): Promise<Reply<"aligned">>;
+  /** One frame at `t` s from the start of the stream; resolves with its tracked boxes and risk. */
+  frame(index: number, t: number, det: Pixels, lamp: (Pixels & { origin: [number, number] }) | null): Promise<Reply<"live">>;
+  /** Builds trajectories and applies the rules to everything sent so far; ends the run. */
+  finish(duration: number, clip: string): Promise<Reply<"result">>;
+  /** Drops the run; the worker skips what is left of it. */
+  cancel(): void;
 }
 
 /** Resolves with `p`, unless the job stops first. */
@@ -240,7 +258,7 @@ function closeVideo(v: HTMLVideoElement): void {
 }
 
 /** Draws the current video frame into the canvases the pipeline reads. */
-class FrameReader {
+export class FrameReader {
   private video: HTMLVideoElement;
   private work: [number, number];
   private det: CanvasRenderingContext2D;
@@ -387,6 +405,13 @@ export class LocalApi implements Api {
     // The page shows one result at a time and a new job hides the last one: free the old clips.
     for (const old of this.jobs.values()) if (old.url) URL.revokeObjectURL(old.url);
     this.jobs.clear();
+    const job = this.newJob(signal);
+    void this.run(job, clip, getClip);
+    return job.id;
+  }
+
+  /** A running job, registered for the worker's replies; aborting `signal` stops it. */
+  private newJob(signal: AbortSignal): LocalJob {
     let stop!: (e: Error) => void;
     const stopped = new Promise<never>((_, reject) => (stop = reject));
     stopped.catch(() => undefined);
@@ -410,8 +435,44 @@ export class LocalApi implements Api {
     };
     this.jobs.set(job.id, job);
     signal.addEventListener("abort", () => job.stop(new ApiError("aborted", "Cancelled.")), { once: true });
-    void this.run(job, clip, getClip);
-    return job.id;
+    return job;
+  }
+
+  /**
+   * Starts a live run for the live page: loads the pipeline as a job does (`onProgress` gets the
+   * fraction of the model downloaded) and returns the run. Aborting `signal` stops it, as does a
+   * worker error. The page grabs and sends the frames itself.
+   */
+  async live(signal: AbortSignal, onProgress: (f: number) => void): Promise<LiveJob> {
+    if (signal.aborted) throw new ApiError("aborted", "Cancelled.");
+    const job = this.newJob(signal);
+    this.active = job;
+    // However the run ends (cancel, `signal`, a worker error or finish), forget it; unless it
+    // finished, the worker drops what is left of it.
+    job.stopped.catch(() => {
+      if (job.status === "running") this.worker?.postMessage({ type: "cancel", job: job.id } satisfies ToWorker);
+      job.on = {};
+      this.jobs.delete(job.id);
+      if (this.active === job) this.active = null;
+    });
+    const engine = await wait(job, this.load(onProgress)).catch((e: unknown) => {
+      job.stop(e instanceof Error ? e : new Error(message(e)));
+      throw e;
+    });
+    const ask = <T extends FromWorker["type"]>(msg: ToWorker, transfer: Transferable[], type: T) => wait(job, this.call(job, msg, transfer, type));
+    return {
+      engine,
+      align: (gray, workSize) => ask({ type: "align", job: job.id, gray, workSize, fps: FPS }, [gray.buffer], "aligned"),
+      frame: (index, t, det, lamp) =>
+        ask({ type: "frame", job: job.id, index, t, det, lamp, live: true }, lamp ? [det.data, lamp.data] : [det.data], "live"),
+      finish: async (duration, clip) => {
+        const done = await ask({ type: "finish", job: job.id, duration, clip }, [], "result");
+        job.status = "done";
+        job.stop(new ApiError("aborted", "Finished."));
+        return done;
+      },
+      cancel: () => job.stop(new ApiError("aborted", "Stopped.")),
+    };
   }
 
   private setStage(job: LocalJob, stage: string): void {

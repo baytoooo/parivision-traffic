@@ -3,7 +3,8 @@
 WIUT Hackathon 2026, Computer Vision track, elimination task. Team PariVision
 (Webster University in Tashkent): Amal Karimov, Komronbek Qodirov, Aziza Adizova.
 
-Website with the live demo, EDA and results: https://parivision-traffic.vercel.app
+Website with the in-browser demo (on a clip, or live on a camera or a shared stream at /live), EDA
+and results: https://parivision-traffic.vercel.app
 
 For a 4K clip of the Tashkent junction the organisers filmed, `solution.py` returns
 

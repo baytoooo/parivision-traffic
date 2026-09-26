@@ -67,6 +67,15 @@ A job, message by message (types in `messages.ts`):
    turns it into a ClipResult whose video is the clip's object URL. `cancel`
    drops the job, and the worker skips its frames still in the queue.
 
+The live page (`src/scripts/live.ts`, through `LocalApi.live`) runs the same
+job on frames of a camera or a shared tab or window. It aligns the first frame,
+then posts `frame` messages with `live: true`, one at a time (the next only
+after the reply to the last, and at most 5 per second), with times counted from
+the start of the run. After each of them the worker also posts `live`: the
+tracker boxes of that frame (`Analyser.lastFrame`) and the risk score after it
+(`Analyser.lastRisk`). At Stop the page sends `finish` when the first frame
+matched our junction, and `cancel` otherwise.
+
 onnxruntime-web runs single-threaded unless the page is cross-origin isolated.
 Its `.wasm` files are emitted by Vite (`?url` imports in `worker.ts`), and the
 worker is built as an ES module (`vite.worker.format` in `astro.config.mjs`).

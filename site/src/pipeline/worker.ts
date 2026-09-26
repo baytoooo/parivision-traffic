@@ -1,7 +1,8 @@
 // The demo's Web Worker (a module worker; the only file of this folder that needs a browser).
 // It owns the ONNX session and the Analyser of the running job: src/scripts/local_api.ts draws
 // frames from a <video> and posts them here, and for each one the worker runs the detector and
-// the lamp reader and feeds the Analyser; at the end it posts the PipelineResult. onnxruntime-web
+// the lamp reader and feeds the Analyser; at the end it posts the PipelineResult. A frame of the
+// live page (src/scripts/live.ts) also gets its tracked boxes and risk back at once. onnxruntime-web
 // runs on WebGPU when the browser offers an adapter and on WebAssembly (CPU) otherwise, or when
 // WebGPU cannot create the session. Messages are typed in messages.ts.
 
@@ -11,9 +12,10 @@ import { alignToReference } from "./align.ts";
 import { Analyser } from "./analyse.ts";
 import { OnnxDetector, type OrtModule } from "./detector.ts";
 import { matInv } from "./geometry.ts";
-import type { Backend, FromWorker, ToWorker } from "./messages.ts";
+import type { Backend, FromWorker, LiveBox, ToWorker } from "./messages.ts";
 import { Scene, type SceneConstants } from "./scene.ts";
 import { lampPatches, lampScores, type Box } from "./signal.ts";
+import { groupOf } from "./tracker.ts";
 
 // The DOM lib types `self` as a Window; this is the part of DedicatedWorkerGlobalScope used here.
 const scope = self as unknown as {
@@ -150,6 +152,13 @@ async function frame(m: Extract<ToWorker, { type: "frame" }>): Promise<void> {
     : null;
   j.analyser.push(m.t, dets, scores);
   post({ type: "frame-done", job: m.job, index: m.index, detections: dets.length });
+  if (m.live) {
+    const groups = need().scene.c.tracking;
+    const boxes = (j.analyser.lastFrame?.boxes ?? []).map(
+      ([x1, y1, x2, y2, id, cls]): LiveBox => ({ id, cls, group: groupOf(id, groups), box: [x1, y1, x2, y2] }),
+    );
+    post({ type: "live", job: m.job, index: m.index, t: m.t, boxes, risk: j.analyser.lastRisk ?? 0 });
+  }
 }
 
 function finish(m: Extract<ToWorker, { type: "finish" }>): void {

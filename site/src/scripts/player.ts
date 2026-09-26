@@ -1,6 +1,7 @@
 // Ties one annotated video to its timeline, risk curve, signal lamp and event
 // table. Used by the Results page (sample clips) and the Demo page (job result).
-// A demo result also carries the tracker's boxes, which are drawn over the video.
+// A demo result also carries the tracker's boxes, which are drawn over the video;
+// the live page (live.ts) draws its boxes with the same colours and helpers.
 import { className, zoneFor, ZONE_BY_KEY } from "../lib/classes";
 import { fmtTime, iou } from "../lib/format";
 import type { ClipResult, Evidence, Overlay, Seg } from "../lib/types";
@@ -26,7 +27,7 @@ const $ = <T extends Element = HTMLElement>(root: Element, sel: string) => root.
 
 // The colours of the rendered videos on the Results page (src/parivision/render.py GROUP_COLORS and
 // CLASS_COLORS, BGR there): a box takes its group's colour, or its event's while it is in one.
-const GROUP_RGB: Record<string, string> = {
+export const GROUP_RGB: Record<string, string> = {
   vehicle: "120, 200, 235",
   person: "140, 235, 140",
   bicycle: "250, 170, 230",
@@ -48,7 +49,38 @@ const CLASS_RGB: Record<string, string> = {
   road_obstacle: "120, 200, 60",
   fire_smoke: "180, 30, 30",
 };
-const OTHER_RGB = "200, 200, 200";
+export const OTHER_RGB = "200, 200, 200";
+
+/** The font of the tags over the boxes, at `dpr` canvas pixels per CSS pixel. */
+export const tagFont = (dpr: number) => `600 ${Math.round(11 * dpr)}px "Overpass Mono", ui-monospace, monospace`;
+
+/**
+ * Where the picture of `video` sits on a canvas laid over it (object-fit: contain), in canvas
+ * pixels: the offset of its top-left corner and the scale from `work` pixels. `cr` is the
+ * canvas's client rect.
+ */
+export function workToCanvas(video: HTMLVideoElement, cr: DOMRect, work: [number, number], dpr: number) {
+  const vr = video.getBoundingClientRect();
+  const [ww, wh] = work;
+  const vw = video.videoWidth || ww, vh = video.videoHeight || wh;
+  const scale = Math.min(vr.width / vw, vr.height / vh);
+  const pw = vw * scale, ph = vh * scale;
+  const ox = (vr.left - cr.left + (vr.width - pw) / 2) * dpr, oy = (vr.top - cr.top + (vr.height - ph) / 2) * dpr;
+  return { ox, oy, sx: (pw * dpr) / ww, sy: (ph * dpr) / wh };
+}
+
+/** A tag in colour `rgb` with dark `text`, above the point (x, y) of a box's top-left corner (below
+ * it at the top edge), kept inside a canvas `W` px wide. Uses the context's font. */
+export function drawTag(g: CanvasRenderingContext2D, text: string, x: number, y: number, rgb: string, dpr: number, W: number): void {
+  const pad = 4 * dpr, h = 16 * dpr;
+  const tw = g.measureText(text).width + 2 * pad;
+  const tx = Math.min(Math.max(x - 1 * dpr, 0), Math.max(0, W - tw));
+  const ty = y - h >= 0 ? y - h : y;
+  g.fillStyle = `rgb(${rgb})`;
+  g.fillRect(tx, ty, tw, h);
+  g.fillStyle = "#151618";
+  g.fillText(text, tx + pad, ty + h - 3 * dpr);
+}
 
 /**
  * Draws a result's tracked boxes on a canvas laid over the video: the analysed frame nearest the
@@ -141,16 +173,10 @@ class BoxOverlay {
     if (i < 0 || !W || !H) return;
 
     // the picture inside the video element (object-fit: contain), in canvas pixels
-    const vr = this.video.getBoundingClientRect();
-    const [ww, wh] = this.data.work;
-    const vw = this.video.videoWidth || ww, vh = this.video.videoHeight || wh;
-    const scale = Math.min(vr.width / vw, vr.height / vh);
-    const pw = vw * scale, ph = vh * scale;
-    const ox = (vr.left - cr.left + (vr.width - pw) / 2) * dpr, oy = (vr.top - cr.top + (vr.height - ph) / 2) * dpr;
-    const sx = (pw * dpr) / ww, sy = (ph * dpr) / wh;
+    const { ox, oy, sx, sy } = workToCanvas(this.video, cr, this.data.work, dpr);
 
     const frame = this.data.frames[i];
-    const font = `600 ${Math.round(11 * dpr)}px "Overpass Mono", ui-monospace, monospace`;
+    const font = tagFont(dpr);
     const actors: [number[], string[]][] = [];
     g.lineJoin = "round";
     for (const b of frame.boxes) {
@@ -172,15 +198,7 @@ class BoxOverlay {
       g.strokeStyle = `rgb(${rgb})`;
       g.lineWidth = 2.5 * dpr;
       g.strokeRect(x, y, (b[2] - b[0]) * sx, (b[3] - b[1]) * sy);
-      const text = labels.map(className).join(", ");
-      const pad = 4 * dpr, h = 16 * dpr;
-      const tw = g.measureText(text).width + 2 * pad;
-      const tx = Math.min(Math.max(x - 1 * dpr, 0), Math.max(0, W - tw));
-      const ty = y - h >= 0 ? y - h : y;
-      g.fillStyle = `rgb(${rgb})`;
-      g.fillRect(tx, ty, tw, h);
-      g.fillStyle = "#151618";
-      g.fillText(text, tx + pad, ty + h - 3 * dpr);
+      drawTag(g, labels.map(className).join(", "), x, y, rgb, dpr, W);
     }
   }
 }

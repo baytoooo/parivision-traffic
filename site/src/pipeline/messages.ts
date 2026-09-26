@@ -1,8 +1,10 @@
 // Messages between the demo page (src/scripts/local_api.ts) and the pipeline's Web Worker
 // (worker.ts). One job runs at a time; every job message carries its id so that late replies
-// of a cancelled job can be told apart. Pixel buffers are transferred, not copied.
+// of a cancelled job can be told apart. Pixel buffers are transferred, not copied. The live
+// page (src/scripts/live.ts) runs the same jobs on frames of a camera or a shared screen and
+// marks its frames `live`, which asks for the tracked boxes of each frame at once.
 
-import type { PipelineResult } from "./types.ts";
+import type { Group, PipelineResult } from "./types.ts";
 
 /** Where the detector runs: WebGPU, or WebAssembly on the CPU. */
 export type Backend = "webgpu" | "wasm";
@@ -14,6 +16,15 @@ export interface Pixels {
   height: number;
 }
 
+/** One tracked object of a live frame: its track id, its COCO class in this frame, its object
+ * group and its box [x1, y1, x2, y2] in work pixels. */
+export interface LiveBox {
+  id: number;
+  cls: number;
+  group: Group;
+  box: [number, number, number, number];
+}
+
 export type ToWorker =
   /** Load scene.json, scene.bin.gz and model.onnx from `base` (the site's /pipeline/ URL) and
    * create the ONNX session. `refs` are the reference views as grey bytes at 1/4 size; WebGPU is
@@ -22,8 +33,9 @@ export type ToWorker =
   /** Start a job: align its first frame (grey, work size / 4) and set up an Analyser. */
   | { type: "align"; job: string; gray: Uint8Array; workSize: [number, number]; fps: number }
   /** One analysed frame: the whole frame for the detector (960 px wide) and the lamp crop at work
-   * scale, whose top-left corner is at `origin` in work pixels. */
-  | { type: "frame"; job: string; index: number; t: number; det: Pixels; lamp: (Pixels & { origin: [number, number] }) | null }
+   * scale, whose top-left corner is at `origin` in work pixels. With `live`, the worker answers
+   * with a `live` message too. */
+  | { type: "frame"; job: string; index: number; t: number; det: Pixels; lamp: (Pixels & { origin: [number, number] }) | null; live?: boolean }
   /** No more frames: build trajectories, apply the rules, send the result. */
   | { type: "finish"; job: string; duration: number; clip: string }
   /** Drop the job; frames of it still in the queue are skipped. */
@@ -38,6 +50,9 @@ export type FromWorker =
    * the three lamp patches, which is what the page crops for the signal reader. */
   | { type: "aligned"; job: string; ok: boolean; score: number; reference: string; H: number[]; lampCrop: [number, number, number, number] }
   | { type: "frame-done"; job: string; index: number; detections: number }
+  /** After a `live` frame, right after its frame-done: the tracked objects of that frame and the
+   * risk score (0 to 1) of the Part B model once it has seen the frame. */
+  | { type: "live"; job: string; index: number; t: number; boxes: LiveBox[]; risk: number }
   /** `groups[i]` names the object group of track ids in [(i + 1) * 1e6, (i + 2) * 1e6). */
   | { type: "result"; job: string; result: PipelineResult; groups: string[] }
   /** `job` is null for a failed init. */
