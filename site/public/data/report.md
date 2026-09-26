@@ -43,8 +43,6 @@ The result is 104 events in eight classes, with no accidents or near misses.
   from 0.526 to 0.406, since a car is on a zebra for only about 2 s.
 * **Part B stays calm.** In 18.4 minutes of normal traffic it crosses the 0.5
   threshold once, for 0.7 s; elsewhere its highest value is 0.499.
-* **A demo with no server.** A parity-tested port of the pipeline runs in the
-  visitor's browser (YOLO26n, 5 fps).
 
 ## What did not work
 
