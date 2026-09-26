@@ -28,9 +28,16 @@ const ENCODE_THREADS = Math.max(1, Math.min(4, Math.floor(DECODE_THREADS / 2)));
 // call then never returns. The core starts in seconds once it has its bytes, and a running ffmpeg
 // reports its progress twice a second, so this long without a word means it has stopped.
 const QUIET_MS = 60000;
+// What ffmpeg logs for a file that is no video it can read: not an MP4 at all, an MP4 cut off
+// before its index, or one with no picture. Converting it on a computer would not help either.
+const UNREADABLE = /Invalid data found when processing input|moov atom not found|matches no streams|does not contain any stream/;
 
 function failed(why: string): Error {
   return new Error(`We could not convert this clip in the browser (${why}). Convert it on a computer with ffmpeg and pick the result: ${CONVERT_CMD}`);
+}
+
+function unreadable(): Error {
+  return new Error("This file is not a readable MP4 video: it may be damaged, incomplete or not a video. Pick another file.");
 }
 
 /** Seconds of an ffmpeg time "hh:mm:ss.cc" in `line` after `key`, or null. */
@@ -54,8 +61,10 @@ export async function transcode(clip: Blob, maxSeconds: number, onProgress: (f: 
   const stall = new Promise<never>((_, reject) => (stalled = reject));
   stall.catch(() => undefined); // when it fires with no call pending
   let watchdog = 0;
+  let notAVideo = false;
   const onLog = ({ message }: LogEvent) => {
     heard = performance.now();
+    if (UNREADABLE.test(message)) notAVideo = true;
     const d = seconds(message, "Duration:");
     if (d) duration = Math.min(d, maxSeconds);
     if (message === "Aborted()") return; // how the core logs ffmpeg's exit, even a clean one
@@ -104,10 +113,11 @@ export async function transcode(clip: Blob, maxSeconds: number, onProgress: (f: 
       ]);
       code = await Promise.race([run, stall]);
     } catch (e) {
+      if (notAVideo) throw unreadable();
       // the core rejects with a bare string when ffmpeg itself crashes, e.g. out of memory
       throw failed(`ffmpeg stopped: ${e instanceof Error ? e.message : e}. ${lastLines.join(" ").trim()}`.trim());
     }
-    if (code !== 0) throw failed(`ffmpeg stopped with code ${code}: ${lastLines.join(" ").trim() || "no message"}`);
+    if (code !== 0) throw notAVideo ? unreadable() : failed(`ffmpeg stopped with code ${code}: ${lastLines.join(" ").trim() || "no message"}`);
     const data = await ffmpeg.readFile("/out.mp4");
     if (!(data instanceof Uint8Array) || !data.length) throw failed("ffmpeg wrote no video");
     onProgress(1);
