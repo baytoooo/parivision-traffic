@@ -367,6 +367,14 @@ the same as ours. The west crossing clip comes out one frame shorter (899
 frames against 900) and its last frames differ slightly. The annotated videos
 and the home-page loop come from step 11.
 
+The stored result the demo replays (with `?mock=1`, and in browsers without
+WebAssembly) is the browser pipeline's own output on the dusk clip, made from
+the command line with ffmpeg and onnxruntime-node:
+
+```bash
+cd site && pnpm replay public/media/demo/dusk_queue.mp4 public/data/demo/mock_result.json --video /media/demo/dusk_queue.mp4
+```
+
 ## Tests
 
 ```bash
