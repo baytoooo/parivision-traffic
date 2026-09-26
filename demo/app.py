@@ -38,7 +38,7 @@ SAMPLES = Path(__file__).resolve().parent / "samples"
 SAMPLE_LIST = [
     {"name": "north_crossing_midday", "label": "Midday, pedestrians on the north crossing", "file": "north_crossing_midday.mp4"},
     {"name": "west_crossing_turns", "label": "Right turns over the west crossing", "file": "west_crossing_turns.mp4"},
-    {"name": "dusk_queue", "label": "Dusk, red-light queue and U-turn", "file": "dusk_queue.mp4"},
+    {"name": "dusk_queue", "label": "Dusk, red-light queue", "file": "dusk_queue.mp4"},
 ]
 
 app = FastAPI(title="PariVision traffic events demo")

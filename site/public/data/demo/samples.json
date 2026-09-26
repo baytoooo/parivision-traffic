@@ -13,7 +13,7 @@
  },
  {
   "name": "dusk_queue",
-  "label": "Dusk, red-light queue and U-turn",
+  "label": "Dusk, red-light queue",
   "seconds": 30,
   "url": "/media/demo/dusk_queue.mp4"
  }
