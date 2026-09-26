@@ -11,12 +11,14 @@ interface Props {
   title: string;
   description: string;
   active?: string;
-  wide?: boolean;
+  /** false leaves out og:url, for a page with no address of its own (the 404 page) */
+  ogUrl?: boolean;
 }
-const { title, description, active = "" } = Astro.props;
+const { title, description, active = "", ogUrl = true } = Astro.props;
 const fullTitle = title === TEAM_NAME ? `${TEAM_NAME}: traffic events at a Tashkent junction` : `${title} | ${TEAM_NAME}`;
-// link previews (Telegram, Slack) need absolute URLs; `site` is set in astro.config.mjs
-const pageUrl = new URL(Astro.url.pathname, Astro.site);
+// link previews (Telegram, Slack) need absolute URLs; `site` is set in astro.config.mjs.
+// The build sees "/results/"; the site links "/results", so og:url drops the trailing slash.
+const pageUrl = ogUrl ? new URL(Astro.url.pathname.replace(/(.)\/$/, "$1"), Astro.site).href : undefined;
 const ogImage = new URL("/media/C3896_poster.jpg", Astro.site);
 ---
 <!doctype html>
@@ -30,7 +32,7 @@ const ogImage = new URL("/media/C3896_poster.jpg", Astro.site);
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content={pageUrl.href} />
+    {pageUrl && <meta property="og:url" content={pageUrl} />}
     <meta property="og:image" content={ogImage.href} />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
