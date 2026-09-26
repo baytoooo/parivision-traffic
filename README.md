@@ -12,7 +12,7 @@ For a 4K clip of the Tashkent junction the organisers filmed, `solution.py` retu
 
 ## Run it
 
-Python 3.10 to 3.13. On the evaluation machine (NVIDIA GPU, no internet):
+Use Python 3.11 or 3.12. On the evaluation machine (NVIDIA GPU, no internet):
 
 ```bash
 pip install -r requirements.txt
@@ -28,14 +28,18 @@ checks all three against `weights/SHA256SUMS`.
 `run_submission.py` and `evaluate.py` are the organisers' files, unchanged
 (sha256 in `docs/starter_kit.sha256`).
 
-`requirements.txt` pins `torch==2.6.0`, whose PyPI wheel carries CUDA 12.4
-kernels. They run on a T4 with any NVIDIA driver from 525 on. Ultralytics comes
-as `ultralytics-opencv-headless`, the same package built against
-`opencv-python-headless`, so only one OpenCV gets installed and it needs no
-libGL. If neither CUDA nor Apple MPS is available the pipeline switches to a
-lighter CPU profile (Part A: YOLO26s at 960 px, 5 frames per second; Part B:
-YOLO26n at 640 px) that aims to finish inside the time budget, at lower
-accuracy.
+On Python 3.10 to 3.13, where we tested it, `requirements.txt` installs
+`torch==2.6.0` and `torchvision==0.21.0`. The torch wheel carries CUDA 12.4
+kernels, which run on a T4 with any NVIDIA driver from 525 on, and the T4
+timings under Runtime were measured with it on Colab. torch 2.6.0 has no wheel
+for Python 3.14, so there `requirements.txt` installs torch 2.9.1 and
+torchvision 0.24.1 instead. We only smoke-tested that combination on a Mac; it
+has not been timed on a T4. Ultralytics comes as `ultralytics-opencv-headless`,
+the same package built against `opencv-python-headless`, so only one OpenCV
+gets installed and it needs no libGL. If neither CUDA nor Apple MPS is
+available the pipeline switches to a lighter CPU profile (Part A: YOLO26s at
+960 px, 5 frames per second; Part B: YOLO26n at 640 px) that aims to finish
+inside the time budget, at lower accuracy.
 
 To check `predictions_samples.json`, put the four sample clips in `samples/`
 (Reproduce everything below shows how to download them), run the harness into
@@ -49,16 +53,24 @@ python tools/compare_predictions.py predictions_samples.json predictions_samples
 
 The three variables and `--time-factor 40` lift the time guards, so nothing is
 thinned out (see Runtime). `tools/compare_predictions.py` prints, for each
-clip, the events per class in both files, how many of them pair up at tIoU
-0.3, 0.5 and 0.7 (with `evaluate.py`'s own matching) and the largest
-difference between the two risk curves. We made the file on an Apple M5 laptop with PyTorch
-2.14 on MPS, where the detector runs in fp32. On a CUDA GPU it runs in fp16,
-so boxes and a few event boundaries can differ slightly: the same command on a
-Colab T4 gave 24, 26 and 18 events on C3896, C3902 and C3905, against 25, 26
-and 18 in this file (C3897 could not be downloaded there because of a Google
-Drive quota). (The pinned torch 2.6.0 is for CUDA. On MPS it is several times
-slower, slow enough that Ultralytics' NMS time limit drops some boxes, so on a
-Mac use a newer torch.)
+clip, the events per class in both files, how many of them pair up at tIoU 0.3,
+0.5 and 0.7 (with `evaluate.py`'s own matching) and the largest difference
+between the two risk curves. We made `predictions_samples.json` on an Apple M5
+laptop with PyTorch 2.14 on MPS, where the detector runs in fp32. On a CUDA GPU
+it runs in fp16, so boxes and a few event boundaries can differ slightly: the
+same command on a Colab T4 gave 24, 26 and 18 events on C3896, C3902 and C3905,
+against 25, 26 and 18 in this file (C3897 could not be downloaded there because
+of a Google Drive quota). (The pinned torch 2.6.0 is for CUDA. On MPS it is
+several times slower, slow enough that Ultralytics' NMS time limit drops some
+boxes, so on a Mac use a newer torch.)
+
+`predictions_samples.json` was made at commit 98be7bd. Later commits changed
+the code in `src/` (among other things the accident rule and the time guards)
+and `requirements.txt`, but not the events on the four samples: running the
+current rules on the analyses that run saved (`out/analysis`, not in the
+repository) gives the same events on all four clips, and the accident rule
+fires on none of them. `tests/test_regression.py` repeats this check for C3905
+on every `pytest` run.
 
 ## How it works
 
