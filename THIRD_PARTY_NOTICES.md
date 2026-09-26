@@ -50,8 +50,8 @@ Uvicorn (BSD-3-Clause) and python-multipart (Apache-2.0)
 
 Installed by pnpm from `site/pnpm-lock.yaml`. The built site ships
 onnxruntime-web, ffmpeg.wasm and the fonts; marked and Astro run only when the
-site is built. The full licence texts are in `site/node_modules/` after
-`pnpm install`.
+site is built. Versions and licences below are from each package's
+`package.json` in `site/node_modules/`.
 
 | package | version | licence | notes |
 |---|---|---|---|
