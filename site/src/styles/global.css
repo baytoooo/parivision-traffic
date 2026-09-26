@@ -241,6 +241,7 @@ td.t { font-family: var(--font-mono); white-space: nowrap; }
   .cards-sm tbody tr:last-child { border-bottom: 0; }
   .cards-sm th, .cards-sm td { display: block; padding: 0; border: 0; text-align: left; min-width: 0; white-space: normal; }
   .cards-sm th[scope="row"], .cards-sm td.wide-sm { grid-column: 1 / -1; }
+  .cards-sm td.span2-sm { grid-column: span 2; }
   .cards-sm td[data-label]::before {
     content: attr(data-label); display: block; margin-bottom: 1px;
     font: 600 .62rem var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted);

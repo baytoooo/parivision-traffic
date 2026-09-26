@@ -56,7 +56,7 @@ const ablations = loadAblations();
 const ftyF1 = (name: string) => ablations.find((a) => a.name === name)?.per_class?.failure_to_yield;
 const fty10 = ftyF1("YOLO26m @1280, 10 fps");
 const fty5 = ftyF1("YOLO26m @1280, 5 fps");
-const ftyDrop = fty10 != null && fty5 != null ? `, and on our labels 5 fps drops failure_to_yield F1 from ${fty10.toFixed(3)} to ${fty5.toFixed(3)} (see the ablations on the Results page)` : "";
+const ftyDrop = fty10 != null && fty5 != null ? `, and on our labels 5 fps drops failure_to_yield F1 from ${fty10.toFixed(3)} to ${fty5.toFixed(3)} (the FTY column of the ablations on the Results page)` : "";
 
 const luma = clips.map((c) => ({ id: c.id, light: c.light.split(",")[0], v: eda?.light[c.id]?.mean_luma ?? NaN }));
 const lumaDay = Math.max(...luma.map((l) => l.v).filter(Number.isFinite));
@@ -91,23 +91,23 @@ const images = eda
 
   <section class="section wrap" id="clips">
     <SecHead num="01" title="The clips" />
-    <div class="table-scroll">
+    <div class="table-scroll cards-sm">
       <table>
         <thead>
-          <tr><th scope="col">Clip</th><th scope="col">Local time</th><th scope="col">Light</th><th scope="col" class="num">Brightness</th><th scope="col" class="num">Resolution</th><th scope="col" class="num">fps</th><th scope="col" class="num">Length</th><th scope="col" class="num">Bitrate</th><th scope="col" class="num">Our labels</th></tr>
+          <tr><th scope="col">Clip</th><th scope="col">Local time</th><th scope="col" class="num">Brightness</th><th scope="col">Light</th><th scope="col" class="num">Resolution</th><th scope="col" class="num">fps</th><th scope="col" class="num">Length</th><th scope="col" class="num">Bitrate</th><th scope="col" class="num">Our labels</th></tr>
         </thead>
         <tbody>
           {clips.map((c) => (
             <tr>
               <th scope="row" class="mono">{c.id}</th>
-              <td class="t">{c.local_time}</td>
-              <td>{c.light}</td>
-              <td class="num">{eda?.light[c.id]?.mean_luma?.toFixed(0) ?? "-"}</td>
-              <td class="num">{c.width}x{c.height}</td>
-              <td class="num">{c.fps}</td>
-              <td class="num">{fmtTime(c.duration)}</td>
-              <td class="num">{edaClip(c.id) ? `${edaClip(c.id)!.bitrate_mbps} Mbit/s` : "-"}</td>
-              <td class="num">{results[c.id]?.labels?.length ?? "TBD"}</td>
+              <td class="t span2-sm" data-label="Local time">{c.local_time}</td>
+              <td data-label="Brightness" class="num">{eda?.light[c.id]?.mean_luma?.toFixed(0) ?? "-"}</td>
+              <td class="wide-sm" data-label="Light">{c.light}</td>
+              <td data-label="Resolution" class="num">{c.width}x{c.height}</td>
+              <td data-label="fps" class="num">{c.fps}</td>
+              <td data-label="Length" class="num">{fmtTime(c.duration)}</td>
+              <td data-label="Bitrate" class="num">{edaClip(c.id) ? `${edaClip(c.id)!.bitrate_mbps} Mbit/s` : "-"}</td>
+              <td data-label="Our labels" class="num">{results[c.id]?.labels?.length ?? "TBD"}</td>
             </tr>
           ))}
         </tbody>
@@ -151,11 +151,12 @@ const images = eda
             <g>
               {bars.map((b, k) => {
                 const h = (Number.isFinite(b.v) ? b.v : 0) / todCeil * 150;
-                const x = cx - 39 + k * 27;
+                // 32 units per bar so the value labels over neighbouring bars do not touch
+                const x = cx - 47 + k * 32;
                 return (
                   <g>
-                    <rect x={x} y={172 - h} width="24" height={h} class={b.cls} />
-                    <text x={x + 12} y={166 - h} text-anchor="middle" class="bar-v">{Number.isFinite(b.v) ? b.v.toFixed(1) : ""}</text>
+                    <rect x={x} y={172 - h} width="30" height={h} class={b.cls} />
+                    <text x={x + 15} y={166 - h} text-anchor="middle" class="bar-v">{Number.isFinite(b.v) ? b.v.toFixed(1) : ""}</text>
                   </g>
                 );
               })}
@@ -194,19 +195,19 @@ const images = eda
         </div>
       ))}
     </div>
-    <div class="table-scroll sig-table">
+    <div class="table-scroll sig-table cards-sm">
       <table>
         <thead><tr><th scope="col">Clip</th><th scope="col" class="num">Full cycles</th><th scope="col" class="num">Green</th><th scope="col" class="num">Yellow</th><th scope="col" class="num">Red</th><th scope="col" class="num">Cycle</th><th scope="col" class="num">Unreadable</th></tr></thead>
         <tbody>
           {sig.map(({ id, time, s }) => (
             <tr>
               <th scope="row" class="mono">{id} <span class="tab-sub">{time}</span></th>
-              <td class="num">{s?.cycles ?? "-"}</td>
-              <td class="num">{s?.green != null ? `${s.green.toFixed(1)} s` : "-"}</td>
-              <td class="num">{s?.yellow != null ? `${s.yellow.toFixed(1)} s` : "-"}</td>
-              <td class="num">{s?.red != null ? `${s.red.toFixed(1)} s` : "-"}</td>
-              <td class="num">{s?.cycle != null ? `${s.cycle.toFixed(1)} s` : "-"}</td>
-              <td class="num">{s ? `${s.unknown_sec.toFixed(1)} s` : "-"}</td>
+              <td data-label="Full cycles" class="num">{s?.cycles ?? "-"}</td>
+              <td data-label="Green" class="num">{s?.green != null ? `${s.green.toFixed(1)} s` : "-"}</td>
+              <td data-label="Yellow" class="num">{s?.yellow != null ? `${s.yellow.toFixed(1)} s` : "-"}</td>
+              <td data-label="Red" class="num">{s?.red != null ? `${s.red.toFixed(1)} s` : "-"}</td>
+              <td data-label="Cycle" class="num">{s?.cycle != null ? `${s.cycle.toFixed(1)} s` : "-"}</td>
+              <td data-label="Unreadable" class="num">{s ? `${s.unknown_sec.toFixed(1)} s` : "-"}</td>
             </tr>
           ))}
         </tbody>
@@ -232,17 +233,17 @@ const images = eda
       <SecHead num="06" title="Events in our dev labels">
         <p>{nLabels} events over {(clips.reduce((a, c) => a + c.duration, 0) / 60).toFixed(1)} minutes. How the labels were made is on the <a href="/report">report page</a>.</p>
       </SecHead>
-      <div class="table-scroll">
+      <div class="table-scroll cards-sm label-table">
         <table>
           <thead><tr><th scope="col">Class</th><th scope="col" class="num">Events</th><th scope="col" class="num">Clips</th><th scope="col" class="num">Median length</th><th scope="col" class="num">Total</th></tr></thead>
           <tbody>
             {labelRows.map(([k, v]) => (
               <tr>
                 <th scope="row">{className(k)}</th>
-                <td class="num">{v.n}</td>
-                <td class="num">{v.clips.length}</td>
-                <td class="num">{v.median_sec.toFixed(1)} s</td>
-                <td class="num">{fmtTime(v.total_sec)}</td>
+                <td data-label="Events" class="num">{v.n}</td>
+                <td data-label="Clips" class="num">{v.clips.length}</td>
+                <td data-label="Median" class="num">{v.median_sec.toFixed(1)} s</td>
+                <td data-label="Total" class="num">{fmtTime(v.total_sec)}</td>
               </tr>
             ))}
           </tbody>
@@ -284,7 +285,7 @@ const images = eda
   .tod .bar-mov { fill: var(--paint); }
   .tod .bar-std { fill: var(--sig-red); }
   .tod .bar-ppl { fill: var(--zebra); }
-  .tod text.bar-v { fill: var(--paint-2); }
+  .tod text.bar-v { fill: var(--paint-2); font-size: 11.5px; }
   .tod text.bar-x { fill: var(--paint); font-weight: 600; }
   .key { display: inline-flex; align-items: center; gap: 7px; margin-right: 16px; }
   .sw { width: 14px; height: 8px; display: inline-block; }
@@ -316,6 +317,9 @@ const images = eda
   .sh-pav { background: var(--line-2); color: var(--paint) !important; }
   .share-key { margin-top: 10px; font-size: .85rem; color: var(--paint-2); }
   @media (min-width: 980px) { .sig-table { margin-top: 64px; } }
+  /* seven columns in half the page width: a little less padding so the last one fits */
+  @media (min-width: 641px) { .sig-table th, .sig-table td { padding-inline: 9px; } }
+  @media (max-width: 640px) { .label-table tr { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 
 
   .maps { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); }
