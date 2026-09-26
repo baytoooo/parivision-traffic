@@ -6,7 +6,8 @@ For each video it prints the number of events per class in both files and, at ea
 evaluate.py scores at (0.3, 0.5, 0.7), how many events of that class pair up across the two files.
 The pairing is evaluate.py's own match_segments (greedy, one to one, by descending tIoU). The match
 rate is the share of all events in both files that found a partner: 1.0 when every event in one
-file has a partner of the same class in the other. It also prints the largest difference between
+file has a partner of the same class in the other. A video that is in only one file counts toward
+the overall rate with none of its events matched. It also prints the largest difference between
 the two risk curves at the times both files have a sample for.
 """
 from __future__ import annotations
@@ -46,7 +47,10 @@ def main() -> int:
     width = max([len("all classes")] + [len(e[2]) for v in (*va.values(), *vb.values()) for e in v.get("events", [])])
     for video in sorted(set(va) | set(vb)):
         if video not in va or video not in vb:
-            print(f"{video}: only in {args.a if video in va else args.b}\n")
+            only, path = (va, args.a) if video in va else (vb, args.b)
+            n = len(only[video].get("events", []))
+            print(f"{video}: only in {path}, {n} events without a partner\n")
+            n_all += n
             continue
         ea, eb = va[video].get("events", []), vb[video].get("events", [])
         print(video)
