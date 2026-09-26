@@ -15,6 +15,9 @@ interface Props {
 }
 const { title, description, active = "" } = Astro.props;
 const fullTitle = title === TEAM_NAME ? `${TEAM_NAME}: traffic events at a Tashkent junction` : `${title} | ${TEAM_NAME}`;
+// link previews (Telegram, Slack) need absolute URLs; `site` is set in astro.config.mjs
+const pageUrl = new URL(Astro.url.pathname, Astro.site);
+const ogImage = new URL("/media/C3896_poster.jpg", Astro.site);
 ---
 <!doctype html>
 <html lang="en">
@@ -26,7 +29,10 @@ const fullTitle = title === TEAM_NAME ? `${TEAM_NAME}: traffic events at a Tashk
     <meta name="theme-color" content="#151618" />
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
-    <meta property="og:image" content="/media/C3896_poster.jpg" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={pageUrl.href} />
+    <meta property="og:image" content={ogImage.href} />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   </head>
   <body>

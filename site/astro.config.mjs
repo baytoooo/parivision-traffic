@@ -4,6 +4,8 @@ import { defineConfig } from "astro/config";
 // Static output for Vercel (project root = site/). The only dynamic part is the
 // demo page, which runs the pipeline in the visitor's browser (src/pipeline/).
 export default defineConfig({
+  // absolute URLs in the Open Graph tags (src/layouts/Base.astro)
+  site: "https://parivision-traffic.vercel.app",
   output: "static",
   trailingSlash: "ignore",
   build: { inlineStylesheets: "auto" },
