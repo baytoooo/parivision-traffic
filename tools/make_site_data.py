@@ -136,7 +136,7 @@ def hero_loop(annotated: Path, start: float, seconds: float, out: Path, poster: 
     """Cut a silent loop from an annotated render, without its timeline panel."""
     import av
 
-    with av.open(str(annotated)) as src, av.open(str(out), "w") as dst:
+    with av.open(str(annotated)) as src, av.open(str(out), "w", options={"movflags": "+faststart"}) as dst:
         vin = src.streams.video[0]
         rate = int(round(float(vin.average_rate)))
         stream = None
@@ -151,7 +151,7 @@ def hero_loop(annotated: Path, start: float, seconds: float, out: Path, poster: 
                 stream = dst.add_stream("libx264", rate=rate)
                 stream.width, stream.height = img.shape[1], img.shape[0]
                 stream.pix_fmt = "yuv420p"
-                stream.options = {"crf": "28", "preset": "slow", "movflags": "+faststart"}
+                stream.options = {"crf": "28", "preset": "slow"}
                 cv2.imwrite(str(poster), img, [cv2.IMWRITE_JPEG_QUALITY, 80])
             for packet in stream.encode(av.VideoFrame.from_ndarray(img, format="bgr24")):
                 dst.mux(packet)
