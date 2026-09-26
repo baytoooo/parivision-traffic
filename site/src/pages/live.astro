@@ -1,0 +1,180 @@
+---
+import Base from "../layouts/Base.astro";
+import "../styles/player.css";
+import { LIVE_MAX_SECONDS } from "../config";
+
+const maxMin = LIVE_MAX_SECONDS / 60;
+// the counts in view, in the order src/scripts/liveloop.ts COUNTED gives them
+const counts = [
+  ["car", "Cars"],
+  ["bus", "Buses"],
+  ["truck", "Trucks"],
+  ["motorcycle", "Motorcycles"],
+  ["person", "People"],
+  ["bicycle", "Bicycles"],
+];
+---
+<Base title="Live" description="Run our detector and tracker on a camera or on a live stream shared from another tab, in your browser. On a view of our junction the event rules and the risk model run too. Nothing is uploaded." active="live">
+  <header class="page-head wrap">
+    <p class="kicker">Live mode</p>
+    <h1>Run it on a live stream</h1>
+    <p class="lede">Point a camera at a street, or share a browser tab that plays a live traffic stream. The detector and the tracker run on this device, up to 5 frames a second, and nothing is uploaded. Our event rules and the risk model are drawn for one junction in Tashkent, so they switch on only when the view matches our camera's.</p>
+  </header>
+
+  <section class="wrap" aria-labelledby="src-heading">
+    <div class="panel panel-pad live-src">
+      <h2 class="live-h" id="src-heading">Choose a source</h2>
+      <div class="live-buttons">
+        <button type="button" class="btn primary" id="btn-camera" disabled>Use a camera</button>
+        <button type="button" class="btn" id="btn-screen" disabled>Share a tab or window</button>
+        <button type="button" class="btn ghost" data-stop hidden>Stop</button>
+      </div>
+      <p class="live-hint" id="screen-hint">For a live stream, open it in another tab and start it playing, then share that tab here. Keep this tab in front: browsers slow down pages in the background.</p>
+      <div class="live-status" id="status" data-state="checking" role="status" aria-live="polite">
+        <span class="live-dot" aria-hidden="true"></span>
+        <span id="status-text">Checking what this browser can run</span>
+      </div>
+      <p class="live-msg" id="live-msg" role="alert" hidden></p>
+    </div>
+  </section>
+
+  <section class="wrap live-view" id="view" hidden aria-label="Live view">
+    <p class="live-align" id="align-msg" hidden></p>
+    <div class="pl-stage">
+      <div class="pl-video frame">
+        <video id="video" muted playsinline aria-label="The live picture"></video>
+        <canvas class="live-overlay" id="overlay" aria-hidden="true"></canvas>
+      </div>
+      <aside class="pl-side live-side" aria-label="What the pipeline sees">
+        <div>
+          <span class="pl-k">Rate</span>
+          <span class="live-big mono" id="rate">-</span>
+          <span class="live-sub mono" id="backend"></span>
+        </div>
+        <div>
+          <span class="pl-k">Running for</span>
+          <span class="live-big mono" id="clock">0:00</span>
+          <span class="live-sub mono" id="frames">0 frames</span>
+        </div>
+        <div class="live-risk" id="risk-box" data-on="wait">
+          <span class="pl-k">Risk now</span>
+          <span class="live-big mono" id="risk">-</span>
+          <span class="live-sub" id="risk-note">Waiting for the view check</span>
+        </div>
+        <div class="live-counts">
+          <span class="pl-k">Tracked in view</span>
+          <dl>
+            {counts.map(([key, label]) => (
+              <div>
+                <dt>{label}</dt>
+                <dd class="mono" id={`count-${key}`}>0</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </aside>
+    </div>
+    <div class="live-under">
+      <p class="live-legend mono" id="legend" aria-hidden="true"></p>
+      <p class="live-final mono" id="final" role="status"></p>
+      <button type="button" class="btn small ghost" data-stop hidden>Stop</button>
+    </div>
+    <div class="panel live-chart" id="risk-panel" hidden>
+      <h3 class="live-chart-h">Risk, last 60 s</h3>
+      <div id="risk-curve"></div>
+    </div>
+  </section>
+
+  <section class="wrap" id="events" hidden tabindex="-1" aria-labelledby="events-heading">
+    <div class="panel panel-pad">
+      <h2 class="live-h" id="events-heading">Events found</h2>
+      <p class="live-sum" id="events-sum"></p>
+      <div class="table-scroll" id="events-table">
+        <table>
+          <caption class="visually-hidden">Events of the live run, times from its start</caption>
+          <thead>
+            <tr>
+              <th scope="col">Class</th>
+              <th scope="col">Start</th>
+              <th scope="col">End</th>
+              <th scope="col" class="num">Length</th>
+            </tr>
+          </thead>
+          <tbody id="event-rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap" aria-labelledby="how-heading">
+    <div class="panel panel-pad live-notes">
+      <h2 class="live-h" id="how-heading">How the live mode works</h2>
+      <ul>
+        <li>The page asks for the camera, or for the tab or window to share, only when you press a button. Stop turns it off. Frames are read on this device and never sent anywhere.</li>
+        <li>The pipeline is the one on the <a href="/demo">demo page</a>: the YOLO26n detector at 960 px wide, on WebGPU where the browser offers it and on the CPU through WebAssembly elsewhere, then ByteTrack.</li>
+        <li>It sends the next frame only when the last one is done, and at most 5 a second. A slower device runs at a lower rate instead of falling behind. The rate on the right is what this device manages.</li>
+        <li>The tracker and the risk model are set for 5 frames a second, the demo's rate. At a lower rate, road users move further between frames and a lost track is kept for longer. So tracks, events and risk are closest to the demo's when the rate stays at 5.</li>
+        <li>The first frame is lined up with our reference views of the junction. If it fits, the page also reads the signal lamps and runs the risk model, and at Stop it applies the event rules to the whole run. The rules need whole tracks, so events come at the end.</li>
+        <li>On any other view the rules and the risk model would look in the wrong places, so the page only detects and tracks there.</li>
+        <li>A run stops by itself after {maxMin} minutes.</li>
+      </ul>
+    </div>
+  </section>
+</Base>
+
+<style is:global>
+  .live-h { font-size: 1.25rem; margin: 0 0 12px; }
+  .live-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+  .live-hint { margin: 10px 0 0; font-size: .85rem; color: var(--paint-2); max-width: 70ch; }
+
+  .live-status { display: flex; align-items: center; gap: 10px; margin-top: 14px; font-size: .92rem; font-weight: 600; }
+  .live-dot { width: 11px; height: 11px; border-radius: 50%; background: var(--sig-amber); flex: none; }
+  .live-status[data-state="ready"] .live-dot { background: var(--sig-green); }
+  .live-status[data-state="running"] .live-dot { background: var(--sig-green); box-shadow: 0 0 10px var(--sig-green); animation: live-pulse 1.4s ease-in-out infinite; }
+  .live-status[data-state="unsupported"] .live-dot { background: var(--sig-red); box-shadow: 0 0 10px var(--sig-red); }
+  @keyframes live-pulse { 50% { opacity: .35; } }
+  .live-msg { margin: 12px 0 0; font-size: .88rem; padding: 8px 10px; border-left: 3px solid var(--sig-red); background: var(--asphalt-3); max-width: 78ch; }
+  .live-msg[data-kind="warn"] { border-left-color: var(--sig-amber); }
+
+  .live-view { margin-top: 18px; display: grid; gap: 12px; scroll-margin-top: 70px; }
+  .live-view > * { min-width: 0; }
+  .live-align { margin: 0; padding: 10px 12px; font-size: .92rem; border: 1px solid var(--line); border-left: 4px solid var(--sig-amber); background: var(--asphalt-2); border-radius: var(--radius); }
+  .live-align[data-ok="true"] { border-left-color: var(--sig-green); font-weight: 700; }
+  .live-overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+
+  .live-big { display: block; font-size: 1.35rem; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; }
+  .live-sub { display: block; font-size: .72rem; color: var(--muted); overflow-wrap: anywhere; }
+  .live-risk[data-on="false"] .live-big, .live-risk[data-on="wait"] .live-big { color: var(--muted); }
+  .live-risk[data-level="alarm"] .live-big { color: var(--sig-red); }
+  .live-risk, .live-counts { grid-column: 1 / -1; }
+  .live-counts dl { margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 10px; }
+  .live-counts dl div { min-width: 0; }
+  .live-counts dt { font-size: .74rem; color: var(--paint-2); }
+  .live-counts dd { margin: 0; font-size: 1.15rem; font-weight: 600; }
+
+  .live-under { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px 16px; margin-block: -8px; padding-block: 8px; }
+  /* while a run is on (live.ts sets data-running), the bar with the second Stop stays on screen
+     whenever the view is: at the bottom, or under the 63 px site header */
+  .live-view[data-running] .live-under { position: sticky; top: 63px; bottom: 0; z-index: 2; background: rgba(21, 22, 24, 0.9); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+  .live-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0; font-size: .72rem; color: var(--muted); }
+  .live-legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .live-legend i { width: 14px; height: 10px; border: 2px solid; display: inline-block; }
+  .live-final { margin: 0; font-size: .78rem; color: var(--paint-2); }
+  .live-final:empty { display: none; }
+
+  .live-chart { padding: 12px 12px 6px 8px; }
+  .live-chart-h { margin: 0 0 4px 4px; font-size: .72rem; font-family: var(--font-mono); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+
+  #events { margin-top: 18px; }
+  #events:focus { outline: none; }
+  .live-sum { font-size: .92rem; color: var(--paint-2); margin: 0 0 12px; max-width: 78ch; }
+  #events td.cls-name { font-weight: 700; }
+
+  .live-notes { margin-top: 18px; }
+  .live-notes ul { margin: 0; padding-left: 1.1em; font-size: .88rem; color: var(--paint-2); display: grid; gap: 4px; max-width: 78ch; }
+</style>
+
+<script>
+  import { initLive } from "../scripts/live";
+  initLive();
+</script>

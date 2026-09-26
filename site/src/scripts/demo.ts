@@ -1,5 +1,5 @@
 // Demo page controller: what this browser can run, file or sample, job progress, result.
-import { RISK_MERGE_GAP, RISK_THETA, UPLOAD_MAX_SECONDS } from "../config";
+import { QUICK_SECONDS, RISK_MERGE_GAP, RISK_THETA, UPLOAD_MAX_SECONDS } from "../config";
 import { fmtBytes, fmtTime } from "../lib/format";
 import type { ClipResult, Job, Sample } from "../lib/types";
 import { ApiError, CONVERT, MockApi, STAGES, type Api } from "./api";
@@ -20,6 +20,10 @@ let api: Api = forceMock ? new MockApi({ fail: mockParam === "error" }) : local;
 let engineState: EngineState = "checking";
 let file: File | null = null;
 let fileOk = false;
+/** The chosen file's length and size, when this browser can read them. */
+let fileMeta: { duration: number; width: number; height: number } | null = null;
+/** The quick option has been offered, and ticked for the visitor, once. */
+let quickOffered = false;
 let running = false;
 /** Whether the running job converts its clip first, which adds a stage to the list. */
 let converting = false;
@@ -42,9 +46,40 @@ function setEngine(state: EngineState, detail = "") {
   };
   $("server-text").textContent = text[state];
   $("server-detail").textContent = detail;
+  // what to expect before a job starts, from our runs of the 30 s samples on an Apple M5 laptop:
+  // 11 to 21 s on WebGPU; on WebAssembly 16 s (Firefox) and 32 s (Chromium) with the machine idle,
+  // 30 to 69 s at load 10 to 16, 76 to 113 s (Firefox) with it busy, and once 244 s (Chromium) at
+  // load 37. The facts list in demo.astro quotes the idle and busy runs; keep the two in step.
+  const time = $("server-time");
+  time.hidden = state !== "online";
+  time.textContent =
+    local.backend === "webgpu"
+      ? "Expected time: about 0.4 to 0.7x the clip's length, on this device's GPU."
+      : "Expected time: about 0.5 to 4x the clip's length, as this browser runs the model on the CPU. A busy computer can take longer.";
   $("replay-note").hidden = !(state === "offline" || state === "mock");
   document.querySelectorAll<HTMLButtonElement>("[data-needs-engine]").forEach((b) => (b.disabled = state === "checking" || running));
+  updateQuick();
   updateAnalyse();
+}
+
+/** On the CPU the page offers to analyse only the first QUICK_SECONDS of an upload, ticked at first;
+ * on WebGPU, or in replay mode, it analyses up to UPLOAD_MAX_SECONDS. */
+function updateQuick() {
+  const box = $<HTMLInputElement>("quick");
+  const offer = engineState === "online" && local.backend === "wasm";
+  $("quick-row").hidden = !offer;
+  if (!offer) box.checked = false;
+  else if (!quickOffered) box.checked = true;
+  quickOffered ||= offer;
+  box.disabled = running;
+  if (file && fileOk) fileNote();
+}
+
+/** Seconds of an upload the next job analyses. */
+function uploadSeconds(): number {
+  // a clip barely over the quick limit (our 30.03 s samples) is analysed whole, as fileNote says
+  if (fileMeta && fileMeta.duration <= QUICK_SECONDS + 0.5) return UPLOAD_MAX_SECONDS;
+  return $<HTMLInputElement>("quick").checked ? QUICK_SECONDS : UPLOAD_MAX_SECONDS;
 }
 
 function onlineDetail() {
@@ -138,6 +173,7 @@ async function readDuration(f: File): Promise<{ duration: number; width: number;
 async function chooseFile(f: File | null) {
   file = f;
   fileOk = false;
+  fileMeta = null;
   const info = $("file-info");
   if (!f) {
     info.hidden = true;
@@ -158,18 +194,28 @@ async function chooseFile(f: File | null) {
   const meta = await readDuration(f);
   if (file !== f) return;
   fileOk = true;
-  if (!meta || !meta.width) {
-    $("file-dur").textContent = "unknown";
-    fileMsg(`This browser cannot play the file, so we first convert it here, in the browser. For ${UPLOAD_MAX_SECONDS / 60} minutes of 4K that takes a few minutes.`, "warn");
-    return updateAnalyse();
-  }
-  $("file-dur").textContent = `${fmtTime(meta.duration)}, ${meta.width}x${meta.height}`;
-  if (local.alwaysConvert && !api.mock) fileMsg("Started with ?transcode=1: we convert the clip in this browser first, although this browser can play it.", "warn");
-  else if (meta.duration > UPLOAD_MAX_SECONDS + 0.5)
-    fileMsg(`This clip is ${fmtTime(meta.duration, 0)} long. Only the first ${fmtTime(UPLOAD_MAX_SECONDS, 0)} is analysed.`, "warn");
+  fileMeta = meta && meta.width ? meta : null;
+  $("file-dur").textContent = fileMeta ? `${fmtTime(fileMeta.duration)}, ${fileMeta.width}x${fileMeta.height}` : "unknown";
+  fileNote();
+  updateAnalyse();
+}
+
+/** The line under the chosen file: what the job will do with it. */
+function fileNote() {
+  const meta = fileMeta;
+  const seconds = uploadSeconds();
+  // Chrome on our Apple M5 laptop converted 2 minutes of a camera file in 75 to 80 s and 30 s of
+  // one in 21 s: about 40 s per minute of the camera's 4K (demo.astro quotes the same)
+  if (!meta)
+    fileMsg(
+      `This browser cannot play the file, so we first convert it here, in the browser, up to its first ${fmtTime(seconds, 0)}. ` +
+        `How long that takes depends on the browser and the computer. For ${fmtTime(seconds, 0)} of the camera's 4K, Chrome on our laptop takes about ${Math.round((seconds * 40) / 60)} s.`,
+      "warn",
+    );
+  else if (local.alwaysConvert && !api.mock) fileMsg("Started with ?transcode=1: we convert the clip in this browser first, although this browser can play it.", "warn");
+  else if (meta.duration > seconds + 0.5) fileMsg(`This clip is ${fmtTime(meta.duration, 0)} long. Only the first ${fmtTime(seconds, 0)} is analysed.`, "warn");
   else if (meta.width >= 3000) fileMsg("4K works but is slower. If this browser decodes the clip slowly, as Chrome does with the camera's own 10-bit files, we convert it here first.", "warn");
   else fileMsg("Ready.", "ok");
-  updateAnalyse();
 }
 
 // ------------------------------------------------------------------ job
@@ -183,6 +229,7 @@ function setRunning(v: boolean) {
   running = v;
   document.querySelectorAll<HTMLButtonElement>("[data-needs-engine]").forEach((b) => (b.disabled = v || engineState === "checking"));
   $<HTMLInputElement>("file-input").disabled = v;
+  $<HTMLInputElement>("quick").disabled = v;
   $("drop").classList.toggle("disabled", v);
   updateAnalyse();
 }
@@ -305,7 +352,8 @@ async function runJob(source: string, start: (signal: AbortSignal) => Promise<st
 function startUpload() {
   if (!file || !fileOk) return;
   const f = file;
-  runJob(f.name, (signal) => api.submitFile(f, signal));
+  const seconds = uploadSeconds();
+  runJob(f.name, (signal) => api.submitFile(f, signal, seconds));
 }
 
 function startSample(s: Sample) {
@@ -327,10 +375,11 @@ function showResult(result: ClipResult, source: string, jobId: string) {
           : "",
       ].join(" ");
   const root = document.querySelector<HTMLElement>('[data-player="demo"]')!;
-  // the clip's own first frame instead of a stock poster, which the tracked boxes would not fit
-  const poster = result.overlay ? undefined : "/media/demo_poster.jpg";
+  // the clip's own first frame instead of a stock poster, which the tracked boxes would not fit; a
+  // still of it, as WebKit shows black until it plays a clip whose first frame comes after 0
+  const poster = result.overlay ? result.poster : "/media/demo_poster.jpg";
   const src = { result, video, poster, title: `${source}, ${result.duration.toFixed(1)} s` };
-  if (!player) player = new Player(root, src, { theta: RISK_THETA, mergeGap: RISK_MERGE_GAP });
+  if (!player) player = new Player(root, src, { theta: RISK_THETA, mergeGap: RISK_MERGE_GAP, placeInNote: true });
   else player.load(src);
   $("result").scrollIntoView({ block: "start" });
   $("result-heading").focus({ preventScroll: true });
@@ -339,9 +388,11 @@ function showResult(result: ClipResult, source: string, jobId: string) {
 function downloadJson() {
   if (!lastResult) return;
   const { result, source, jobId } = lastResult;
-  // the result as the Python demo server returned it: no object URL, no per-frame boxes
+  // the result as the Python demo server returned it, with readable notes and a zone per event
+  // (as the table shows them): no object URLs, no per-frame boxes
   const data: Partial<ClipResult> = { ...result };
   delete data.video;
+  delete data.poster;
   delete data.overlay;
   const payload = { job_id: jobId, source, mode: api.mock ? "mock" : `browser, ${local.backend}`, ...data };
   const blob = new Blob([JSON.stringify(payload, null, 1)], { type: "application/json" });
@@ -378,6 +429,7 @@ export function initDemo() {
     chooseFile(null);
   });
   $("btn-analyse").addEventListener("click", startUpload);
+  $("quick").addEventListener("change", () => file && fileOk && fileNote());
   $("btn-cancel").addEventListener("click", () => abort?.abort());
   $("btn-again").addEventListener("click", () => {
     show("idle");

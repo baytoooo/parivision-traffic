@@ -5,9 +5,11 @@
 // Analyser. A clip the <video> cannot decode (the camera's own 10-bit 4:2:2 files in most browsers
 // on Windows and Linux), or decodes only slowly, is first converted in the page by ffmpeg.wasm
 // (transcode.ts). The page polls job() as it polled the Python demo server; nothing leaves the
-// device.
+// device. The live page (live.ts) uses the same worker through live(), with frames it grabs from a
+// camera or a shared screen itself.
 
 import { UPLOAD_MAX_SECONDS } from "../config";
+import { readableNote } from "../lib/classes";
 import type { ClipResult, Counts, Job, Sample } from "../lib/types";
 import { ALIGN_DOWNSCALE, rgbaToGray } from "../pipeline/align";
 import { roundHalfEven } from "../pipeline/geometry";
@@ -16,7 +18,7 @@ import type { PipelineResult } from "../pipeline/types";
 import { ApiError, CONVERT, STAGES, type Api, type Health } from "./api";
 
 const FPS = 5; // pipeline.py PROFILES["cpu"]: analysed frames per second
-const WORK_WIDTH = 1920; // pipeline.py WORK_WIDTH: the work frame, whose pixels the pipeline's boxes are in
+export const WORK_WIDTH = 1920; // pipeline.py WORK_WIDTH: the work frame, whose pixels the pipeline's boxes are in
 const IN_FLIGHT = 2; // frames posted to the worker and not yet done
 const SEEK_TIMEOUT_MS = 20000;
 const OPEN_TIMEOUT_MS = 30000;
@@ -27,6 +29,11 @@ const FIRST_FRAME_MS = 8000; // from the clip's metadata to its first frame; lon
 // or not, seek in 10 to 70 ms.
 const PROBE = [1, 2, 3].map((k) => k / FPS); // seeks timed before choosing
 const SLOW_SEEK_MS = 150; // most of them slower than this: convert the clip first
+// WebKit (Safari) draws black at t = 0 when a clip's first frame comes later, as after an empty edit
+// at the start of many ffmpeg cuts; Chrome and Firefox draw that first frame. A job aligns on, and
+// starts detecting at, the first frame that is not black, stepping 1 / FPS at a time.
+const BLACK_MAX = 16; // a grey frame whose brightest pixel is darker than this is black
+const BLACK_STEPS = 5;
 const REFERENCES = ["day", "dusk"]; // public/pipeline/reference_<name>.png
 const [READ, LOAD, ALIGN, DETECT, RULES] = STAGES;
 
@@ -57,8 +64,12 @@ interface LocalJob {
   framesTotal: number;
   error: string | null;
   result: ClipResult | null;
+  /** The job analyses the clip up to this time, at most. */
+  maxSeconds: number;
   /** Object URL of the clip; the result's video. */
   url: string | null;
+  /** Object URL of a still of the first frame analysed; the result's poster. */
+  poster: string | null;
   /** Worker messages of this job, by type. */
   on: Partial<Record<FromWorker["type"], Handler>>;
   /** Rejects when the job is cancelled or fails; every wait of the job races it. */
@@ -66,9 +77,26 @@ interface LocalJob {
   stop: (e: Error) => void;
 }
 
-interface Engine {
+export interface Engine {
   backend: Backend;
+  /** The detector's input [h, w]. */
   input: [number, number];
+}
+
+type Reply<T extends FromWorker["type"]> = Extract<FromWorker, { type: T }>;
+
+/** A live run (LocalApi.live): the page sends the frames, one at a time, and gets each one's
+ * tracked boxes back. Every call rejects once the run has stopped or failed. */
+export interface LiveJob {
+  readonly engine: Engine;
+  /** Registers the first frame (grey, work size / 4) and starts the Analyser. */
+  align(gray: Uint8Array<ArrayBuffer>, workSize: [number, number]): Promise<Reply<"aligned">>;
+  /** One frame at `t` s from the start of the stream; resolves with its tracked boxes and risk. */
+  frame(index: number, t: number, det: Pixels, lamp: (Pixels & { origin: [number, number] }) | null): Promise<Reply<"live">>;
+  /** Builds trajectories and applies the rules to everything sent so far; ends the run. */
+  finish(duration: number, clip: string): Promise<Reply<"result">>;
+  /** Drops the run; the worker skips what is left of it. */
+  cancel(): void;
 }
 
 /** Resolves with `p`, unless the job stops first. */
@@ -232,6 +260,12 @@ async function seeksSlowly(v: HTMLVideoElement, times: number[], limit: number):
   return slow >= most;
 }
 
+/** Whether a grey frame is all black: what WebKit draws before a clip's first frame. */
+function isBlack(gray: Uint8Array): boolean {
+  for (let i = 0; i < gray.length; i++) if (gray[i] >= BLACK_MAX) return false;
+  return true;
+}
+
 /** Frees the browser's decoder of a video from openVideo and takes it off the page. */
 function closeVideo(v: HTMLVideoElement): void {
   v.removeAttribute("src");
@@ -240,7 +274,7 @@ function closeVideo(v: HTMLVideoElement): void {
 }
 
 /** Draws the current video frame into the canvases the pipeline reads. */
-class FrameReader {
+export class FrameReader {
   private video: HTMLVideoElement;
   private work: [number, number];
   private det: CanvasRenderingContext2D;
@@ -278,6 +312,11 @@ class FrameReader {
     return { data: this.det.getImageData(0, 0, canvas.width, canvas.height).data.buffer, width: canvas.width, height: canvas.height };
   }
 
+  /** The frame last drawn for the detector as a JPEG (null if the browser cannot encode it). */
+  still(): Promise<Blob | null> {
+    return new Promise((resolve) => this.det.canvas.toBlob(resolve, "image/jpeg", 0.85));
+  }
+
   /** The work-pixel rectangle [x0, y0, x1, y1) of the frame at work scale, with its origin. */
   lampCrop([x0, y0, x1, y1]: [number, number, number, number]): Pixels & { origin: [number, number] } {
     const w = x1 - x0, h = y1 - y0;
@@ -293,17 +332,19 @@ class FrameReader {
   }
 }
 
-function toClipResult(r: PipelineResult, groups: string[], video: string): ClipResult {
+function toClipResult(r: PipelineResult, groups: string[], video: string, poster: string | null): ClipResult {
   return {
     clip: r.clip,
     duration: r.duration,
     events: r.events,
     risk: r.risk,
     signal: r.signal,
-    evidence: r.evidence,
+    // the notes as the Results page words them ("west crossing", not "west")
+    evidence: r.evidence.map((e) => ({ ...e, note: readableNote(e.note) })),
     counts: r.counts as Counts,
     aligned: r.aligned,
     video,
+    ...(poster ? { poster } : {}),
     overlay: { work: r.overlay.work, groups, frames: r.overlay.frames },
   };
 }
@@ -354,8 +395,8 @@ export class LocalApi implements Api {
     return this.sampleList;
   }
 
-  async submitFile(file: File, signal: AbortSignal): Promise<string> {
-    return this.start(file.name, signal, async () => file);
+  async submitFile(file: File, signal: AbortSignal, maxSeconds = UPLOAD_MAX_SECONDS): Promise<string> {
+    return this.start(file.name, signal, async () => file, Math.min(maxSeconds, UPLOAD_MAX_SECONDS));
   }
 
   async submitSample(name: string, signal: AbortSignal): Promise<string> {
@@ -382,11 +423,24 @@ export class LocalApi implements Api {
 
   // ---------------------------------------------------------------- jobs
 
-  private start(clip: string, signal: AbortSignal, getClip: (job: LocalJob, onProgress: (f: number) => void) => Promise<Blob>): string {
+  private start(
+    clip: string,
+    signal: AbortSignal,
+    getClip: (job: LocalJob, onProgress: (f: number) => void) => Promise<Blob>,
+    maxSeconds = UPLOAD_MAX_SECONDS,
+  ): string {
     if (signal.aborted) throw new ApiError("aborted", "Cancelled.");
     // The page shows one result at a time and a new job hides the last one: free the old clips.
-    for (const old of this.jobs.values()) if (old.url) URL.revokeObjectURL(old.url);
+    for (const old of this.jobs.values()) for (const url of [old.url, old.poster]) if (url) URL.revokeObjectURL(url);
     this.jobs.clear();
+    const job = this.newJob(signal);
+    job.maxSeconds = maxSeconds;
+    void this.run(job, clip, getClip);
+    return job.id;
+  }
+
+  /** A running job, registered for the worker's replies; aborting `signal` stops it. */
+  private newJob(signal: AbortSignal): LocalJob {
     let stop!: (e: Error) => void;
     const stopped = new Promise<never>((_, reject) => (stop = reject));
     stopped.catch(() => undefined);
@@ -403,15 +457,53 @@ export class LocalApi implements Api {
       framesTotal: 0,
       error: null,
       result: null,
+      maxSeconds: UPLOAD_MAX_SECONDS,
       url: null,
+      poster: null,
       on: {},
       stopped,
       stop,
     };
     this.jobs.set(job.id, job);
     signal.addEventListener("abort", () => job.stop(new ApiError("aborted", "Cancelled.")), { once: true });
-    void this.run(job, clip, getClip);
-    return job.id;
+    return job;
+  }
+
+  /**
+   * Starts a live run for the live page: loads the pipeline as a job does (`onProgress` gets the
+   * fraction of the model downloaded) and returns the run. Aborting `signal` stops it, as does a
+   * worker error. The page grabs and sends the frames itself.
+   */
+  async live(signal: AbortSignal, onProgress: (f: number) => void): Promise<LiveJob> {
+    if (signal.aborted) throw new ApiError("aborted", "Cancelled.");
+    const job = this.newJob(signal);
+    this.active = job;
+    // However the run ends (cancel, `signal`, a worker error or finish), forget it; unless it
+    // finished, the worker drops what is left of it.
+    job.stopped.catch(() => {
+      if (job.status === "running") this.worker?.postMessage({ type: "cancel", job: job.id } satisfies ToWorker);
+      job.on = {};
+      this.jobs.delete(job.id);
+      if (this.active === job) this.active = null;
+    });
+    const engine = await wait(job, this.load(onProgress)).catch((e: unknown) => {
+      job.stop(e instanceof Error ? e : new Error(message(e)));
+      throw e;
+    });
+    const ask = <T extends FromWorker["type"]>(msg: ToWorker, transfer: Transferable[], type: T) => wait(job, this.call(job, msg, transfer, type));
+    return {
+      engine,
+      align: (gray, workSize) => ask({ type: "align", job: job.id, gray, workSize, fps: FPS }, [gray.buffer], "aligned"),
+      frame: (index, t, det, lamp) =>
+        ask({ type: "frame", job: job.id, index, t, det, lamp, live: true }, lamp ? [det.data, lamp.data] : [det.data], "live"),
+      finish: async (duration, clip) => {
+        const done = await ask({ type: "finish", job: job.id, duration, clip }, [], "result");
+        job.status = "done";
+        job.stop(new ApiError("aborted", "Finished."));
+        return done;
+      },
+      cancel: () => job.stop(new ApiError("aborted", "Stopped.")),
+    };
   }
 
   private setStage(job: LocalJob, stage: string): void {
@@ -455,7 +547,7 @@ export class LocalApi implements Api {
         let playable: Blob = blob;
         try {
           const { transcode } = await wait(job, import("./transcode"));
-          playable = await wait(job, transcode(blob, UPLOAD_MAX_SECONDS, (f) => this.advance(job, f), halt.signal));
+          playable = await wait(job, transcode(blob, job.maxSeconds, (f) => this.advance(job, f), halt.signal));
         } catch (e) {
           // a clip this browser decodes, if slowly, is analysed as it is when the conversion fails
           if (slow !== true || (e instanceof ApiError && e.kind === "aborted")) throw e;
@@ -464,11 +556,8 @@ export class LocalApi implements Api {
         job.url = URL.createObjectURL(playable);
         video = await openFor(job, job.url);
       }
-      const limit = Math.min(video.duration, UPLOAD_MAX_SECONDS);
+      const limit = Math.min(video.duration, job.maxSeconds);
       const work: [number, number] = [WORK_WIDTH, roundHalfEven((video.videoHeight * WORK_WIDTH) / video.videoWidth)];
-      const times: number[] = [];
-      for (let k = 0; k / FPS < limit; k++) times.push(k / FPS);
-      job.framesTotal = times.length;
 
       this.setStage(job, LOAD);
       // the model's bytes; the ONNX Runtime engine loads after them, in the rest of the stage
@@ -476,9 +565,20 @@ export class LocalApi implements Api {
 
       this.setStage(job, ALIGN);
       const frames = new FrameReader(video, work, engine.input[1]);
+      // the first frame that is not black; if the first BLACK_STEPS are, the clip starts black and
+      // is read from 0 all the same
+      let first = 0;
       await wait(job, seek(video, 0));
-      const gray = frames.grayFrame();
+      let gray = frames.grayFrame();
+      for (let k = 1; isBlack(gray) && k <= BLACK_STEPS && k / FPS < limit; k++) {
+        await wait(job, seek(video, k / FPS));
+        gray = frames.grayFrame();
+        if (!isBlack(gray)) first = k;
+      }
       const aligned = await wait(job, this.call(job, { type: "align", job: job.id, gray, workSize: work, fps: FPS }, [gray.buffer], "aligned"));
+      const times: number[] = [];
+      for (let k = first; k / FPS < limit; k++) times.push(k / FPS);
+      job.framesTotal = times.length;
 
       this.setStage(job, DETECT);
       // Seek and draw frame k + 1 while the worker detects frame k; at most IN_FLIGHT posted.
@@ -491,9 +591,13 @@ export class LocalApi implements Api {
         wake?.();
       };
       const slot = () => wait(job, new Promise<void>((r) => (wake = r)));
+      // the result's poster: the first frame analysed, which the player shows until it plays (WebKit
+      // shows black for a clip that starts after 0)
+      let still: Promise<Blob | null> = Promise.resolve(null);
       for (let k = 0; k < times.length; k++) {
         await wait(job, seek(video, times[k]));
         const det = frames.detFrame();
+        if (k === 0) still = frames.still();
         const lamp = frames.lampCrop(aligned.lampCrop);
         while (inFlight >= IN_FLIGHT) await slot();
         this.post({ type: "frame", job: job.id, index: k, t: times[k], det, lamp }, [det.data, lamp.data]);
@@ -503,7 +607,9 @@ export class LocalApi implements Api {
 
       this.setStage(job, RULES);
       const done = await wait(job, this.call(job, { type: "finish", job: job.id, duration: limit, clip }, [], "result"));
-      job.result = toClipResult(done.result, done.groups, job.url);
+      const poster = await wait(job, still);
+      if (poster) job.poster = URL.createObjectURL(poster);
+      job.result = toClipResult(done.result, done.groups, job.url, job.poster);
       job.status = "done";
       job.stage = "done";
       job.progress = 1;
@@ -513,8 +619,8 @@ export class LocalApi implements Api {
       job.error = cancelled ? "Cancelled." : message(e);
       job.stage = "failed";
       this.worker?.postMessage({ type: "cancel", job: job.id } satisfies ToWorker);
-      if (job.url) URL.revokeObjectURL(job.url);
-      job.url = null;
+      for (const url of [job.url, job.poster]) if (url) URL.revokeObjectURL(url);
+      job.url = job.poster = null;
       job.stop(e instanceof Error ? e : new Error(message(e)));
     } finally {
       job.on = {};

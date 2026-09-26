@@ -16,5 +16,11 @@ export const RISK_MERGE_GAP = 2.0;
 
 /** The demo analyses this many seconds from the start of a clip, at most (src/scripts/local_api.ts stops reading frames there). */
 export const UPLOAD_MAX_SECONDS = 120;
+/** Where the model runs on the CPU (WebAssembly, no WebGPU), the demo offers to analyse only this
+ * many seconds of an upload, and does so unless the visitor unticks the box. */
+export const QUICK_SECONDS = 30;
+/** A live run (src/scripts/live.ts) stops by itself after this many seconds. The rules then take
+ * a few seconds for every 5 minutes of stream. */
+export const LIVE_MAX_SECONDS = 600;
 /** The camera's own files are 10-bit 4:2:2 H.264, which not every browser decodes. The demo converts such a file in the browser (src/scripts/transcode.ts); if that fails, it shows this command for converting it on a computer. */
 export const CONVERT_CMD = `ffmpeg -i in.MP4 -t ${UPLOAD_MAX_SECONDS} -vf scale=1920:-2 -pix_fmt yuv420p -c:v libx264 out.mp4`;

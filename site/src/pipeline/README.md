@@ -29,7 +29,8 @@ rules.ts         Context and one function per class, detectFromContext (rules.py
 risk.ts          Part B's Anticipator.observe path (risk.py)
 detector.ts      letterbox, ONNX session, output parsing; works with onnxruntime-web and -node
 analyse.ts       Analyser, glue with no DOM: frames in, PipelineResult (events, signal, risk curve,
-                 counts, tracker boxes per frame) out; pipeline.py analyse() + demo/worker.py
+                 counts, tracker boxes per frame, the zone of each piece of evidence) out;
+                 pipeline.py analyse() + demo/worker.py, zones as tools/make_site_data.py
 messages.ts      the messages between the page and the worker
 worker.ts        Web Worker: owns the ONNX session and the running job's Analyser
 ```
@@ -52,13 +53,19 @@ A job, message by message (types in `messages.ts`):
    browser shows no frame of it (the camera's 10-bit 4:2:2 files in most
    browsers on Windows and Linux), seeks slowly because it decodes in software
    (the same files in Chrome on a Mac), fails a seek, or the page has
-   `?transcode=1`, the page first converts the first 120 s with ffmpeg.wasm
+   `?transcode=1`, the page first converts the part it analyses (the first
+   120 s, or 30 s for a quick run on the CPU, see step 3) with ffmpeg.wasm
    (`src/scripts/transcode.ts`) to 8-bit H.264, 1920 px wide, and opens that. If
    the conversion fails on a clip the browser decodes, only slowly, the page
    reads the original after all. It draws the first frame grey
-   at 480 x 270 and posts `align`. The worker runs `alignToReference`, builds the
+   at 480 x 270 and posts `align`. WebKit draws black at t = 0 for a clip whose
+   first frame comes later (an empty edit at the start), so a black frame is
+   skipped: the page steps 0.2 s at a time, up to 1 s, to the first frame that
+   is not black. The worker runs `alignToReference`, builds the
    lamp patches and an Analyser, and posts `aligned` with H and the lamp crop.
-3. For t = k / 5 s while t < min(duration, 120 s): the page seeks, draws the
+3. For t = k / 5 s from that frame on, while t < min(duration, 120 s) (30 s
+   when the model runs on WebAssembly and the visitor keeps the quick run the
+   page offers there): the page seeks, draws the
    frame at 960 px wide and the lamp crop at work scale, and posts `frame` (pixel
    buffers transferred, at most two in flight, so the next seek overlaps the
    current detection). The worker detects, reads the lamps, calls
@@ -66,6 +73,15 @@ A job, message by message (types in `messages.ts`):
 4. `finish`: the worker calls `Analyser.finish` and posts `result`; the page
    turns it into a ClipResult whose video is the clip's object URL. `cancel`
    drops the job, and the worker skips its frames still in the queue.
+
+The live page (`src/scripts/live.ts`, through `LocalApi.live`) runs the same
+job on frames of a camera or a shared tab or window. It aligns the first frame,
+then posts `frame` messages with `live: true`, one at a time (the next only
+after the reply to the last, and at most 5 per second), with times counted from
+the start of the run. After each of them the worker also posts `live`: the
+tracker boxes of that frame (`Analyser.lastFrame`) and the risk score after it
+(`Analyser.lastRisk`). At Stop the page sends `finish` when the first frame
+matched our junction, and `cancel` otherwise.
 
 onnxruntime-web runs single-threaded unless the page is cross-origin isolated.
 Its `.wasm` files are emitted by Vite (`?url` imports in `worker.ts`), and the
@@ -101,7 +117,10 @@ worker is built as an ES module (`vite.worker.format` in `astro.config.mjs`).
 `site/tests/*.test.ts`, run from `site/` with `node --test "tests/*.test.ts"`. Fixtures are in
 `site/tests/fixtures/<clip>/` (C3905 and C3902), made by
 `python tools/export_parity_fixtures.py --clip <clip>`; see its docstring for
-what each file holds. Each test feeds a module the Python input of that stage
+what each file holds. The C3905 fixtures and the two reference frames are
+committed gzipped (`tests/fixture.ts` reads either form). The C3902 tests skip
+until `python tools/export_parity_fixtures.py --clip C3902` writes theirs; see
+the Tests section of the top-level README. Each test feeds a module the Python input of that stage
 and compares with the Python output of that stage:
 
 | test | input | compared with | tolerance |

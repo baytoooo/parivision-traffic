@@ -46,6 +46,8 @@ export interface ClipResult {
   counts?: Counts;
   /** Only in demo job results: the video to play, the analysed clip itself (an object URL) or a stored video in replay mode. */
   video?: string;
+  /** Only in demo job results: a still of the first frame analysed (an object URL), the video's poster. */
+  poster?: string;
   /** Only in demo job results: whether the first frame matched our reference view of the junction. */
   aligned?: boolean;
   /** Only in demo job results: the tracker's boxes per analysed frame, drawn over the video. */

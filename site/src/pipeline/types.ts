@@ -41,6 +41,8 @@ export interface Evidence {
   end: number;
   actors: number[];
   note: string;
+  /** Only in PipelineResult: where on the junction it happened, a key of ZONES in src/lib/classes.ts. */
+  zone?: string;
 }
 
 /** [start_sec, end_sec, label] */
