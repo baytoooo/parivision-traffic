@@ -75,6 +75,7 @@ const html = await marked.parse(body, { renderer, gfm: true });
      scoped rules above. */
   @media print {
     @page { size: A4; margin: 12mm 14mm; }
+    :root { color-scheme: light; }
     html, body { background: #fff !important; color: #000; font-size: 9.8pt; line-height: 1.34; }
     body::before, .skip, .site-header, .site-footer, .toc, .page-head .kicker { display: none !important; }
     body .wrap { max-width: none; padding: 0; }

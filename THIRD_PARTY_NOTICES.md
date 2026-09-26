@@ -68,7 +68,8 @@ site is built. Versions and licences below are from each package's
 * **Sample clips** C3896, C3897, C3902 and C3905, given by the organisers to
   the participants of WIUT Hackathon 2026. No licence stated. The clips are not
   in the repository, but images made from them are: the reference views
-  (`src/parivision/assets/reference_*.jpg`, `docs/background.jpg`), the
+  (`src/parivision/assets/reference_*.jpg`, `docs/background.jpg`,
+  `site/public/pipeline/reference_*.png`, `site/tests/fixtures/refs/`), the
   website's posters, example frames and EDA figures (`site/public/media/`), and
   the C3905 test fixtures (`site/tests/fixtures/C3905/`: one 960x540 frame, one
   480x270 grey frame and four crops of the signal head).

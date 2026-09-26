@@ -69,7 +69,8 @@ the code in `src/` (among other things the accident rule and the time guards)
 and `requirements.txt`, but not the events on the four samples: running the
 current rules on the analyses that run saved (`out/analysis`, not in the
 repository) gives the same events on all four clips, and the accident rule
-fires on none of them.
+fires on none of them. `tests/test_regression.py` repeats this check for
+C3905 on every `pytest` run, from its saved trajectories in `tests/data/`.
 
 ## How it works
 
@@ -124,10 +125,12 @@ pair has to look dangerous for 0.6 s without a break, and pairs on opposite
 sides of the median or a moving car next to a parked one are ignored. The score
 is the worst pair, smoothed. If the machine is slow, `step` thins out the
 frames it processes, down to 1 Hz, aiming to keep its own work under 0.4x the
-clip length and Parts A and B together under 2.8x (the harness allows 3x). Past
-95% of that budget it stops processing and holds the last score. The harness
-still decodes every frame it hands to `step`, and that time is outside our
-control.
+clip length and Parts A and B together under 2.8x (the harness allows 3x). The
+harness still decodes every frame it hands to `step`, and that time is outside
+our control, so `step` measures it (the time between its calls) and stops
+processing, holding the last score, as soon as the frames still to come would
+take the pass past 95% of that budget. If the first frame does not register
+(a dark or blank start), it tries again every 2 s.
 
 ### Things that shaped the design
 
@@ -232,16 +235,24 @@ A machine with more cores decodes proportionally faster (our M5 laptop reads
 these files at about 78 frames per second), and with the default settings
 the 60 s cut of C3896 took 1.4x its length on the laptop.
 
-**The guards.** Part A thins its frames and stops at 1.3x the clip length, and
+**The guards.** `solution.py` loads both detectors, runs each once and computes
+the reference views' features when it is imported. The harness imports it
+before it starts timing, so these one-off costs (several seconds on a cold GPU)
+no longer come out of the first clip's budget. Part A thins its frames and stops
+at 1.3x the clip length, checked on every frame, and keeps 2 s plus 0.03x the
+clip free for the rules after the frame loop; and
 Part B thins its own work to keep both parts under 2.8x. Because a clip that
 goes over the budget scores nothing, Part A also measures how fast the machine
 decodes and stops early enough to leave the harness 1.3 times that decode time
 for Part B, plus 0.4x the clip for Part B's own work. On a machine that decodes
 a clip in less than about its own length this never binds; on a slow one it
 trades the end of the clip for a result that is not empty. On short clips
-there are floors, set so that both parts still fit in 3x: Part A may take up
-to 60 s but never more than 1.8x the clip length, and Part B always gets at
-least 10 s (half the clip length on clips under 20 s).
+there is a floor, set so that both parts still fit in 3x: Part A may take up
+to 60 s but never more than 1.8x the clip length. Part B gets what Part A left
+of the 2.8x and nothing more: a clip over 3x would lose Part A's events too.
+On 10 edge-case clips (1 s to 60 s; 4K 10-bit, 1080p, 720p at 30 fps, HEVC,
+black frames, another view, a file name with spaces and Cyrillic) the harness
+stayed inside the budget on the M5, with other jobs running on it.
 `tools/t4_check.sh` runs the harness with the official 3x budget on a T4 and
 prints the same table.
 
@@ -382,8 +393,10 @@ pip install pytest && pytest -q
 cd site && pnpm install --frozen-lockfile && pnpm test
 ```
 
-On a clean clone every `pytest -q` test passes. They use a 6 s synthetic
-clip and need nothing outside the repository. `pnpm test` needs Node 22.18 or
+On a clean clone all 13 `pytest -q` tests pass and need nothing outside the
+repository: most use a 6 s synthetic clip or hand-made scenes, and
+`tests/test_regression.py` runs the rules on C3905's saved trajectories and
+checks they give the submitted events. `pnpm test` needs Node 22.18 or
 newer; on a clean clone it runs 55 tests, of which 40 pass and 15 are skipped.
 Most site tests check the in-browser port of the pipeline
 (`site/src/pipeline/`) against the Python pipeline, stage by stage, on fixtures

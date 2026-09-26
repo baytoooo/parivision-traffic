@@ -145,7 +145,7 @@ const exampleHref = (clip: string, t: number) => `/results?clip=${encodeURICompo
                 {isNum(r.mean) && <span class="bar" style={`--w:${Math.round(r.mean * 100)}%`} aria-hidden="true"></span>}
                 {fmtNum(r.mean, 2)}
               </td>
-              <td data-label="TP / FP / FN" class={`num tpfpfn${isNum(r.tp) ? "" : " tbd"}`}>{fmtInt(r.tp)} / {fmtInt(r.fp)} / {fmtInt(r.fn)}</td>
+              <td data-label="TP / FP / FN @0.5" class={`num tpfpfn${isNum(r.tp) ? "" : " tbd"}`}>{fmtInt(r.tp)} / {fmtInt(r.fp)} / {fmtInt(r.fn)}</td>
             </tr>
           ))}
         </tbody>
@@ -195,7 +195,7 @@ const exampleHref = (clip: string, t: number) => `/results?clip=${encodeURICompo
           </tbody>
         </table>
       </div>
-      <p class="note-line">Codes: {[...confPred, ...confRows.map((r) => r.key).filter((k) => !confPred.includes(k))].map((k) => `${code(k)} ${className(k).toLowerCase()}`).join(", ")}; None is no label. It checks overlap in time only, so a labelled U-turn that happens while someone jaywalks counts as jaywalking. It is not one-to-one like evaluate.py, so the diagonal can differ a little from the true positives above. U-turns (rule off) and illegal turns (no rule) are in our labels but not in our submission, so theirs are all missed or overlap other events.</p>
+      <p class="note-line">Codes: {[...confPred, ...confRows.map((r) => r.key).filter((k) => !confPred.includes(k))].map((k) => `${code(k)} ${className(k).charAt(0).toLowerCase()}${className(k).slice(1)}`).join(", ")}; None is no label. It checks overlap in time only, so a labelled U-turn that happens while someone jaywalks counts as jaywalking. It uses IoU 0.3 and is not one-to-one like evaluate.py, so the diagonal is higher than the TP at 0.5 in the table above. U-turns (rule off) and illegal turns (no rule) are in our labels but not in our submission, so theirs are all missed or overlap other events.</p>
     </section>
   )}
 
@@ -281,7 +281,7 @@ const exampleHref = (clip: string, t: number) => `/results?clip=${encodeURICompo
         </tbody>
       </table>
     </div>
-    <p class="note-line">Class columns: {ablClasses.map((k) => `${code(k)} ${className(k).toLowerCase()}`).join(", ")}. A dash means the class is in neither the labels nor the predictions of those clips.</p>
+    <p class="note-line">Class columns: {ablClasses.map((k) => `${code(k)} ${className(k).charAt(0).toLowerCase()}${className(k).slice(1)}`).join(", ")}. A dash means the class is in neither the labels nor the predictions of those clips.</p>
   </section>
 
   <script type="application/json" id="clips-data" set:html={JSON.stringify(tabs)} />
