@@ -14,8 +14,9 @@ export const RISK_THETA = 0.5;
 /** Alarm runs closer than this are merged (MERGE_GAP in evaluate.py). */
 export const RISK_MERGE_GAP = 2.0;
 
-/** The demo analyses this many seconds from the start of a clip, at most (src/scripts/local_api.ts stops reading frames there). */
-export const UPLOAD_MAX_SECONDS = 120;
+/** The demo analyses this many seconds from the start of a clip, at most (src/scripts/local_api.ts stops reading frames there).
+ * Longer than any clip of this camera we have seen (the samples run 2 to 6 minutes). */
+export const UPLOAD_MAX_SECONDS = 600;
 /** Where the model runs on the CPU (WebAssembly, no WebGPU), the demo offers to analyse only this
  * many seconds of an upload, and does so unless the visitor unticks the box. */
 export const QUICK_SECONDS = 30;

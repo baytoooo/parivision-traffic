@@ -12,7 +12,7 @@ Each keeps its own licence.
 | file | what it is | licence |
 |---|---|---|
 | `weights/yolo26n.pt`, `weights/yolo26s.pt`, `weights/yolo26m.pt` | YOLO26 detection weights pretrained on COCO, from the Ultralytics assets release v8.4.0, unchanged (checksums in `weights/SHA256SUMS`) | AGPL-3.0 (Ultralytics) |
-| `site/public/pipeline/model.onnx` | `yolo26n.pt` exported to ONNX for the in-browser demo by `tools/export_browser_assets.py` | AGPL-3.0, as the weights it is made from |
+| `site/public/pipeline/model.onnx` | `yolo26s.pt` exported to ONNX for the in-browser demo by `tools/export_browser_assets.py` | AGPL-3.0, as the weights it is made from |
 
 The weights were trained by Ultralytics on COCO 2017, whose annotations are
 under CC BY 4.0.

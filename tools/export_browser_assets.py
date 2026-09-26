@@ -1,6 +1,6 @@
 """Export what the in-browser demo needs from the Python pipeline, so both share one source of truth.
 
-    python tools/export_browser_assets.py [--model yolo26n --height 544 --width 960]
+    python tools/export_browser_assets.py [--model yolo26s --height 544 --width 960]
 
 Writes site/public/pipeline/:
 
@@ -116,7 +116,7 @@ def constants() -> dict:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--model", default="yolo26n")
+    ap.add_argument("--model", default="yolo26s")
     ap.add_argument("--height", type=int, default=544)
     ap.add_argument("--width", type=int, default=960)
     args = ap.parse_args()

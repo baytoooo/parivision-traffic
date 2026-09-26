@@ -31,7 +31,7 @@ const maxMin = UPLOAD_MAX_SECONDS / 60;
         <input type="file" id="file-input" accept=".mp4,video/mp4" class="visually-hidden" />
         <span class="drop-icon" aria-hidden="true"></span>
         <span class="drop-main">Choose an .mp4 or drop it here</span>
-        <span class="drop-sub">Any file size. The file is read on this device and not uploaded. We analyse the first {maxMin} minutes. 1080p is recommended; 4K works but is slower.</span>
+        <span class="drop-sub">Any file size. The file is read on this device and not uploaded. We analyse the whole clip, up to {maxMin} minutes. 1080p is recommended; 4K works but is slower.</span>
       </label>
       <p class="codec-note">Any .mp4 works. The camera's own files are 10-bit 4:2:2 H.264: most browsers on Windows and Linux cannot play them, and Chrome on a Mac decodes them slowly, in software. In both cases we first convert the file here, in the browser, which in Chrome on our laptop takes about 40 s per minute of 4K. 8-bit H.264 at 1080p, the format of our sample clips, needs no conversion.</p>
       <div class="file-info" id="file-info" hidden>
@@ -105,11 +105,11 @@ const maxMin = UPLOAD_MAX_SECONDS / 60;
     <div class="panel panel-pad notes">
       <h2 class="h-card" id="notes-heading">How the browser run differs from our submission</h2>
       <ul class="facts-list">
-        <li>The first run downloads the detector (10 MB) and the ONNX Runtime engine (14 MB for WebAssembly, 27 MB for WebGPU, less when the server compresses it). The browser keeps both in its cache for the next runs.</li>
-        <li>A file this browser cannot play, or decodes too slowly, is converted first by ffmpeg.wasm (a 33 MB download the first time): the first {maxMin} minutes, 1920 px wide, 8-bit H.264 at CRF 23. The pipeline then reads that copy. On our Apple M5 Mac, Chrome converts the first 2 minutes of a camera file in 75 to 80 s. The converter is ffmpeg.wasm (MIT) around an FFmpeg core licensed GPL-2.0-or-later; its source is at <a href="https://github.com/ffmpegwasm/ffmpeg.wasm">github.com/ffmpegwasm/ffmpeg.wasm</a>.</li>
-        <li>The detector runs on WebGPU where the browser offers it. Elsewhere it runs on the CPU through WebAssembly, which is slower. On our Apple M5 laptop a 30 s sample took 11 to 21 s on WebGPU. On the CPU it took 16 to 32 s with the machine idle and 76 s or more with it busy, and a slower laptop takes longer. So on the CPU the page offers to analyse only the first {QUICK_SECONDS} s of your clip.</li>
-        <li>It reads the first {maxMin} minutes of a clip at 5 frames per second. The submission reads 10 frames per second.</li>
-        <li>The detector is the small YOLO26n at 960 px wide, about a thirtieth of the compute of the submission's YOLO26m at 1280 px and 10 frames per second. On the two clips we could compare, it scores within 0.01 mean F1 of it (see the <a href="/results#ablations">ablations</a>).</li>
+        <li>The first run downloads the detector (38 MB) and the ONNX Runtime engine (14 MB for WebAssembly, 27 MB for WebGPU, less when the server compresses it). The browser keeps both in its cache for the next runs.</li>
+        <li>A file this browser cannot play, or decodes too slowly, is converted first by ffmpeg.wasm (a 33 MB download the first time): up to {maxMin} minutes, 1920 px wide, 8-bit H.264 at CRF 23. The pipeline then reads that copy. On our Apple M5 Mac, Chrome converts 2 minutes of a camera file in 75 to 80 s. The converter is ffmpeg.wasm (MIT) around an FFmpeg core licensed GPL-2.0-or-later; its source is at <a href="https://github.com/ffmpegwasm/ffmpeg.wasm">github.com/ffmpegwasm/ffmpeg.wasm</a>.</li>
+        <li>The detector runs on WebGPU where the browser offers it. Elsewhere it runs on the CPU through WebAssembly, which is slower. On our Apple M5 laptop a 30 s sample took 14 to 17 s on WebGPU and about 50 s on the CPU, in Chrome and in Firefox; a busy or slower computer takes longer. So on the CPU the page offers to analyse only the first {QUICK_SECONDS} s of your clip.</li>
+        <li>It reads up to {maxMin} minutes of a clip at 5 frames per second. The submission reads 10 frames per second.</li>
+        <li>The detector is YOLO26s at 960 px wide, 5 frames per second: the setting our submission falls back to on a machine without a GPU, and a fraction of the compute of its YOLO26m at 1280 px and 10 frames per second. On the two clips we could compare, it scores 0.350 against 0.340 (Score A, see the <a href="/results#ablations">ablations</a>). The smaller YOLO26n we used before scored 0.337 there and found fewer pedestrians (jaywalking F1 0.36 against 0.49).</li>
         <li>To line the camera view up with our reference view, the page searches edge maps for the scale and shift that fit best and then refines them. The submission matches SIFT features.</li>
         <li>Tracking, the signal reader, the event rules and the risk model are the same algorithms with the same settings, ported to TypeScript and checked against the Python output.</li>
       </ul>

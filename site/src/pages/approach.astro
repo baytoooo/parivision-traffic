@@ -22,13 +22,13 @@ const learned = [
 ];
 
 const licences = [
-  { what: "YOLO26m, YOLO26s, YOLO26n weights", who: "Ultralytics", lic: "AGPL-3.0", use: "YOLO26m for Part A, YOLO26s for Part B; YOLO26n for Part B in the CPU fallback and, exported to ONNX, in the in-browser demo" },
+  { what: "YOLO26m, YOLO26s, YOLO26n weights", who: "Ultralytics", lic: "AGPL-3.0", use: "YOLO26m for Part A, YOLO26s for Part B and, exported to ONNX, in the in-browser demo; YOLO26n for Part B in the CPU fallback" },
   { what: "COCO 2017", who: "COCO Consortium", lic: "Annotations CC BY 4.0; images under their Flickr licences", use: "What the detector weights were trained on. We did not train on it ourselves." },
   { what: "ByteTrack (Ultralytics implementation)", who: "Zhang et al.; Ultralytics", lic: "MIT (original), AGPL-3.0 (Ultralytics)", use: "Multi-object tracking" },
   { what: "OpenCV", who: "OpenCV team", lic: "Apache 2.0", use: "Video metadata, SIFT, homography, colour" },
   { what: "PyAV", who: "PyAV contributors", lic: "BSD-3-Clause", use: "Decoding the clips for Part A" },
   { what: "PyTorch", who: "PyTorch Foundation", lic: "BSD-3-Clause", use: "Runs the detectors" },
-  { what: "onnxruntime-web", who: "Microsoft", lic: "MIT", use: "Runs the YOLO26n export in the in-browser demo" },
+  { what: "onnxruntime-web", who: "Microsoft", lic: "MIT", use: "Runs the YOLO26s export in the in-browser demo" },
   { what: "ffmpeg.wasm", who: "ffmpegwasm, FFmpeg developers", lic: "MIT; FFmpeg core GPL-2.0-or-later", use: "Converts clips the browser cannot play, in the demo (source: github.com/ffmpegwasm/ffmpeg.wasm)" },
   { what: "Sample clips C3896, C3897, C3902, C3905", who: "Hackathon organisers", lic: "No licence stated; given to participants for this hackathon", use: "Scene analysis, our dev set and tuning. Not in the repository." },
   { what: "Our dev labels (labels/)", who: "PariVision, drafted with Claude agents", lic: "AGPL-3.0, with the repository", use: "Tuning and scoring on the sample clips" },

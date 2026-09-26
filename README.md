@@ -461,7 +461,7 @@ onnxruntime-web (MIT) and ffmpeg.wasm (MIT wrapper around an FFmpeg core under
 GPL-2.0-or-later, which converts clips the browser cannot play). Because we
 ship Ultralytics weights and call its code, this repository is released under
 AGPL-3.0 (`LICENSE`). That includes `site/public/pipeline/model.onnx`, which
-`tools/export_browser_assets.py` exports from `yolo26n.pt`.
+`tools/export_browser_assets.py` exports from `yolo26s.pt`.
 `THIRD_PARTY_NOTICES.md` lists every third-party model, package and dataset
 with its licence, and `weights/SHA256SUMS` holds the checksums of the weights,
 which `weights/download.sh` checks.

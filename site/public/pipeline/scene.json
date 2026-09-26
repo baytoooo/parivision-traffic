@@ -348,7 +348,7 @@
    19
   ],
   "conf": 0.1,
-  "model": "yolo26n",
+  "model": "yolo26s",
   "input": [
    544,
    960
@@ -428,6 +428,7 @@
    "5": 2.0,
    "7": 1.8
   },
+  "REALIGN_SEC": 2.0,
   "STEP": 0.1,
   "TARGET_HZ": 10.0,
   "TOTAL_LIMIT": 2.8,

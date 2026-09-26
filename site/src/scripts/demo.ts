@@ -46,16 +46,15 @@ function setEngine(state: EngineState, detail = "") {
   };
   $("server-text").textContent = text[state];
   $("server-detail").textContent = detail;
-  // what to expect before a job starts, from our runs of the 30 s samples on an Apple M5 laptop:
-  // 11 to 21 s on WebGPU; on WebAssembly 16 s (Firefox) and 32 s (Chromium) with the machine idle,
-  // 30 to 69 s at load 10 to 16, 76 to 113 s (Firefox) with it busy, and once 244 s (Chromium) at
-  // load 37. The facts list in demo.astro quotes the idle and busy runs; keep the two in step.
+  // what to expect before a job starts, from our runs of the 30 s samples with the YOLO26s detector
+  // on an Apple M5 laptop at load 5 to 6: 14 and 17 s on WebGPU (Chrome), 48 s (Chromium) and 51 s
+  // (Firefox) on WebAssembly; a busy machine takes longer. The facts list in demo.astro quotes these runs.
   const time = $("server-time");
   time.hidden = state !== "online";
   time.textContent =
     local.backend === "webgpu"
-      ? "Expected time: about 0.4 to 0.7x the clip's length, on this device's GPU."
-      : "Expected time: about 0.5 to 4x the clip's length, as this browser runs the model on the CPU. A busy computer can take longer.";
+      ? "Expected time: about 0.5 to 0.7x the clip's length, on this device's GPU."
+      : "Expected time: about 1.5 to 4x the clip's length, as this browser runs the model on the CPU. A busy or slower computer takes longer.";
   $("replay-note").hidden = !(state === "offline" || state === "mock");
   document.querySelectorAll<HTMLButtonElement>("[data-needs-engine]").forEach((b) => (b.disabled = state === "checking" || running));
   updateQuick();

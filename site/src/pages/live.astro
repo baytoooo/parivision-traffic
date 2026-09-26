@@ -111,7 +111,7 @@ const counts = [
       <h2 class="live-h" id="how-heading">How the live mode works</h2>
       <ul>
         <li>The page asks for the camera, or for the tab or window to share, only when you press a button. Stop turns it off. Frames are read on this device and never sent anywhere.</li>
-        <li>The pipeline is the one on the <a href="/demo">demo page</a>: the YOLO26n detector at 960 px wide, on WebGPU where the browser offers it and on the CPU through WebAssembly elsewhere, then ByteTrack.</li>
+        <li>The pipeline is the one on the <a href="/demo">demo page</a>: the YOLO26s detector at 960 px wide, on WebGPU where the browser offers it and on the CPU through WebAssembly elsewhere, then ByteTrack.</li>
         <li>It sends the next frame only when the last one is done, and at most 5 a second. A slower device runs at a lower rate instead of falling behind. The rate on the right is what this device manages.</li>
         <li>The tracker and the risk model are set for 5 frames a second, the demo's rate. At a lower rate, road users move further between frames and a lost track is kept for longer. So tracks, events and risk are closest to the demo's when the rate stays at 5.</li>
         <li>The first frame is lined up with our reference views of the junction. If it fits, the page also reads the signal lamps and runs the risk model, and at Stop it applies the event rules to the whole run. The rules need whole tracks, so events come at the end.</li>
