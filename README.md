@@ -167,19 +167,25 @@ prints the full report.
 ## Checking on crash footage
 
 The samples have no crash, so we checked the accident rule and the Part B risk
-model on the public ACCIDENT benchmark (CVPR 2026): 95 of its CARLA crash
-clips and 34 real CCTV crash clips from intersections, each with the moment of
-impact annotated (`labels/accident_*.csv` lists them; `tools/crash_check.py`
-downloads, runs and scores them). These are other cameras, so the check runs
-without our scene layout and takes metres per pixel from the size of the
-vehicles. The rule finds 24 of the 95 synthetic crashes within 2 s of the
-impact and 1 of the 34 real ones, most of which are low-resolution videos where
-the detector misses the striking car, and it never fires before an impact. It
-fires nowhere in our 18 minutes of normal traffic, which is why we submit the
-class: if the test set has no crash, a class we never predict costs nothing.
-Part B raises an alarm in the 10 s before 11 of the synthetic and 4 of the real
-impacts. Raising its gain catches more crashes but also sets off many alarms in
-normal traffic, so we left it as it was.
+model on the public ACCIDENT benchmark (CVPR 2026), whose clips come with the
+moment of impact annotated. `labels/accident_real.csv` lists the 130 real CCTV
+crash clips we picked (118 of them at intersections) and
+`labels/accident_synthetic.csv` 100 of its CARLA crash clips;
+`tools/crash_check.py` downloads, runs and scores them. The numbers below cover
+the clips we had run the detectors on: 34 of the 130 real ones and 95 of the
+100 synthetic ones (`crash_check.py eval` skips clips without a detection cache
+and prints which). These are other cameras, so the check runs without our scene
+layout and takes metres per pixel from the size of the vehicles. The rule finds
+24 of the 95 synthetic crashes and 1 of the 34 real ones, starting between 1.5
+s before and 2 s after the impact. The benchmark rates 25 of these 34 real
+clips as poor quality, and in most of them the detector misses the striking
+car. The rule fired early, more than 1.5 s before the impact, on 1 of the 34
+real clips (8uCJX3Qp78g_00, a t-bone crash it then missed) and on none of the
+synthetic ones. It fires nowhere in our 18 minutes of normal traffic, which is
+why we submit the class: if the test set has no crash, a class we never predict
+costs nothing. Part B raises an alarm in the 10 s before 11 of the synthetic
+and 4 of the real impacts. Raising its gain catches more crashes but also sets
+off many alarms in normal traffic, so we left it as it was.
 
 ## Runtime
 
