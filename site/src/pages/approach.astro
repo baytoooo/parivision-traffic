@@ -65,16 +65,16 @@ const licences = [
 
   <section class="section wrap" id="learned">
     <SecHead num="03" title="What is learned and what is a rule" />
-    <div class="table-scroll">
+    <div class="table-scroll cards-sm">
       <table>
         <thead><tr><th scope="col">Part</th><th scope="col">Stage</th><th scope="col">Kind</th><th scope="col">What exactly</th></tr></thead>
         <tbody>
           {learned.map((r) => (
             <tr>
-              <td class="mono">{r.part}</td>
+              <td class="mono part inline-sm" data-label="Part">{r.part}</td>
               <th scope="row">{r.stage}</th>
-              <td><span class={`chip ${r.how === "Learned" ? "todo learned-chip" : ""}`}>{r.how}</span></td>
-              <td class="detail">{r.detail}</td>
+              <td class="kind"><span class={`chip ${r.how === "Learned" ? "todo learned-chip" : ""}`}>{r.how}</span></td>
+              <td class="detail wide-sm">{r.detail}</td>
             </tr>
           ))}
         </tbody>
@@ -82,8 +82,32 @@ const licences = [
     </div>
   </section>
 
+  <section class="section wrap" id="risk">
+    <SecHead num="04" title="The Part B risk score">
+      <p>Every 0.1 s, for each pair of road users, with positions in metres (one scale per pair, taken between the two) and velocities fitted to the last 0.8 s of their tracks:</p>
+    </SecHead>
+    <ol class="formula" role="list">
+      <li>
+        <span class="f-k mono">Pair hazard</span>
+        <code>h = 1 / (1 + exp(2.5 (t - 0.9))) × (0.4 + 0.6 d) × min(1, c / 10)</code>
+        <span class="f-d">if they close in at <var>c</var> ≥ 4 m/s and, moving in straight lines, their footprint circles overlap within 3 s; otherwise 0. <var>t</var> is the time in seconds until the circles first touch, <var>d</var> the overlap at the closest approach divided by the sum of the radii (at most 1). Radii: person 0.35 m, bicycle 0.6, motorbike 0.7, car 1.3, truck 1.8, bus 2.0; both shrink to 40% when one of the two moves under 1 m/s.</span>
+      </li>
+      <li>
+        <span class="f-k mono">Braking</span>
+        <code>risk = min(1, h × (1 + 0.5 max(b1, b2))),  b = clip((a - 4) / 6, 0, 1)</code>
+        <span class="f-d"><var>a</var> is a user's deceleration in m/s² over the same 0.8 s, counted only if it was faster than 3 m/s. A pair counts once it has looked dangerous for 0.6 s without a break.</span>
+      </li>
+      <li>
+        <span class="f-k mono">Score</span>
+        <code>score = 0.65 × previous score + 0.35 × the highest pair risk in the frame</code>
+        <span class="f-d">Pairs left out: two pedestrians, a pedestrian off the carriageway, users on opposite sides of the median, a moving vehicle and a standing one, users more than 30 m apart.</span>
+      </li>
+    </ol>
+    <p class="f-src">Code: <code>pair_hazard</code> and <code>Anticipator._hazard</code> in <a href="https://github.com/baytoooo/parivision-traffic/blob/main/src/parivision/risk.py">src/parivision/risk.py</a>.</p>
+  </section>
+
   <section class="section wrap" id="rules">
-    <SecHead num="04" title="The rule for each class">
+    <SecHead num="05" title="The rule for each class">
       <p>Distances are in pixels of the reference view; near the north crossing one metre left to right is about 50 px, and fewer along the avenue. Score A averages over classes, so a class we predict that never happens in the test set adds a zero. Five classes have no rule. We have a U-turn rule, but we keep it off for this reason: nothing in view says the U-turns here are illegal, so the organisers may never label one.</p>
     </SecHead>
     <ol class="rules" role="list">
@@ -102,7 +126,7 @@ const licences = [
 
   <section class="section wrap two-col" id="signal">
     <div>
-      <SecHead num="05" title="How we read the signal" />
+      <SecHead num="06" title="How we read the signal" />
       <div class="prose">
         <p>The heads over the SB lanes face away from the camera. Two heads do face it. The one on the median nose is a three-lamp vehicle signal for the approach from the south, which runs in the same phase as SB; we read the phase from it, and it stays readable at dusk. The one on the pole at the left corner is a two-lamp pedestrian signal for the west crossing, and we do not use it.</p>
         <p>For each of the three lamps we take a small patch around its centre, mapped from the reference view into the frame. A lit red lamp is much redder than its dark housing, a lit green one much greener, a lit yellow one much warmer. The lamp with the strongest contrast relative to its own threshold wins. Position decides the phase, not colour alone, so tail lights passing behind the head do not read as red.</p>
@@ -126,7 +150,7 @@ const licences = [
   </section>
 
   <section class="section wrap" id="registration">
-    <SecHead num="06" title="Why registration was needed" />
+    <SecHead num="07" title="Why registration was needed" />
     <div class="prose">
       <p>The clips are not framed identically: the afternoon clips are shifted by up to about 60 px and zoomed by 1 to 2% against the morning ones. And the camera is not quite still at the start of a recording: in C3896 the view drifts 9 px over the first 40 s while the camera settles, enough to put the signal lamps outside the patches we read. Every zone we test against (stop line, crossings, carriageways, bus stop) is drawn once, by hand, in the reference view. If we drew them per clip, a new test clip with slightly different framing would put the stop line in the wrong place.</p>
       <p>So we match SIFT features of the clip's frames against a midday and a dusk reference, each a per-pixel median background with most of the traffic removed, and keep the homography with the most inliers: on the first frame, then again every 2 s for the first 30 s and every 10 s after. The signal lamps are read with the latest homography. At the end the keyframes' per-pixel median is registered once more, and that homography maps the tracks into the reference view for the rules.</p>
@@ -134,13 +158,13 @@ const licences = [
   </section>
 
   <section class="section wrap" id="models">
-    <SecHead num="07" title="Models, data and licences" />
-    <div class="table-scroll">
+    <SecHead num="08" title="Models, data and licences" />
+    <div class="table-scroll cards-sm">
       <table>
         <thead><tr><th scope="col">What</th><th scope="col">From</th><th scope="col">Licence</th><th scope="col">How we use it</th></tr></thead>
         <tbody>
           {licences.map((l) => (
-            <tr><th scope="row">{l.what}</th><td>{l.who}</td><td class="mono small">{l.lic}</td><td class="detail">{l.use}</td></tr>
+            <tr><th scope="row">{l.what}</th><td class="wide-sm inline-sm" data-label="From">{l.who}</td><td class="mono small wide-sm inline-sm" data-label="Licence">{l.lic}</td><td class="detail wide-sm">{l.use}</td></tr>
           ))}
         </tbody>
       </table>
@@ -148,7 +172,7 @@ const licences = [
   </section>
 
   <section class="section wrap" id="budget">
-    <SecHead num="08" title="Frame sampling and runtime budget" />
+    <SecHead num="09" title="Frame sampling and runtime budget" />
     <div class="budget">
       <dl class="facts">
         <div><dt>Source</dt><dd>3840x2160, 29.97 fps, about 140 Mbit/s</dd></div>
@@ -174,6 +198,13 @@ const licences = [
   th[scope="row"] { font-weight: 700; white-space: nowrap; }
   td.detail { color: var(--paint-2); font-size: .9rem; min-width: 260px; }
   td.small { font-size: .78rem; }
+  @media (max-width: 640px) {
+    th[scope="row"] { white-space: normal; }
+    td.detail { min-width: 0; }
+    /* the part letter and the kind chip share a line under the stage */
+    td.part { grid-column: 1; grid-row: 2; }
+    td.kind { grid-column: 2 / -1; grid-row: 2; }
+  }
   .learned-chip { font-weight: 600; }
 
   .rules { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); }
@@ -194,6 +225,14 @@ const licences = [
   .patch { fill: none; stroke: var(--zebra); stroke-width: 1.5; stroke-dasharray: 3 3; }
   .lab { font: 600 12px var(--font-mono); fill: var(--paint); }
   .lab.dim { fill: var(--muted); font-weight: 400; }
+
+  .formula { list-style: none; padding: 0; margin: 0; display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; max-width: 980px; }
+  .formula li { background: var(--asphalt-2); padding: 12px 16px 14px; display: grid; gap: 6px; }
+  .f-k { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .formula code { justify-self: start; font-size: .92rem; padding: 4px 8px; color: var(--paint); white-space: normal; overflow-wrap: anywhere; }
+  .f-d { font-size: .9rem; color: var(--paint-2); line-height: 1.45; }
+  .formula var { font-family: var(--font-mono); font-style: normal; color: var(--paint); }
+  .f-src { margin: 12px 0 0; font-size: .9rem; color: var(--paint-2); }
 
   .budget { display: grid; gap: 24px; }
   @media (min-width: 900px) { .budget { grid-template-columns: 1fr 1fr; } }
