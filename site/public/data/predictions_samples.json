@@ -14,18 +14,13 @@
      "stopped_vehicle"
     ],
     [
-     13.51,
+     13.81,
      15.52,
      "failure_to_yield"
     ],
     [
      15.82,
      17.42,
-     "failure_to_yield"
-    ],
-    [
-     18.32,
-     19.72,
      "failure_to_yield"
     ],
     [
@@ -40986,7 +40981,7 @@
     ],
     [
      79.98,
-     85.89,
+     84.18,
      "failure_to_yield"
     ],
     [
@@ -41035,11 +41030,6 @@
      "jaywalking"
     ],
     [
-     235.54,
-     237.54,
-     "failure_to_yield"
-    ],
-    [
      289.59,
      290.89,
      "failure_to_yield"
@@ -41061,7 +41051,7 @@
     ],
     [
      307.31,
-     309.91,
+     308.51,
      "failure_to_yield"
     ],
     [
@@ -117499,11 +117489,6 @@
     [
      108.31,
      111.41,
-     "failure_to_yield"
-    ],
-    [
-     118.62,
-     121.42,
      "failure_to_yield"
     ]
    ],

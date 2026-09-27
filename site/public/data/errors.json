@@ -3,7 +3,7 @@
   "iou": 0.3,
   "labels": {
    "failure_to_yield": {
-    "failure_to_yield": 33,
+    "failure_to_yield": 27,
     "missed": 14,
     "jaywalking": 1
    },
@@ -41,7 +41,7 @@
    }
   },
   "false_alarms": {
-   "failure_to_yield": 17,
+   "failure_to_yield": 22,
    "jaywalking": 3,
    "stop_line": 1
   }
