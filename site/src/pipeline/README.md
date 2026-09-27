@@ -91,6 +91,18 @@ tracker boxes of that frame (`Analyser.lastFrame`) and the risk score after it
 (`Analyser.lastRisk`). At Stop the page sends `finish` when the first frame
 matched our junction, and `cancel` otherwise.
 
+A view that never matches our junction (neither the first frame nor the keyframes' median at
+`finish` registers) gets a generic result (`generic.ts`, browser only). The zebras, the stop line,
+the lamps and our carriageways are drawn for our junction, so those rules stay off. Two rules need
+no map of the place: wrong-way driving against the direction the traffic takes in each 40 px cell
+of the frame, learned from the clip itself (a cell counts when at least 30 samples of 4 other
+vehicles agree on one direction), and `collisions`, with metres per pixel from a plane fitted to
+the size of the clip's vehicle boxes (`tools/crash_check.py` `vehicle_scale`). The risk model is
+replayed over the stored detections the way `crash_check.replay` runs it: the whole frame is road,
+there is no median, metres come from the vehicle sizes. Checked in Python on our four clips at 5
+frames per second as if the junction were unknown: 948 of 1072 real vehicle tracks run backwards
+were found as wrong-way, and nothing fired in the 18 minutes of normal traffic.
+
 onnxruntime-web runs single-threaded unless the page is cross-origin isolated.
 Its `.wasm` files are emitted by Vite (`?url` imports in `worker.ts`), and the
 worker is built as an ES module (`vite.worker.format` in `astro.config.mjs`).

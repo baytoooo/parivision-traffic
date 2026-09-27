@@ -357,7 +357,8 @@ export class Player {
     );
     const actors = [...new Set(ev.flatMap((e) => e.actors ?? []))];
     const notes = [...new Set(ev.map((e) => e.note).filter(Boolean))];
-    const zone = zoneFor(seg[2], ev.find((e) => e.zone)?.zone);
+    // a view that is not our junction has no zones of ours
+    const zone = this.src.result.mode === "generic" ? "" : zoneFor(seg[2], ev.find((e) => e.zone)?.zone);
     return { actors, notes, zone };
   }
 

@@ -8,9 +8,11 @@
 
 import { evidenceZone } from "../lib/classes.ts";
 import type { AlignResult } from "./align.ts";
+import { learnedWrongWay, vehicleScale } from "./generic.ts";
 import { diag } from "./geometry.ts";
 import { Anticipator } from "./risk.ts";
-import { Context, detectFromContext } from "./rules.ts";
+import { collisions, Context, detectFromContext } from "./rules.ts";
+import { finalize } from "./segments.ts";
 import type { Scene, SceneConstants } from "./scene.ts";
 import { fillPhases, phaseFromScores } from "./signal.ts";
 import { collect, MultiTracker, type Track } from "./tracker.ts";
@@ -45,6 +47,10 @@ export class Analyser {
   private framesInBin = new Map<number, number>();
   /** worker.py's names for the counted classes (detector.COCO_NAMES), by class id. */
   private counted: Map<number, string>;
+  private k: Classes;
+  /** Every frame's detections, for a view that is not our junction: finish() replays the risk model
+   * over them once the clip's vehicle sizes give its scale. */
+  private detLog: [number, Detection[]][] = [];
 
   constructor(scene: Scene, fps: number, workSize: [number, number]) {
     this.scene = scene;
@@ -55,6 +61,7 @@ export class Analyser {
     // worker.py: Anticipator({"fps": 5.0, "width": w, "height": h}), the analysis rate and the work frame
     this.risk = new Anticipator({ fps, width: workSize[0], height: workSize[1] }, scene);
     const k = (scene.c as SceneConstants & { trajectories?: Classes }).trajectories ?? COCO;
+    this.k = k;
     this.counted = new Map([
       [k.CAR, "car"],
       [k.BUS, "bus"],
@@ -92,6 +99,7 @@ export class Analyser {
     const r1 = (v: number) => round(v, 1);
     this.frames.push({ t, boxes: rows.map(([x1, y1, x2, y2, id, , cls]) => [r1(x1), r1(y1), r1(x2), r1(y2), Math.trunc(id), Math.trunc(cls)]) });
 
+    this.detLog.push([t, dets]);
     // worker.py on_frame: the risk model sees the same detections in time order
     this.riskCurve.push([round(t, 2), round(this.risk.observe(dets, shape, t), 4)]);
     const b = Math.floor(t / BIN_SEC);
@@ -123,6 +131,7 @@ export class Analyser {
 
   /** Events and everything the page draws. `duration` is the analysed length (pipeline.py `limit`). */
   finish(duration: number, clip: string): PipelineResult {
+    if (!this.alignment?.ok) return this.finishGeneric(duration, clip);
     const [w, h] = this.workSize;
     const ref = this.scene.c.ref_size;
     // an unreadable clip gets a plain rescale, as in analyse()
@@ -148,10 +157,7 @@ export class Analyser {
       else signal.push([round(t, 1), round(t, 1), phases[i]]);
     });
 
-    const bins = [...this.perBin.keys()].sort((a, b) => a - b);
-    const counts: Record<string, number[]> = { t: bins.map((b) => b * BIN_SEC) };
-    for (const name of ["car", "bus", "truck", "motorcycle", "person", "bicycle"])
-      counts[name] = bins.map((b) => round((this.perBin.get(b)!.get(name) ?? 0) / this.framesInBin.get(b)!, 2));
+    const counts = this.counts();
 
     return {
       clip,
@@ -162,6 +168,54 @@ export class Analyser {
       risk: this.riskCurve,
       counts,
       aligned: !!this.alignment?.ok,
+      mode: "junction",
+      overlay: { work: this.workSize, frames: this.frames },
+      fps: this.fps,
+    };
+  }
+
+  /** Mean detections per frame per BIN_SEC bin, by class name (worker.py on_frame). */
+  private counts(): Record<string, number[]> {
+    const bins = [...this.perBin.keys()].sort((a, b) => a - b);
+    const counts: Record<string, number[]> = { t: bins.map((b) => b * BIN_SEC) };
+    for (const name of ["car", "bus", "truck", "motorcycle", "person", "bicycle"])
+      counts[name] = bins.map((b) => round((this.perBin.get(b)!.get(name) ?? 0) / this.framesInBin.get(b)!, 2));
+    return counts;
+  }
+
+  /**
+   * A view that is not our junction (generic.ts): only the rules that need no map of the place, in
+   * work pixels, with metres from the size of the clip's vehicles, and the risk model replayed the
+   * way tools/crash_check.py runs it on other cameras. No signal: the lamps are not where we read them.
+   */
+  private finishGeneric(duration: number, clip: string): PipelineResult {
+    const [w, h] = this.workSize;
+    const I = diag(1, 1);
+    const trajectories = build(this.tracks.values(), I, 5, 5, this.k);
+    const mpp = vehicleScale(this.detLog.map(([, d]) => d), this.k);
+    const evidence: Evidence[] = [
+      ...learnedWrongWay(trajectories, this.k),
+      ...collisions(trajectories, mpp, this.scene.c.crash, this.scene.c.risk.RADIUS_M as Record<string, number>, this.k),
+    ];
+    const perClass: Record<string, [number, number][]> = {};
+    for (const e of evidence) (perClass[e.label] ??= []).push([e.start, e.end]);
+    const { gap, min_len } = this.scene.c.events;
+    const events = finalize(perClass, duration, gap, min_len);
+    const risk = new Anticipator({ fps: this.fps, width: w, height: h }, this.scene);
+    risk.setAlignment(I);
+    risk.setGeneric(mpp);
+    const shape: [number, number] = [h, w];
+    const curve = this.detLog.map(([t, d]): [number, number] => [round(t, 2), round(risk.observe(d, shape, t), 4)]);
+    return {
+      clip,
+      duration: round(duration, 2),
+      events,
+      evidence: evidence.map((e): Evidence => ({ label: e.label, start: round(e.start, 2), end: round(e.end, 2), actors: e.actors, note: e.note, zone: "" })),
+      signal: [],
+      risk: curve,
+      counts: this.counts(),
+      aligned: false,
+      mode: "generic",
       overlay: { work: this.workSize, frames: this.frames },
       fps: this.fps,
     };

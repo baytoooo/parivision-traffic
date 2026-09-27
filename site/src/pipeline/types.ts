@@ -67,6 +67,9 @@ export interface PipelineResult {
   /** Mean detections per frame per 5 s bin, by class name, plus "t". */
   counts: Record<string, number[]>;
   aligned: boolean;
+  /** "junction": every rule, on our junction's map; "generic": a view that did not register, so only
+   * the rules that need no map of the place (generic.ts). */
+  mode: "junction" | "generic";
   overlay: { work: [number, number]; frames: OverlayFrame[] };
   /** Frames per second the clip was analysed at. */
   fps: number;

@@ -50,6 +50,9 @@ export interface ClipResult {
   poster?: string;
   /** Only in demo job results: whether the first frame matched our reference view of the junction. */
   aligned?: boolean;
+  /** Only in demo job results: "generic" when the view never matched our junction, so only the rules
+   * that need no map of the place ran (src/pipeline/generic.ts). */
+  mode?: "junction" | "generic";
   /** Only in demo job results: the tracker's boxes per analysed frame, drawn over the video. */
   overlay?: Overlay;
 }

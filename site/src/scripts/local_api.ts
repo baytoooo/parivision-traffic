@@ -343,6 +343,7 @@ function toClipResult(r: PipelineResult, groups: string[], video: string, poster
     evidence: r.evidence.map((e) => ({ ...e, note: readableNote(e.note) })),
     counts: r.counts as Counts,
     aligned: r.aligned,
+    mode: r.mode,
     video,
     ...(poster ? { poster } : {}),
     overlay: { work: r.overlay.work, groups, frames: r.overlay.frames },

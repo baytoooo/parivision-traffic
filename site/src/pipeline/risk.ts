@@ -133,6 +133,7 @@ export class Anticipator {
   private tracker: MultiTracker;
   private H: Mat3 | null = null;
   private history = new Map<number, Sample[]>();
+  private mpp: ((x: number, y: number) => number) | null = null;
   private streaks = new Map<string, number>();
 
   constructor(meta: { fps: number; width: number; height: number }, scene: Scene) {
@@ -148,6 +149,16 @@ export class Anticipator {
   /** The homography from work pixels to the reference view (Python: self.alignment.H). */
   setAlignment(H: Mat3): void {
     this.H = H;
+  }
+
+  /** A view that is not our junction (tools/crash_check.py replay): the whole frame is road, there is
+   * no median between the directions, and metres per pixel come from `mpp`. */
+  setGeneric(mpp: (x: number, y: number) => number): void {
+    this.mpp = mpp;
+  }
+
+  private metres(x: number, y: number): number {
+    return this.mpp ? this.mpp(x, y) : metresPerPx(this.scene, x, y);
   }
 
   /** Tracker + hazard update from one frame's detections (work pixels); returns the smoothed score. */
@@ -190,7 +201,7 @@ export class Anticipator {
       const dt = ts.map((x) => x - ts[ts.length - 1]);
       // px/s, least squares: robust to box jitter
       const v: Vec = [slope(dt, ps.map((p) => p[0])), slope(dt, ps.map((p) => p[1]))];
-      const m = metresPerPx(this.scene, last[1][0], last[1][1]); // for this user's own speed and braking only
+      const m = this.metres(last[1][0], last[1][1]); // for this user's own speed and braking only
       users.push({ v, r: last[2], cls: last[3], speed: norm(v) * m, braking: braking(ts, ps.map((q): Vec => [q[0] * m, q[1] * m])), q: last[1], tid });
     }
     let best = 0.0;
@@ -202,7 +213,7 @@ export class Anticipator {
         if (a.cls === k.PERSON && b.cls === k.PERSON) continue;
         // one scale for both users, taken between them: positions scaled by each user's own scale
         // would not share a frame, and users far apart would look close
-        const m = metresPerPx(this.scene, (a.q[0] + b.q[0]) / 2, (a.q[1] + b.q[1]) / 2);
+        const m = this.metres((a.q[0] + b.q[0]) / 2, (a.q[1] + b.q[1]) / 2);
         const pa: Vec = [a.q[0] * m, a.q[1] * m], pb: Vec = [b.q[0] * m, b.q[1] * m];
         if (Math.max(a.speed, b.speed) < k.MIN_SPEED || norm([pb[0] - pa[0], pb[1] - pa[1]]) > 30.0) continue;
         // moving car vs parked or queued car: never on its own
@@ -224,11 +235,13 @@ export class Anticipator {
 
   /** _road_mask: the carriageway including the crossings. */
   private onRoad(p: Vec): boolean {
+    if (this.mpp) return true;
     return this.scene.mask("road", p[0], p[1]) === 1;
   }
 
   /** _carriageways: 0 elsewhere, 1 southbound, 2 northbound (nb is filled last, so it wins an overlap). */
   private carriageway(p: Vec): number {
+    if (this.mpp) return 0;
     if (this.scene.zone("nb", p[0], p[1])) return 2;
     return this.scene.zone("sb", p[0], p[1]) ? 1 : 0;
   }

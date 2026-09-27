@@ -369,9 +369,11 @@ function showResult(result: ClipResult, source: string, jobId: string) {
     ? "Stored example result from replay mode, not an analysis of your file."
     : [
         `Analysed on this device with ${backendName()}: ${result.risk.length} frames, 5 per second.`,
-        result.aligned === false
-          ? "The first frame did not match our view of the junction, so the rules looked in the wrong places and these events are not to be trusted."
-          : "",
+        result.mode === "generic"
+          ? "This is not our junction, or the page could not match the view to it. The rules for zebras, stop lines, lamps and our carriageways need that match, so only the ones that need no map of the place ran: driving against the traffic in each part of the frame, learned from this clip, and collisions, with distances judged from the size of the vehicles. The risk curve is worked out the same way."
+          : result.aligned === false
+            ? "The first frame did not match our view of the junction, so the rules looked in the wrong places and these events are not to be trusted."
+            : "",
       ].join(" ");
   const root = document.querySelector<HTMLElement>('[data-player="demo"]')!;
   // the clip's own first frame instead of a stock poster, which the tracked boxes would not fit; a
