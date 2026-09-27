@@ -240,7 +240,7 @@ export function failureToYield(ctx: Context, H: Mat3): Evidence[] {
     const m = `cw_${name}`;
     const pedZone = `cw_${name}_zone`; // the zebra dilated by fty_cw_dilate px
     // who is out on this crossing (not waiting on the kerb at its end), indexed by time (0.1 s bins)
-    const onCw = new Map<number, [number, number[]][]>();
+    const onCw = new Map<number, [number, number[], number[]][]>();
     for (const ped of ctx.people) {
       const kerb = ctx.dist("road_dist", ped.foot);
       const zone = ctx.mask(pedZone, ped.foot);
@@ -252,7 +252,7 @@ export function failureToYield(ctx: Context, H: Mat3): Evidence[] {
         const key = roundHalfEven(t * 10);
         let bin = onCw.get(key);
         if (!bin) onCw.set(key, (bin = []));
-        bin.push([ped.tid, ped.foot[i]]);
+        bin.push([ped.tid, ped.foot[i], ped.vel[i]]);
       });
     }
     if (onCw.size === 0) continue;
@@ -265,12 +265,22 @@ export function failureToYield(ctx: Context, H: Mat3): Evidence[] {
       for (const [s_, e_] of runs(veh.t, on, ctx.gap(0.3))) {
         const sel = vs.filter((_, i) => veh.t[i] >= s_ && veh.t[i] <= e_);
         if (e_ - s_ < 0.2 || median(sel) < p.fty_min_speed) continue;
+        // it stood before the crossing: a pedestrian already past its path and walking on was let through
+        let slowest = Infinity;
+        veh.t.forEach((t, i) => {
+          if (t >= s_ - p.fty_yield_sec && t < s_) slowest = Math.min(slowest, vs[i]);
+        });
+        const yielded = slowest < p.fty_yield_speed;
         const victims = new Set<number>();
         veh.t.forEach((t, i) => {
           if (!(t >= s_ - 0.3 && t <= e_)) return;
-          for (const [tid, f] of onCw.get(roundHalfEven(t * 10)) ?? []) {
+          for (const [tid, f, v] of onCw.get(roundHalfEven(t * 10)) ?? []) {
             const dx = f[0] - veh.foot[i][0], dy = f[1] - veh.foot[i][1];
-            if (Math.sqrt(dx * dx + dy * dy) < p.fty_near_px) victims.add(tid);
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist >= p.fty_near_px) continue;
+            const away = v[0] * dx + v[1] * dy > p.fty_away * Math.sqrt(v[0] * v[0] + v[1] * v[1]) * dist;
+            if (yielded && dist > p.fty_past_px && away) continue;
+            victims.add(tid);
           }
         });
         if (victims.size) {
@@ -457,6 +467,13 @@ export function wrongWay(ctx: Context): Evidence[] {
     for (const tr of movers) {
       const inside = ctx.zone(name, tr.foot);
       if (!inside.some((v) => v > 0)) continue;
+      // ww_edge_px inside the zone in x and y (rules.py): not on the service road along the NB far kerb
+      for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const moved = ctx.zone(name, tr.foot.map(([x, y]) => [x + ox * p.ww_edge_px, y + oy * p.ww_edge_px]));
+        moved.forEach((v, i) => {
+          if (!(v > 0)) inside[i] = 0;
+        });
+      }
       const sp = ctx.speed(tr);
       const bad = tr.vel.map(([vx, vy], i) => {
         const diff = Math.abs(pymod(degrees(Math.atan2(vy, vx)) - heading + 180, 360) - 180);

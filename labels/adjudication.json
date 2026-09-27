@@ -870,7 +870,7 @@
    "end": 26.9,
    "category": "label_wrong",
    "cause": "The pedestrian was in lane 1 by the median and walking away from the car. The white sedan crossed the zebra in lane 3, with lane 2 empty between them, so it was counted as a pedestrian in the car's path when he was not.",
-   "reason": "Background: I built a median background of C3905 and measured the NB lane dashes and the north_nb stripes on it (sheets out/sheets/adj/C3905_fn_52_bg2.jpg, _5.jpg, _6.jpg). The lane dividers run at slope ~0.33. In proxy terms, u = y - 0.33(x-600): lane 1/2 at u\u2248227, lane 2/3 at u\u2248206, lane 3/4 at u\u2248184, and the median edge at u\u2248246. The zebra runs from about y 252 to 268 at x 650 and from 243 to 258 at x 760.\n\nThe car: a white Sonata-like sedan comes in from the east arm and turns into NB. Its front reaches the south edge of the zebra at about (774,257) at 25.8 s, and its rear bumper clears the north edge at about 26.9 s, so the claimed times do match the crossing. While it is on the zebra, its visible left (median-side) wheels ride exactly on the lane 2/3 divider: front-left wheel (760,258) at 26.0, (738,253) at 26.2 and (714,244) at 26.4; rear-left wheel (742,253) at 26.6. All of these are at u\u2248206-208, so the car's body is in lane 3. After the zebra it continues up lane 2 (front at about (641,231) at 27.0, u\u2248217). It never enters lane 1.\n\nThe pedestrian: a man in a light blue shirt, on the phone, walks west along the zebra. He crosses the lane 1/2 divider between 24.6 and 25.0 s. During the car's crossing his feet are at (662,258) at 25.8, (657,258) at 26.0, (645,260) at 26.4 and (630,261) at 26.8, so u goes from 240 to 251. That puts him in lane 1, reaching the median gap and nose, and moving away from the car the whole time. All of lane 2 separated them, about 80-90 proxy px across the row, or 1.5 lanes from the car's side. So he was neither in the car's path nor in the lane next to it. He was well beyond a lane divider and not heading into the car's lane, which is exactly the exclusion in labeling.md.\n\nThe item note says the car swings into his lane and passes about 30 px NNE of him. That is wrong. The car was already off the zebra at that point, and it was in lane 2, not lane 1. Nobody braked, swerved or jumped back, so this is not a near_miss, and no other class fits. The avenue signal was red, which was the cross-street phase for this turner.\n\nA separate event is real: the white BMW-like SUV right behind it. Its front-left wheel is on the lane 1/2 divider at 27.4 s, then inside lane 1 on the zebra at about (653,254) at 27.6 s, passing just in front of the same man. The existing separate label 27.1-28.1 covers this. It does not overlap 25.8-26.9 and should not be merged with it. Drop 25.8-26.9 as not a failure_to_yield."
+   "reason": "Background: I built a median background of C3905 and measured the NB lane dashes and the north_nb stripes on it (sheets out/sheets/adj/C3905_fn_52_bg2.jpg, _5.jpg, _6.jpg). The lane dividers run at slope ~0.33. In proxy terms, u = y - 0.33(x-600): lane 1/2 at u≈227, lane 2/3 at u≈206, lane 3/4 at u≈184, and the median edge at u≈246. The zebra runs from about y 252 to 268 at x 650 and from 243 to 258 at x 760.\n\nThe car: a white Sonata-like sedan comes in from the east arm and turns into NB. Its front reaches the south edge of the zebra at about (774,257) at 25.8 s, and its rear bumper clears the north edge at about 26.9 s, so the claimed times do match the crossing. While it is on the zebra, its visible left (median-side) wheels ride exactly on the lane 2/3 divider: front-left wheel (760,258) at 26.0, (738,253) at 26.2 and (714,244) at 26.4; rear-left wheel (742,253) at 26.6. All of these are at u≈206-208, so the car's body is in lane 3. After the zebra it continues up lane 2 (front at about (641,231) at 27.0, u≈217). It never enters lane 1.\n\nThe pedestrian: a man in a light blue shirt, on the phone, walks west along the zebra. He crosses the lane 1/2 divider between 24.6 and 25.0 s. During the car's crossing his feet are at (662,258) at 25.8, (657,258) at 26.0, (645,260) at 26.4 and (630,261) at 26.8, so u goes from 240 to 251. That puts him in lane 1, reaching the median gap and nose, and moving away from the car the whole time. All of lane 2 separated them, about 80-90 proxy px across the row, or 1.5 lanes from the car's side. So he was neither in the car's path nor in the lane next to it. He was well beyond a lane divider and not heading into the car's lane, which is exactly the exclusion in labeling.md.\n\nThe item note says the car swings into his lane and passes about 30 px NNE of him. That is wrong. The car was already off the zebra at that point, and it was in lane 2, not lane 1. Nobody braked, swerved or jumped back, so this is not a near_miss, and no other class fits. The avenue signal was red, which was the cross-street phase for this turner.\n\nA separate event is real: the white BMW-like SUV right behind it. Its front-left wheel is on the lane 1/2 divider at 27.4 s, then inside lane 1 on the zebra at about (653,254) at 27.6 s, passing just in front of the same man. The existing separate label 27.1-28.1 covers this. It does not overlap 25.8-26.9 and should not be merged with it. Drop 25.8-26.9 as not a failure_to_yield."
   }
  },
  {
@@ -965,7 +965,7 @@
    "end": 38,
    "category": "boundary_only",
    "cause": "The model saw this crossing but made the segment too long. In pred_3.json, which adjudicate_items_3 was built from, it output one failure_to_yield of 36.74-40.54 s. That joins the SUV crossing to a later lane-1 white sedan at the west end (about 38.6-40.5 s, by which time the pedestrian is at the kerb). IoU with 37.0-38.0 is 1.0/3.8 = 0.26, below 0.3, so it was scored as a miss. pred_all.json splits it into 36.74-37.94, which would match (IoU about 0.75).",
-   "reason": "Checked on crops at 0.1-0.4 s steps from 33 to 41 s (out/sheets/adj/C3905_fn_57_1..8.jpg). I also drew the painted zebra edges into the frames, measured on a median of empty frames: upper y \u2248 300 - 0.144(x-280), lower y \u2248 323 - 0.139(x-280), in proxy pixels.\n\nWhat happens:\n- A man in a light-blue shirt walks west along the north_sb zebra from about x 440 at 33 s to about x 200 at 38.6 s. His feet stay on the stripes the whole time, for example (272,312) at 37.0 s, with the zebra spanning y 301-324 there.\n- The signal is green from 34.6 s. The white Kia Sonet-type SUV in SB lane 2 rolls from the stop line and never stops.\n- At 36.6-36.9 s the man walks right across the front of its bumper, from its front-right to its front-left.\n- At 37.0 s the SUV's front-left wheel is at about (289,297), 1 px short of the upper edge, and the bumper overhang is at the edge. At 36.9 s it was about 10 px short. So the front enters the zebra at 37.0 s.\n- At that moment the man is on the stripes about 15-20 px (roughly 1 m) left of the SUV's front-left corner. That is the lane next to it, not the far half.\n- The SUV keeps rolling over the stripes beside him.\n\nEnd: the car is heading almost straight right in the image, and the zebra's lower edge rises to the right. The rear-left wheel meets the lower edge at about 37.8-37.9 s. With about 11 px of rear overhang, the rear bumper clears the edge at about 37.9-38.1 s, so the end is 38.0 s.\n\nOther classes: no hard braking, no swerve and no jump back, so this is not near_miss. The signal is green, so it is not red_light.\n\nThe dev label 37.0-38.0 is correct as it stands."
+   "reason": "Checked on crops at 0.1-0.4 s steps from 33 to 41 s (out/sheets/adj/C3905_fn_57_1..8.jpg). I also drew the painted zebra edges into the frames, measured on a median of empty frames: upper y ≈ 300 - 0.144(x-280), lower y ≈ 323 - 0.139(x-280), in proxy pixels.\n\nWhat happens:\n- A man in a light-blue shirt walks west along the north_sb zebra from about x 440 at 33 s to about x 200 at 38.6 s. His feet stay on the stripes the whole time, for example (272,312) at 37.0 s, with the zebra spanning y 301-324 there.\n- The signal is green from 34.6 s. The white Kia Sonet-type SUV in SB lane 2 rolls from the stop line and never stops.\n- At 36.6-36.9 s the man walks right across the front of its bumper, from its front-right to its front-left.\n- At 37.0 s the SUV's front-left wheel is at about (289,297), 1 px short of the upper edge, and the bumper overhang is at the edge. At 36.9 s it was about 10 px short. So the front enters the zebra at 37.0 s.\n- At that moment the man is on the stripes about 15-20 px (roughly 1 m) left of the SUV's front-left corner. That is the lane next to it, not the far half.\n- The SUV keeps rolling over the stripes beside him.\n\nEnd: the car is heading almost straight right in the image, and the zebra's lower edge rises to the right. The rear-left wheel meets the lower edge at about 37.8-37.9 s. With about 11 px of rear overhang, the rear bumper clears the edge at about 37.9-38.1 s, so the end is 38.0 s.\n\nOther classes: no hard braking, no swerve and no jump back, so this is not near_miss. The signal is green, so it is not red_light.\n\nThe dev label 37.0-38.0 is correct as it stands."
   }
  },
  {
@@ -985,6 +985,120 @@
    "category": "missed_by_model",
    "cause": "The west-arm walkers' foot points (tracks 2000848 and 2000880, reference y 945 to 996 below the bottom-left island) fall on ROAD but outside drivable.png and the junction box, so walk_check is 0 and the rule never tests them. The bus-stop man (track 2000762) stays 10 to 15 proxy px (20 to 30 ref px) below the NB kerb, inside the 30 px NB_KERB exclusion band, so walk_check is 0 for him too. The model's only nearby output (69.67-71.27) came from a different man near the zebra's east edge, and its IoU with either true segment is under 0.3.",
    "reason": "The jaywalking is real, but under the per-class merge rule it is two segments, not one run from 66.3 to 79.7. I checked this on gridded crops at 4 to 7x, with 0.1 to 0.5 s steps.\n\n(1) 66.3-71.0: a man in a maroon shirt and jeans at the NB bus stop. At 66.2 his feet are on the sidewalk kerb at about proxy (614-619, 141). At 66.3-66.4 his front foot lands on the asphalt at (611, 145). He then walks up-left over the bus-bay entry and kerb lane, 10 to 12 px below the kerb, reaching about (577-587, 147) at 68.0. A white car passes in the next lane at 70.5-71.3. At 70.7-71.0 his feet reach the rounded nose of the raised separator island between the bus bay and the main lanes, at about (507-512, 139-141). The island's kerbstones are clear in C3902. From 71.1 to 76.4 his feet stay on that island strip: (494-503, 134) at 72.0, (467-476, 129) at 74.0, (446-451, 126) at 75.6. So the verifier who kept him on the asphalt until 79.0 was wrong. From 71.0 onward he is on an island and then getting into the white sedan in the bus bay.\n\n(2) 72.3-79.7, the west arm. The woman in dark navy with white shoes comes up the lower west zebra next to a family with two boys in white. At 72.2 her body straddles the zebra's west edge (about x 300 at the frame bottom). At 72.4 it is fully left of the edge. At 72.9 her feet are at (252-265, 535), 30 to 45 px off the stripes. The smaller boy is also more than a body width west of the stripes from about 72.3-72.4 and crosses the asphalt to the island's east tip by about 75.5. The woman walks west on the west-arm carriageway, 20 to 40 px below the bottom-left island's south kerb: (207-231, 519) at 74.0, (153-179, 506) at 75.0, (99-122, 498) at 76.0, (47-62, 490) at 77.0. She leaves the frame at the left at about 78.1. The man in the black printed T-shirt with a shoulder bag leaves the zebra's west edge at 75.3 and crosses the asphalt gap to the island tip. From 76.4 to 78.4 his feet are on the asphalt just below the island's kerbstones, with the kerb band visible above his feet. Past the tip he walks at y about 484, about 45 px below the corner's yellow kerb line. A sliver of his foot is at x 0-8 at 79.7, and he is gone at 79.8.\n\nBetween 71.0 and about 72.2 nobody is clearly more than a body width onto the carriageway. The black-print man walked up from the south-east from 69.8 to 71.3 about one body width outside the zebra's east edge, with his feet mostly below the frame. That is borderline, so I did not count it. Other things I checked: track 2000738 (63.8-70.3) is a driver inside a car. The pair at 79.9-83.1 walks on the north crossing's stripes. Nothing extends either segment.\n\nThe label should therefore be split into 66.3-71.0 and 72.3-79.7. I report the larger one here. The model detected neither."
+  }
+ },
+ {
+  "clip": "C3896",
+  "kind": "fn",
+  "label": "failure_to_yield",
+  "start": 13.2,
+  "end": 19.6,
+  "actors": "",
+  "signal": "",
+  "id": "C3896_yield_0",
+  "verdict": {
+   "real_event": false,
+   "label": "failure_to_yield",
+   "start": 0,
+   "end": 0,
+   "category": "label_wrong",
+   "cause": "The vehicle stood before the crossing while the pedestrians walked past in front of it, and drove off once they were past its lane and walking away: it yielded. Checked on frames of the clip in a second review (2026-09-27) of the labels that the rule with the yield check no longer matches.",
+   "reason": "Second review of the yield cases, frames rendered from the sample clip."
+  }
+ },
+ {
+  "clip": "C3896",
+  "kind": "fn",
+  "label": "failure_to_yield",
+  "start": 92.9,
+  "end": 96.1,
+  "actors": "",
+  "signal": "",
+  "id": "C3896_yield_1",
+  "verdict": {
+   "real_event": false,
+   "label": "failure_to_yield",
+   "start": 0,
+   "end": 0,
+   "category": "label_wrong",
+   "cause": "The vehicle stood before the crossing while the pedestrians walked past in front of it, and drove off once they were past its lane and walking away: it yielded. Checked on frames of the clip in a second review (2026-09-27) of the labels that the rule with the yield check no longer matches.",
+   "reason": "Second review of the yield cases, frames rendered from the sample clip."
+  }
+ },
+ {
+  "clip": "C3896",
+  "kind": "fn",
+  "label": "failure_to_yield",
+  "start": 155.2,
+  "end": 157.7,
+  "actors": "",
+  "signal": "",
+  "id": "C3896_yield_2",
+  "verdict": {
+   "real_event": false,
+   "label": "failure_to_yield",
+   "start": 0,
+   "end": 0,
+   "category": "label_wrong",
+   "cause": "The vehicle stood before the crossing while the pedestrians walked past in front of it, and drove off once they were past its lane and walking away: it yielded. Checked on frames of the clip in a second review (2026-09-27) of the labels that the rule with the yield check no longer matches.",
+   "reason": "Second review of the yield cases, frames rendered from the sample clip."
+  }
+ },
+ {
+  "clip": "C3897",
+  "kind": "fn",
+  "label": "failure_to_yield",
+  "start": 2,
+  "end": 5.9,
+  "actors": "",
+  "signal": "",
+  "id": "C3897_yield_3",
+  "verdict": {
+   "real_event": false,
+   "label": "failure_to_yield",
+   "start": 0,
+   "end": 0,
+   "category": "label_wrong",
+   "cause": "The vehicle stood before the crossing while the pedestrians walked past in front of it, and drove off once they were past its lane and walking away: it yielded. Checked on frames of the clip in a second review (2026-09-27) of the labels that the rule with the yield check no longer matches.",
+   "reason": "Second review of the yield cases, frames rendered from the sample clip."
+  }
+ },
+ {
+  "clip": "C3897",
+  "kind": "fn",
+  "label": "failure_to_yield",
+  "start": 235,
+  "end": 240.2,
+  "actors": "",
+  "signal": "",
+  "id": "C3897_yield_4",
+  "verdict": {
+   "real_event": false,
+   "label": "failure_to_yield",
+   "start": 0,
+   "end": 0,
+   "category": "label_wrong",
+   "cause": "The vehicle stood before the crossing while the pedestrians walked past in front of it, and drove off once they were past its lane and walking away: it yielded. Checked on frames of the clip in a second review (2026-09-27) of the labels that the rule with the yield check no longer matches.",
+   "reason": "Second review of the yield cases, frames rendered from the sample clip."
+  }
+ },
+ {
+  "clip": "C3902",
+  "kind": "fn",
+  "label": "failure_to_yield",
+  "start": 182.2,
+  "end": 186.9,
+  "actors": "",
+  "signal": "",
+  "id": "C3902_yield_5",
+  "verdict": {
+   "real_event": false,
+   "label": "failure_to_yield",
+   "start": 0,
+   "end": 0,
+   "category": "label_wrong",
+   "cause": "The vehicle stood before the crossing while the pedestrians walked past in front of it, and drove off once they were past its lane and walking away: it yielded. Checked on frames of the clip in a second review (2026-09-27) of the labels that the rule with the yield check no longer matches.",
+   "reason": "Second review of the yield cases, frames rendered from the sample clip."
   }
  }
 ]

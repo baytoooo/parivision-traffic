@@ -99,11 +99,11 @@ map (`scene.PERSON_HEIGHT_PX`, fitted on ~150k pedestrian boxes).
 | class | rule |
 |---|---|
 | jaywalking | a pedestrian (not a cyclist, not someone seen through a car window) on the drivable area outside every zebra, by at least 0.35 of their own height, for 1 s or more |
-| failure_to_yield | a car, bus or truck drives across a zebra while a walking pedestrian is out on the same zebra (not waiting at the kerb) within 160 px of it (about 3 to 3.5 m on the north crossing) |
+| failure_to_yield | a car, bus or truck drives across a zebra while a walking pedestrian is out on the same zebra (not waiting at the kerb) within 160 px of it (about 3 to 3.5 m on the north crossing); a car that stood before the zebra and drives on once the pedestrian is past its path and walking away has let them through and does not count |
 | red_light | a southbound vehicle's front crosses the stop line after the vehicle signal has been red for 1 s, and at least 1.5 s before it turns green |
 | stop_line | a southbound vehicle stands still with its front past the stop line, between the line and the far side of the north crossing, while the signal is red |
 | stopped_vehicle | a vehicle stands still 10 s or more on the northbound carriageway (not at the bus stop or at the right edge of the frame) or in the junction box; the southbound approach, where the red-light queue stands, does not count |
-| wrong_way | a vehicle or bike moves against the lane direction on either carriageway for 1.5 s or more |
+| wrong_way | a vehicle or bike moves against the lane direction on either carriageway for 1.5 s or more, at least 6 px inside it (the service road along the far kerb of the NB carriageway is not the carriageway); on 1074 real tracks of the samples run backwards it finds 1057, and it never fires on the samples themselves |
 | congestion | southbound traffic stands still while it has green: at least 8 s into the green, 8 or more vehicles stand on the last stretch of the approach and past the stop line (or 5 past the stop line alone) for 6 s or more; it carries on into the red while 5 or more still stand past the stop line |
 | illegal_u_turn | detected (SB traffic round the median nose into NB) and shown on the website, not submitted: nothing in view says these U-turns are prohibited, and a predicted class the test set lacks costs a zero in the macro average |
 | accident | two road users meet at speed (closing at 3 m/s or more, the faster one doing 3 m/s or more), both velocities change at the contact, and both then stand together for 2 s; the event runs from the contact until they stand |
@@ -158,13 +158,13 @@ missing `camera.md`) and `docs/labeling.md` (how we built the dev set).
 ## Results on our dev labels
 
 Scored with the organisers' `evaluate.py` against our own labels of the four
-samples (104 events; `labels/dev_labels.json`, built as `docs/labeling.md`
+samples (98 events; `labels/dev_labels.json`, built as `docs/labeling.md`
 describes). F1 is the mean over tIoU 0.3, 0.5 and 0.7.
 
 | class | F1 | TP / FP / FN at tIoU 0.5 |
 |---|---:|---:|
 | congestion | 0.800 | 2 / 0 / 1 |
-| failure_to_yield | 0.518 | 27 / 28 / 21 |
+| failure_to_yield | 0.504 | 24 / 28 / 18 |
 | jaywalking | 0.538 | 12 / 12 / 16 |
 | red_light | 0.667 | 1 / 0 / 1 |
 | stop_line | 0.769 | 5 / 3 / 0 |
@@ -172,7 +172,7 @@ describes). F1 is the mean over tIoU 0.3, 0.5 and 0.7.
 | illegal_u_turn (not submitted) | 0 | 0 / 0 / 9 |
 | illegal_turn (no rule) | 0 | 0 / 0 / 2 |
 
-Score A is **0.525**. We emit eight classes, and the mean F1 over the six that
+Score A is **0.523**. We emit eight classes, and the mean F1 over the six that
 fired on the samples is 0.70 (wrong_way and accident never fired and are not in
 our labels, so `evaluate.py` leaves them out). The dev labels are committed in `labels/`. We
 drafted them with Claude agents (a hosted model, used only to build the dev
@@ -447,7 +447,7 @@ THIRD_PARTY_NOTICES.md licences of the models, packages and data we use
   clips are not in this repository; `labels/accident_real.csv` and
   `labels/accident_synthetic.csv` list the ones we used, with the benchmark's
   annotations.
-* **Our dev labels** (`labels/`): 104 events on the four sample clips, drafted
+* **Our dev labels** (`labels/`): 98 events on the four sample clips, drafted
   with Claude agents as `docs/labeling.md` describes. AGPL-3.0, with the rest
   of the repository.
 * No other datasets are used.

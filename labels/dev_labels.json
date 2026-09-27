@@ -14,11 +14,6 @@
     "stopped_vehicle"
    ],
    [
-    13.2,
-    19.6,
-    "failure_to_yield"
-   ],
-   [
     36.1,
     72.5,
     "illegal_u_turn"
@@ -49,11 +44,6 @@
     "failure_to_yield"
    ],
    [
-    92.9,
-    96.1,
-    "failure_to_yield"
-   ],
-   [
     94.5,
     98.2,
     "jaywalking"
@@ -77,11 +67,6 @@
     136,
     147.5,
     "illegal_u_turn"
-   ],
-   [
-    155.2,
-    157.7,
-    "failure_to_yield"
    ],
    [
     159.6,
@@ -163,11 +148,6 @@
     0.0,
     26.2,
     "stopped_vehicle"
-   ],
-   [
-    2,
-    5.9,
-    "failure_to_yield"
    ],
    [
     6.2,
@@ -263,11 +243,6 @@
     230,
     246.4,
     "jaywalking"
-   ],
-   [
-    235,
-    240.2,
-    "failure_to_yield"
    ],
    [
     253,
@@ -383,11 +358,6 @@
    [
     173.9,
     175.3,
-    "failure_to_yield"
-   ],
-   [
-    182.2,
-    186.9,
     "failure_to_yield"
    ],
    [

@@ -14,7 +14,9 @@ With --adjudication labels/adjudication.json it folds in the adjudication pass
 these labels): an event the labels missed is added, a label the adjudicator
 found wrong is removed, and a boundary-only disagreement takes the adjudicator's
 times when the labels it touches form one run. Only disagreements get a second
-look, so this favours the model somewhat; the report says so.
+look, so this favours the model somewhat; the report says so. The items with ids ending in
+_yield_<n> come from a second review by hand on frames of the clips: failure-to-yield labels where
+the car had stood before the zebra and drove on once the pedestrians were past its path.
 
 labels/dev_labels_verified.json holds what the journals gave (107 events before
 adjudication), so the committed labels can be rebuilt from the repository:

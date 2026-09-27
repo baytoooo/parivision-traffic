@@ -23,30 +23,30 @@ labelled them from our guide (`docs/labeling.md`). A verifier agent kept 285
 of 351 claims; an adjudicator agent reviewed 52 disagreements between model
 and labels (the model was wrong in 34, the labels in 13). No person labelled
 frames, so our numbers are indicative, and the adjudication favours the model.
-The result is 104 events in eight classes, with no accidents or near misses.
+A second look at failure to yield removed six labels where the car had waited and let the
+pedestrians pass. The result is 98 events in eight classes, with no accidents or near misses.
 `solution.py` never calls Claude.
 
 ## What worked
 
-* **Score A 0.525 on our dev set.** The six classes that fired average an F1
+* **Score A 0.523 on our dev set.** The six classes that fired average an F1
   of 0.70. The rules were tuned on these labels, so we expect less on the test
   set.
 * **Registration.** Framing shifts between clips and the camera drifts while
-  it settles. Without registration Score A falls from 0.526 to 0.393
-  (ablation figures; the official run gives 0.525).
+  it settles. Without registration Score A falls from 0.524 to 0.391.
 * **The right signal head.** The head on the left corner pole is a pedestrian
   signal; read as the vehicle one, it turned the last platoon of every green
   into red-light runners. We read the median-nose head instead.
 * **A road mask learned from traffic** raises jaywalking F1 from 0.415 to
   0.551 in the ablations (0.538 in the official run).
-* **10 frames per second.** 5 fps costs 0.013 of Score A; 3.3 fps drops it
-  from 0.526 to 0.406, since a car is on a zebra for only about 2 s.
+* **10 frames per second.** 5 fps costs 0.015 of Score A; 3.3 fps drops it
+  from 0.524 to 0.403, since a car is on a zebra for only about 2 s.
 * **Part B stays calm.** In 18.4 minutes of normal traffic it crosses the 0.5
   threshold once, for 0.7 s; elsewhere its highest value is 0.499.
 
 ## What did not work
 
-* **Failure to yield (F1 0.518).** Boundaries decide tIoU 0.5 and 0.7, and the
+* **Failure to yield (F1 0.504).** Boundaries decide tIoU 0.5 and 0.7, and the
   task does not say how close the pedestrian must be.
 * **Jaywalking (F1 0.538).** A rider whose moped the detector loses looks like
   a pedestrian; a speed test removes most.

@@ -35,6 +35,13 @@ PARAMS = {
     "jay_min_height": 0.65,        # x expected person height; shorter boxes are occluded
     # failure to yield
     "fty_near_px": 160.0,          # lateral distance ped <-> vehicle along the crossing
+    # a vehicle that stood (below fty_yield_speed px/s) in the fty_yield_sec before the crossing, and
+    # drives on once a pedestrian is past its path (more than fty_past_px away and walking away from
+    # it, cosine above fty_away), has let them through: not an event
+    "fty_yield_speed": 20.0,
+    "fty_yield_sec": 3.0,
+    "fty_past_px": 30.0,
+    "fty_away": 0.5,
     "fty_cw_dilate": 10.0,         # px, person counts as on the crossing within this margin
     "fty_min_speed": 20.0,         # px/s, the vehicle must actually be driving through
     "fty_kerb": 0.4,               # x person height: out on the zebra, not standing at its kerb end
@@ -63,6 +70,8 @@ PARAMS = {
     "ww_min_speed": 40.0,
     "ww_angle": 120.0,             # deg away from the lane direction
     "ww_min_dur": 1.5,
+    "ww_edge_px": 6.0,             # this far inside the zone in x and y: a car on the service road that
+                                   # runs along the far kerb of the NB carriageway is not on it
     # U-turns
     "ut_dir_tol": 30.0,            # deg: how close the first/last headings must be to SB/NB
     "ut_nose_px": 130.0,           # the path passes the median nose this closely
@@ -270,8 +279,8 @@ def failure_to_yield(ctx: Context, H_work_to_ref: np.ndarray) -> list[Evidence]:
             h = np.maximum(ped.height, 20.0)
             walking = ped.speed > p["fty_walk"] * h  # someone standing still beside the car's path is not being cut off
             hit = (ctx.sample(ped_zone, ped.foot) > 0) & (kerb > p["fty_kerb"] * h) & walking
-            for t_, f_ in zip(ped.t[hit], ped.foot[hit]):
-                on_cw.setdefault(int(round(t_ * 10)), []).append((ped.tid, f_))
+            for t_, f_, v_ in zip(ped.t[hit], ped.foot[hit], ped.vel[hit]):
+                on_cw.setdefault(int(round(t_ * 10)), []).append((ped.tid, f_, v_))
         if not on_cw:
             continue
         for veh in ctx.vehicles:
@@ -285,11 +294,18 @@ def failure_to_yield(ctx: Context, H_work_to_ref: np.ndarray) -> list[Evidence]:
                 sel = (veh.t >= s_) & (veh.t <= e_)
                 if e_ - s_ < 0.2 or np.median(veh.speed[sel]) < p["fty_min_speed"]:
                     continue
+                before = (veh.t >= s_ - p["fty_yield_sec"]) & (veh.t < s_)
+                yielded = before.any() and veh.speed[before].min() < p["fty_yield_speed"]
                 victims = set()
                 for i in np.nonzero((veh.t >= s_ - 0.3) & (veh.t <= e_))[0]:
-                    for tid, f_ in on_cw.get(int(round(veh.t[i] * 10)), ()):
-                        if np.linalg.norm(f_ - veh.foot[i]) < p["fty_near_px"]:
-                            victims.add(tid)
+                    for tid, f_, v_ in on_cw.get(int(round(veh.t[i] * 10)), ()):
+                        d = f_ - veh.foot[i]
+                        dist = float(np.linalg.norm(d))
+                        if dist >= p["fty_near_px"]:
+                            continue
+                        if yielded and dist > p["fty_past_px"] and np.dot(v_, d) > p["fty_away"] * np.linalg.norm(v_) * dist:
+                            continue  # it stopped for them, they are past its path and walking on: let through
+                        victims.add(tid)
                 if victims:
                     # our footprint points sit low in the box; the convention runs from the front
                     # entering the zebra to the rear leaving it, which is a little longer
@@ -448,6 +464,8 @@ def wrong_way(ctx: Context) -> list[Evidence]:
             inside = ctx.sample(ctx.zones[name], tr.foot) > 0
             if not inside.any():
                 continue
+            for off in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                inside &= ctx.sample(ctx.zones[name], tr.foot + np.array(off) * p["ww_edge_px"]) > 0
             ang = np.degrees(np.arctan2(tr.vel[:, 1], tr.vel[:, 0]))
             diff = np.abs((ang - heading + 180) % 360 - 180)
             bad = inside & (tr.speed > p["ww_min_speed"]) & (diff > p["ww_angle"])

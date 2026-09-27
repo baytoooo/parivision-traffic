@@ -42,7 +42,7 @@ export const CLASSES: ClassMeta[] = [
     name: "Wrong way",
     code: "WW",
     status: "on",
-    rule: "A vehicle faster than 40 px/s heads more than 120 degrees away from its carriageway's direction for at least 1.5 s. Each carriageway has one legal direction in the reference view.",
+    rule: "A vehicle faster than 40 px/s heads more than 120 degrees away from its carriageway's direction for at least 1.5 s, at least 6 px inside the carriageway (the service road along the far kerb does not count). Each carriageway has one legal direction in the reference view. On 1074 real tracks run backwards it finds 1057; it never fires on the samples.",
   },
   {
     key: "illegal_u_turn",
@@ -70,7 +70,7 @@ export const CLASSES: ClassMeta[] = [
     name: "Failure to yield",
     code: "FTY",
     status: "on",
-    rule: "A car, bus or truck moving at 20 px/s or more drives across a zebra while a walking pedestrian is out on it, not at the kerb, within 160 px of the vehicle. Motorbikes are skipped. The segment runs from the front entering the zebra to the rear leaving it.",
+    rule: "A car, bus or truck moving at 20 px/s or more drives across a zebra while a walking pedestrian is out on it, not at the kerb, within 160 px of the vehicle. A car that stood before the zebra and drives on once the pedestrian is past its path and walking away has let them through, and does not count. Motorbikes are skipped. The segment runs from the front entering the zebra to the rear leaving it.",
   },
   {
     key: "illegal_turn",
